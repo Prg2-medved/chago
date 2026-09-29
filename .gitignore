@@ -1,12 +1,46 @@
+# Python virtual environments
 venv/
 .venv/
 
+# Python cache
 __pycache__/
 *.py[cod]
 
+# Type checking / tests
+.mypy_cache/
 .pytest_cache/
+.coverage
+htmlcov/
 
+# Local environment / secrets
 .env
+.env.*
+!.env.example
 
+# IDE
 .vscode/
 .idea/
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Local ML models
+models/
+*.gguf
+*.safetensors
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
