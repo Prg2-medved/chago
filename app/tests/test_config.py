@@ -46,3 +46,29 @@ def test_invalid_port_exits():
     )
     assert result.returncode == 1
     assert "APP_PORT" in result.stderr
+
+
+def test_llm_defaults(monkeypatch):
+    for name in ("LLM_BASE_URL", "LLM_MODEL_NAME", "LLM_MAX_TOKENS"):
+        monkeypatch.delenv(name, raising=False)
+    settings = load_settings()
+    assert settings.llm_base_url == "http://llm:8080"
+    assert settings.llm_model_name == "Qwen3-4B-Instruct-2507"
+    assert settings.llm_max_tokens == 768
+
+
+def test_llm_overrides(monkeypatch):
+    monkeypatch.setenv("LLM_BASE_URL", "http://localhost:8081/")
+    monkeypatch.setenv("LLM_MODEL_NAME", "custom-alias")
+    monkeypatch.setenv("LLM_MAX_TOKENS", "128")
+    settings = load_settings()
+    assert settings.llm_base_url == "http://localhost:8081"
+    assert settings.llm_model_name == "custom-alias"
+    assert settings.llm_max_tokens == 128
+
+
+@pytest.mark.parametrize("value", ["", "no", "0", "-1", "1.5"])
+def test_invalid_max_tokens(monkeypatch, value):
+    monkeypatch.setenv("LLM_MAX_TOKENS", value)
+    with pytest.raises(ValueError, match="LLM_MAX_TOKENS"):
+        load_settings()

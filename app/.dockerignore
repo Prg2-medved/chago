@@ -6,3 +6,7 @@ venv/
 .env
 .env.*
 tests/
+models/
+**/*.gguf
+**/*.safetensors
+pytest-cache-files-*/

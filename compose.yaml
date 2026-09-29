@@ -4,5 +4,42 @@ services:
     environment:
       APP_HOST: "0.0.0.0"
       APP_PORT: "8000"
+      LLM_BASE_URL: "${LLM_BASE_URL:-http://llm:8080}"
+      LLM_MODEL_NAME: "${LLM_MODEL_NAME:-Qwen3-4B-Instruct-2507}"
+      LLM_MAX_TOKENS: "${LLM_MAX_TOKENS:-768}"
     ports:
       - "${APP_HOST:-127.0.0.1}:${APP_PORT:-8000}:8000"
+
+  llm:
+    # Preliminary CPU tag: replace LLM_IMAGE with a verified RepoDigest before acceptance.
+    image: "${LLM_IMAGE:-ghcr.io/ggml-org/llama.cpp:server}"
+    pull_policy: never
+    volumes:
+      - type: bind
+        source: "${LLM_MODEL_PATH:-./models/Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf}"
+        target: /models/model.gguf
+        read_only: true
+        bind:
+          create_host_path: false
+    command:
+      - --model
+      - /models/model.gguf
+      - --alias
+      - "${LLM_MODEL_NAME:-Qwen3-4B-Instruct-2507}"
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --ctx-size
+      - "${LLM_CONTEXT_SIZE:-8192}"
+      - --threads
+      - "${LLM_THREADS:-8}"
+      - --threads-batch
+      - "${LLM_THREADS:-8}"
+      - --parallel
+      - "1"
+      - --gpu-layers
+      - "0"
+      - --device
+      - none
+      - --no-webui
