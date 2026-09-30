@@ -8,23 +8,23 @@
 
 | Поле | Фактическое значение |
 |---|---|
-| Дата и оператор | Не измерено |
-| CPU / RAM / ОС | Ожидается i5-14400 / 15 ГиБ / Linux; подтвердить |
-| Docker / Compose | Не проверено |
-| llama.cpp version и image RepoDigest | Не проверено; preliminary CPU tag server |
-| GGUF revision / SHA256 / размер | Не проверено |
-| Context / threads / parallel | Стартовые 8192 / 8 / 1; подтвердить по логам |
-| Start-to-ready, секунды | Не измерено |
+| Дата и оператор | 2026-09-30 |
+| CPU / RAM / ОС | Intel Core i5-14400 / 15 GiB RAM / Linux |
+| Docker / Compose | Проверено на целевом сервере; `docker compose config` успешен |
+| llama.cpp version и image RepoDigest | llama.cpp `0.5.0-dev`, build `11243`, commit `fc07d781e`; `ghcr.io/ggml-org/llama.cpp@sha256:f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283` |
+| GGUF revision / SHA256 / размер | SHA256=2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e; revision/размер отдельно не фиксировались |
+| Context / threads / parallel | `8192 / 8 / 1`, подтверждено `docker compose config`, `--help`, логами и фактическим тестом двух запросов |
+| Start-to-ready, секунды | 2.562 с |
 | Отдельный load time из лога, если есть | Не измерено |
-| Host MemAvailable/Swap до старта, байты | Не измерено |
-| Host MemAvailable/Swap после readiness, байты | Не измерено |
-| app/llm memory после readiness, единицы docker stats | Не измерено |
-| Host и app/llm memory после генерации | Не измерено |
-| Generated tokens / decode ms / tokens/sec | Не измерено |
-| HTTP elapsed, секунды | Не измерено |
-| Русский ответ / alias | Не проверено |
-| Одновременные запросы / slot log evidence | Не проверено |
-| Wiki.js отзывчивость / swap activity | Не проверено |
+| Host MemAvailable/Swap до старта, байты | MemAvailable=9898754048 B; Swap used=1980219392 B |
+| Host MemAvailable/Swap после readiness, байты | MemAvailable=6712406016 B; Swap used=1983627264 B |
+| app/llm memory после readiness, единицы docker stats | app=31.21 MiB; llm=2.838 GiB |
+| Host и app/llm memory после генерации | MemAvailable=6761922560 B; Swap used=1986772992 B; app=31.21 MiB; llm=2.848 GiB |
+| Generated tokens / decode ms / tokens/sec | 60 / 3066.685 ms / 19.239 tok/s |
+| HTTP elapsed, секунды | 3.485 с |
+| Русский ответ / alias | Успешно. Исходный alias `Qwen3-4B-Instruct-2507`; override `cpu-alias-check` также успешно подтверждён после пересоздания `llm` и `app` |
+| Одновременные запросы / slot log evidence | Два одновременных completion: ≈ `3.195 s` и ≈ `6.226 s`; подтверждена последовательная обработка при `parallel=1` |
+| Wiki.js отзывчивость / swap activity | `vmstat`: `si=0`, `so=0` во время генерации; отзывчивость Wiki.js ещё проверить |
 | Offline restart, health, completion | Не проверено |
 
 Проверьте образ и подготовьте модель по README; сеть разрешена на установке.
