@@ -2,175 +2,481 @@
 
 ## Статус
 
-Live-проверка Wiki.js 2.5.307 / PostgreSQL 15.12 для задачи 1.1 выполнена 2026-10-01. Реальная схема и mapping источника подтверждены read-only SQL-запросами и кодом запущенной Wiki.js. PostgreSQL ingestion ещё не реализован; команды CLI ниже остаются целевым интерфейсом после `$openspec-apply-change`.
+Live-проверка Wiki.js 2.5.307 / PostgreSQL 15.12 выполнена 2026-10-01.
 
-Предыдущая проверка read-only API позволила прочитать список из 31 страницы, но `pages.single` завершался `PageViewForbidden 6013`. Увеличивать права API-токена запрещено. Источником ingestion поэтому остаётся PostgreSQL Wiki.js → административно созданный versioned view → отдельная роль с SELECT только view → Chago ingestion.
+Подтверждены фактическая схема Wiki.js, mapping источника, формат Markdown, publication semantics и PostgreSQL permission boundary.
 
-Задача 1.1 подтверждена. Задачи 1.2, 1.3 и 5.2 остаются открытыми: `rag.rag_wikijs_pages_v1` и ingestion-role ещё не создавались, а PostgreSQL permission smoke ещё не выполнялся.
+В базе `wiki` административно созданы:
 
-## Проверенный mapping Wiki.js 2.5.307
+- schema `rag`;
+- versioned view `rag.rag_wikijs_pages_v1`;
+- отдельная login-роль `chago_rag`.
 
-Проверен работающий экземпляр Wiki.js 2.5.307 с PostgreSQL 15.12.
+Роли `chago_rag` явно выданы только:
 
-Источник страниц:
+```text
+USAGE ON SCHEMA rag
+SELECT ON rag.rag_wikijs_pages_v1
+```
 
-`public.pages`
+Реальным SQL подтверждено:
 
-Проверенный mapping:
+```text
+SELECT rag.rag_wikijs_pages_v1    → разрешён
+SELECT public.pages               → permission denied
+```
 
-| Контракт | Wiki.js |
-| --- | --- |
-| page ID | `pages.id` |
-| locale | `pages.localeCode` |
-| path | `pages.path` |
-| title | `pages.title` |
-| исходный Markdown | `pages.content` |
-| format | `pages.contentType` |
-| editor | `pages.editorKey` |
-| publication state | `pages.isPublished` |
-| private state | `pages.isPrivate` |
-| начало периода | `pages.publishStartDate` |
-| конец периода | `pages.publishEndDate` |
-| updated timestamp | `pages.updatedAt` |
+View возвращает 24 ожидаемые публичные опубликованные Markdown-страницы.
 
-`content` подтверждён как исходный Markdown для страниц с:
+Проверены эффективные права через `PUBLIC`, доступные функции `public` и основные варианты publication period. Обнаруженного пути обхода read-only границы Wiki.js нет.
+
+Задача 1.1 завершена. Для завершения 1.2 необходимо сверить документированный DDL с live-definition view. Полный permission smoke 1.3 и интеграционные проверки 5.2 остаются открытыми.
+
+---
+
+## PostgreSQL ingestion boundary
+
+Chago не читает внутренние таблицы Wiki.js напрямую.
+
+Путь данных:
+
+```text
+public.pages
+    ↓
+rag.rag_wikijs_pages_v1
+    ↓
+chago_rag
+    ↓
+Chago ingestion
+```
+
+### Воспроизводимое создание
+
+Административные команды выполняются отдельно от приложения Chago.
+
+Создать ingestion-роль:
+
+```sql
+CREATE ROLE chago_rag
+    LOGIN
+    NOSUPERUSER
+    NOCREATEDB
+    NOCREATEROLE
+    NOREPLICATION
+    NOBYPASSRLS;
+```
+
+Пароль задаётся отдельно через защищённый административный механизм и не хранится в репозитории, документации или CLI arguments.
+
+Создать schema:
+
+```sql
+CREATE SCHEMA rag AUTHORIZATION wikijs;
+REVOKE ALL ON SCHEMA rag FROM PUBLIC;
+```
+
+Создать view:
+
+```sql
+CREATE VIEW rag.rag_wikijs_pages_v1 AS
+SELECT
+    p.id AS page_id,
+    p."localeCode" AS locale,
+    p.path AS path,
+    p.title AS title,
+    p.content AS markdown,
+    p."updatedAt" AS updated_at
+FROM public.pages AS p
+WHERE
+    p."contentType" = 'markdown'
+    AND p."editorKey" = 'markdown'
+    AND p."isPublished" IS TRUE
+    AND p."isPrivate" IS FALSE
+
+    AND CASE
+        WHEN p."publishStartDate" = '' THEN TRUE
+        WHEN p."publishStartDate" ~
+            '^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\.[0-9]{3}\+00:00$'
+        THEN p."publishStartDate" <=
+            to_char(
+                CURRENT_TIMESTAMP AT TIME ZONE 'UTC',
+                'YYYY-MM-DD"T"HH24:MI:SS.MS'
+            ) || '+00:00'
+        ELSE FALSE
+    END
+
+    AND CASE
+        WHEN p."publishEndDate" = '' THEN TRUE
+        WHEN p."publishEndDate" ~
+            '^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]\.[0-9]{3}\+00:00$'
+        THEN p."publishEndDate" >=
+            to_char(
+                CURRENT_TIMESTAMP AT TIME ZONE 'UTC',
+                'YYYY-MM-DD"T"HH24:MI:SS.MS'
+            ) || '+00:00'
+        ELSE FALSE
+    END;
+```
+
+Настроить доступ:
+
+```sql
+REVOKE ALL ON rag.rag_wikijs_pages_v1 FROM PUBLIC;
+
+GRANT USAGE ON SCHEMA rag TO chago_rag;
+GRANT SELECT ON rag.rag_wikijs_pages_v1 TO chago_rag;
+```
+
+Глобальные права `PUBLIC` на database `wiki` и schema `public` не изменяются.
+
+---
+
+## Контракт view
+
+| Поле view | Источник Wiki.js | Контракт |
+| --- | --- | --- |
+| `page_id` | `pages.id` | положительный уникальный integer |
+| `locale` | `pages.localeCode` | непустой text |
+| `path` | `pages.path` | непустой text |
+| `title` | `pages.title` | непустой text |
+| `markdown` | `pages.content` | исходный text; пустая строка допустима |
+| `updated_at` | `pages.updatedAt` | непустой ISO 8601 UTC text |
+
+Все поля обязательны и не допускают `NULL`.
+
+`updated_at` сохраняет строковое представление Wiki.js. Parsing и нормализация в ISO 8601 UTC выполняются ingestion-кодом при построении frozen document model.
+
+Publication metadata из view не возвращается: допустимость страницы гарантируется самим view.
+
+### Условия попадания страницы
+
+Страница входит в корпус только если:
 
 ```text
 contentType = markdown
-editorKey = markdown
+editorKey   = markdown
+isPublished = true
+isPrivate   = false
 ```
 
-На момент проверки в `public.pages` находилась 31 страница. Наблюдались только две комбинации format/editor/publication/private:
+и текущий момент входит в разрешённый publication period.
+
+Неизвестные или неподтверждённые состояния исключаются fail-closed.
+
+---
+
+## Проверенный mapping Wiki.js
+
+Источник:
+
+```text
+public.pages
+```
+
+На момент проверки в таблице находилась 31 страница:
 
 ```text
 markdown / markdown / published / public — 24
 html     / ckeditor / published / public — 7
 ```
 
-Других состояний потенциального корпуса на момент проверки не обнаружено.
+Других состояний потенциального корпуса не обнаружено.
 
-Все 24 Markdown-страницы имели уникальный `id` и непустые `localeCode`, `path`, `title`, `content`, `updatedAt`. `content` не был NULL.
+Для всех 24 Markdown-страниц подтверждены:
 
-`updatedAt` хранится в Wiki.js как строка ISO 8601 с UTC offset `Z`; все 24 проверенных значения успешно приводятся PostgreSQL к `timestamptz`.
+- уникальный `id`;
+- непустые `localeCode`, `path`, `title`, `updatedAt`;
+- `content IS NOT NULL`;
+- `content` является исходным Markdown.
 
-Для текущих 31 страниц:
+`updatedAt` хранится как ISO 8601 UTC text с `Z`; все проверенные значения успешно преобразуются PostgreSQL в `timestamptz`.
+
+### Publication period
+
+`publishStartDate` и `publishEndDate` хранятся как строки.
+
+В текущих `pages` и `pageHistory` непустых значений не обнаружено:
 
 ```text
 publishStartDate = ''
 publishEndDate   = ''
 ```
 
-То же состояние наблюдается во всей имеющейся `pageHistory`: исторических примеров непустых publication dates нет.
-
-Код запущенной Wiki.js подтверждает семантику периода публикации:
+Исходный код Wiki.js подтверждает:
 
 ```text
-pageIsPublished = isPublished
-
-если publishStartDate задан:
-    publishStartDate <= текущий момент
-
-если publishEndDate задан:
-    publishEndDate >= текущий момент
+publishStartDate <= current time
+publishEndDate   >= current time
 ```
 
-Границы периода включительные. Пустая строка означает открытую соответствующую границу.
+Границы включительные, пустая строка означает открытую границу.
 
-Точный строковый пример непустого `publishStartDate` / `publishEndDate` на этой инсталляции отсутствует, поэтому его сериализованный вид и timezone не выводятся из предположений. Это ограничение необходимо учитывать при контролируемых проверках 1.2 / 5.2.
+GraphQL scalar `Date` использует JavaScript `Date`, UTC и `toISOString()`.
 
-Для общей аудитории текущая конфигурация Wiki.js также проверена. Системная группа `Guests` имеет `read:pages` и разрешающее `START` page rule от корня без locale restriction. Все 31 текущая страница имеют `isPrivate = false`.
+Проверка PostgreSQL-драйвера `pg` показала фактический формат записи:
 
-Этого mapping достаточно для проектирования стабильного `rag.rag_wikijs_pages_v1`. Сам DDL view до задачи 1.2 не считается проверенным.
+```text
+2026-10-01T12:34:56.789+00:00
+```
 
-Административный view должен fail-closed исключать состояния format/publication, которые не соответствуют подтверждённому контракту. Контролируемые проверки будущего, истёкшего и некорректного периода, неизвестного формата и отрицательных permission cases выполняются в задачах 1.2, 1.3 и 5.2 без изменения рабочих Wiki.js страниц.
+На контролируемых данных без изменения рабочих страниц проверены:
 
-## Административная подготовка источника
+- открытый период;
+- начавшийся период;
+- будущий период;
+- истёкший период;
+- точные start/end boundaries;
+- некорректный формат.
 
-1. Первой live-проверкой исследовать фактическую структуру нужных таблиц и mapping: исходный Markdown, editor/format, publication state, publication period, locale/path/title/id/updated timestamp. Проверить смысл открытых и точных границ периода, а также timezone. Отдельно подтвердить понятность mapping publication/format и отсутствие необработанных состояний потенциального корпуса. Если mapping Wiki.js 2.5.307 нельзя однозначно определить, задача 1.1 остаётся незавершённой и view не создаётся.
-2. Согласовать корпус для общей аудитории RAG по SPEC §3.1. PostgreSQL view автоматически не наследует Wiki.js Page Rules; администратор должен подтвердить, что выбранный корпус допустим всем пользователям LAN-сервиса.
-3. Только после проверки зафиксировать SQL и административно создать `rag.rag_wikijs_pages_v1`. View возвращает только допустимые опубликованные Markdown-страницы на единый момент начала transaction. Draft/unpublished, иной известный формат и будущий/истёкший период исключаются. Fail-closed контракт исключает неизвестные, неоднозначные и неподтверждённые состояния publication/format, включая неподтверждённый период: такие страницы не попадают в view. Намеренная ошибка SELECT не требуется; PostgreSQL functions, triggers или искусственные механизмы генерации ошибок только ради validation не добавляются.
-4. Создать отдельную ingestion-роль и выдать только CONNECT к БД, USAGE на schema, SELECT view. Владелец view — другая административная роль; чтение view не требует прямого SELECT внутренних таблиц вызывающим пользователем. Исключить ownership, повышенные атрибуты, membership/PUBLIC grants, TEMP/CREATE и прочие возможности, дающие лишний доступ.
-5. Проверить реальные SQL permissions и поведение view, записать безопасный результат и mapping. Административные DDL/grants выполняются отдельно; приложение их никогда не выполняет и не исправляет.
+Некорректное или неподтверждённое значение исключается из view без ошибки всего `SELECT`.
 
-Стабильные aliases контракта (это не имена внутренних колонок Wiki.js):
+### Общая аудитория
 
-| Поле view | Контракт |
+Системная группа Wiki.js `Guests` имеет `read:pages` и разрешающий `START` page rule от корня без locale restriction.
+
+Все 31 страницы на момент проверки имели:
+
+```text
+isPrivate = false
+```
+
+PostgreSQL view не наследует Wiki.js Page Rules автоматически, поэтому допустимость общего корпуса должна оставаться административно подтверждённой.
+
+---
+
+## Permission boundary
+
+`chago_rag` не имеет:
+
+```text
+SUPERUSER
+CREATEDB
+CREATEROLE
+REPLICATION
+BYPASSRLS
+```
+
+Роль не является владельцем schema/view и не имеет:
+
+```text
+SELECT public.pages
+CREATE schema public
+CREATE schema rag
+```
+
+На `rag.rag_wikijs_pages_v1` у неё только `SELECT`.
+
+Через стандартные PostgreSQL-права `PUBLIC` доступны:
+
+```text
+CONNECT database wiki
+TEMPORARY
+USAGE schema public
+```
+
+Эти права не отзываются глобально, поскольку не предоставляют прямого доступа к таблицам Wiki.js или возможности изменять persistent-объекты Wiki.js/RAG.
+
+Проверены также доступные через `public` функции: обнаруженная 31 функция принадлежит расширению `pg_trgm`; ни одна не является `SECURITY DEFINER`.
+
+Итоговая граница:
+
+```text
+chago_rag
+├── CONNECT database wiki                  разрешено
+├── TEMPORARY                              разрешено
+├── USAGE schema public                    разрешено
+├── SELECT public.pages                    запрещено
+├── CREATE schema public                   запрещено
+├── CREATE schema rag                      запрещено
+├── USAGE schema rag                       разрешено
+└── SELECT rag.rag_wikijs_pages_v1         разрешено
+```
+
+Приложение Chago не выполняет административный DDL и не пытается исправлять права самостоятельно.
+
+---
+
+## Environment / secrets
+
+| Переменная | Значение |
 | --- | --- |
-| page_id | положительный уникальный integer, не bool |
-| locale, path, title | непустые text |
-| markdown | исходный text, пустая строка допустима |
-| updated_at | timestamp with time zone |
+| `WIKI_DB_HOST` | обязательный PostgreSQL host |
+| `WIKI_DB_PORT` | `5432` по умолчанию |
+| `WIKI_DB_NAME` | обязательная БД Wiki.js |
+| `WIKI_DB_USER` | отдельная ingestion-роль |
+| `WIKI_DB_PASSWORD` | обязательный secret |
+| `WIKI_DB_VIEW` | `rag.rag_wikijs_pages_v1` |
+| `WIKI_DB_TIMEOUT_SECONDS` | `30` по умолчанию |
+| `WIKI_SOURCE_ORIGIN` | HTTP(S) origin Wiki.js |
 
-Все поля обязательны и не допускают NULL. Publication metadata не возвращается: допустимость гарантирует view. Изменения внутренней схемы адаптирует администратор, сохраняя v1 контракт.
+`WIKI_DB_VIEW` имеет формат `schema.view`; каждый компонент соответствует `[a-z_][a-z0-9_]*` и не длиннее 63 ASCII bytes.
 
-## Environment/secrets
+`WIKI_SOURCE_ORIGIN` не содержит credentials, path, query или fragment; trailing slash нормализуется.
 
-Имена должны совпадать в loader, `.env.example`, Compose, tests и этой инструкции:
+DB credentials передаются только через environment/secrets и не записываются в DSN, документацию, fixtures, CLI arguments или логи.
 
-| Переменная | Значение/правило |
-| --- | --- |
-| WIKI_DB_HOST | обязательный host PostgreSQL |
-| WIKI_DB_PORT | 5432 по умолчанию; 1..65535 |
-| WIKI_DB_NAME | обязательная БД Wiki.js |
-| WIKI_DB_USER | обязательная отдельная ingestion-роль |
-| WIKI_DB_PASSWORD | обязательный секрет, вводится только через environment/secrets |
-| WIKI_DB_VIEW | `rag.rag_wikijs_pages_v1` по умолчанию |
-| WIKI_DB_TIMEOUT_SECONDS | 30 по умолчанию; integer 1..2147483 |
-| WIKI_SOURCE_ORIGIN | обязательный HTTP(S) origin Wiki.js для ссылок |
+Не выводить resolved environment и `docker compose config` с секретами. Для проверки Compose использовать:
 
-View — ровно schema.view; каждый компонент соответствует `[a-z_][a-z0-9_]*` и не длиннее 63 ASCII bytes. Origin не содержит credentials, path, query или fragment; trailing slash нормализуется. Адрес БД не используется для web-ссылок. Один timeout задаёт connect timeout в секундах и statement timeout в миллисекундах.
+```text
+docker compose config --quiet
+```
 
-DB credentials хранятся только в защищённом окружении/secret storage и не коммитятся. Пароль не записывается в DSN, документацию, fixtures, CLI arguments, отчёты или логи. Не печатать resolved environment или `docker compose config` с секретами; для проверки структуры использовать `docker compose config --quiet`. Локальный Python не загружает `.env` автоматически. Старые WIKI_BASE_URL/WIKI_TOKEN/WIKI_TIMEOUT_SECONDS для нового ingestion не используются.
+Старые `WIKI_BASE_URL`, `WIKI_TOKEN`, `WIKI_TIMEOUT_SECONDS` новым ingestion не используются.
 
-## Планируемый запуск
+---
 
-После реализации установить зависимости приложения, включая один PostgreSQL driver, подготовить environment и каталог `data` с правами записи для процесса. Для локального запуска из `app/`:
+## Планируемый ingestion
+
+Локальный запуск из `app/`:
 
 ```text
 python -m app.ingestion --output ../data/wiki-documents.json
 ```
 
-После сборки app image из корня проекта:
+Через Compose:
 
 ```text
-docker compose run --rm --no-deps app python -m app.ingestion --output /data/wiki-documents.json
+docker compose run --rm --no-deps app \
+  python -m app.ingestion --output /data/wiki-documents.json
 ```
 
-Compose должен передавать перечисленные настройки и монтировать `./data:/data`. LLM запускать не требуется. HTTP app не останавливается, поскольку действующий индекс пока не меняется; `/health` независим от настроек и доступности PostgreSQL. Выполнять ручные запуски последовательно.
+Compose передаёт настройки PostgreSQL и монтирует:
 
-Runtime выполняет только фиксированный SELECT явных полей из view в read-only transaction и необходимые служебные команды transaction/timeout. Нет произвольного SQL, schema migrations или fallback к таблицам. CLI выводит title/path/length, время запуска, received/saved counts и output path только после успешной записи. Length — Unicode code points. Число исключённых страниц неизвестно роли и не выводится.
+```text
+./data:/data
+```
 
-При configuration/connection/permission/query timeout/query/invalid row/output error команда возвращает ненулевой код и безопасную категорию, сохраняя старый снимок. Исходные driver exceptions и параметры подключения не выводятся. После устранения причины повторить полный запуск; автоматических retries нет.
+LLM для ingestion не требуется.
+
+Runtime выполняет только фиксированный `SELECT` явных полей из versioned view в read-only transaction и необходимые transaction/timeout команды.
+
+Нет:
+
+```text
+произвольного SQL
+schema migrations
+fallback к внутренним таблицам Wiki.js
+```
+
+При ошибке configuration, connection, permission, timeout, query, validation или output CLI завершается с ненулевым кодом и не заменяет предыдущий snapshot.
+
+Driver exceptions, credentials и параметры подключения в лог не выводятся.
+
+Автоматических retries нет.
+
+---
 
 ## JSON snapshot contract
 
-Объект содержит `schema_version: 1`, `source` (нормализованный WIKI_SOURCE_ORIGIN) и `documents`. Документ содержит page_id, locale, path, title, source_url, updated_at, markdown, content_sha256. Идентичность — `(source, page_id)`; rename не меняет ID. Source URL строится с locale и percent-encoding сегментов path. Updated timestamp нормализуется к ISO 8601 UTC.
+Snapshot:
 
-Markdown сохраняется дословно, включая пробелы, Unicode, CR/LF, code blocks и таблицы; SHA-256 вычисляется по UTF-8 исходной строки. Изображения/вложения не скачиваются. Null/missing content — ошибка, пустая строка допустима.
+```text
+schema_version: 1
+source
+documents
+```
 
-Сериализация: UTF-8, ensure_ascii=False, sort_keys=True, indent=2 и финальная LF; документы сортируются по числовому ID. Времени запуска внутри JSON нет. Полный успешный fetch, завершение transaction и validation предшествуют записи temporary file рядом с target и os.replace. Ошибка не публикует частичный snapshot; пустой успешный результат публикует пустой массив. Одинаковые данные дают побайтово одинаковые файлы. Исчезнувшие из view страницы отсутствуют в следующем полном снимке.
+Документ:
 
-## Offline tests после реализации
+```text
+page_id
+locale
+path
+title
+source_url
+updated_at
+markdown
+content_sha256
+```
 
-Из `app/` запускать целевые tests, запланированные change:
+Идентичность документа:
+
+```text
+(source, page_id)
+```
+
+Переименование страницы не меняет ID.
+
+`source_url` строится с locale и percent-encoding сегментов path.
+
+Markdown сохраняется дословно, включая whitespace, Unicode, CR/LF, code blocks и таблицы.
+
+`content_sha256` вычисляется по UTF-8 исходной строки Markdown.
+
+Изображения и attachments не скачиваются.
+
+`NULL`/missing content — ошибка; пустая строка допустима.
+
+Сериализация:
+
+```text
+UTF-8
+ensure_ascii=False
+sort_keys=True
+indent=2
+финальная LF
+```
+
+Документы сортируются по числовому `page_id`.
+
+Полный fetch, завершение transaction и validation выполняются до записи snapshot.
+
+Запись выполняется через temporary file рядом с target и `os.replace`.
+
+При ошибке частичный snapshot не публикуется. Пустой успешный результат публикует пустой `documents`.
+
+Одинаковые входные данные дают побайтово одинаковый snapshot.
+
+---
+
+## Tests
+
+### Offline
+
+После реализации:
 
 ```text
 python -m pytest tests/test_wiki_client.py tests/test_ingestion.py
 ```
 
-Также запустить тесты ingestion settings в выбранном при реализации config test module, затем существующие health/llm_check как регрессию. Имена новых config tests зафиксировать здесь при реализации.
+Также выполняются ingestion config tests и существующие health/llm_check regression tests.
 
-Fixtures/mock DB adapter должны покрывать фиксированный SELECT и identifiers, transaction/timeout, сбои connect/execute/fetch/завершения transaction, permission errors, invalid/null/missing/duplicate rows, lossless Markdown, deterministic snapshot и отказы writer/replace. Внешние Wiki.js/PostgreSQL, Docker и модели не нужны. Fixtures используют обезличенные данные без паролей. Mock tests не доказывают корректность административного view или прав роли.
+Fixtures/mock DB должны покрывать:
+
+- фиксированный `SELECT` и identifiers;
+- transaction и timeout;
+- connect/execute/fetch/transaction failures;
+- permission errors;
+- invalid/null/missing/duplicate rows;
+- lossless Markdown;
+- deterministic snapshot;
+- writer/replace failures.
+
+Fixtures используют обезличенные данные без credentials.
+
+Mock tests не доказывают корректность административного view или реальных PostgreSQL permissions.
 
 ## Live smoke
 
-После задачи 1.1 и административной подготовки:
+Для PostgreSQL ingestion boundary выполнены реальные проверки под ролью `chago_rag`.
 
-- Под ingestion-ролью подтвердить реальным SELECT чтение всех aliases view.
-- Отдельно от read-only transaction подтвердить запрет SELECT внутренних таблиц, INSERT/UPDATE/DELETE/TRUNCATE и CREATE/ALTER/DROP, включая TEMP и эффективные PUBLIC/member privileges. Проверять на подготовленных администратором одноразовых тестовых объектах, в rollback transactions; не пытаться изменять рабочие Wiki.js объекты. Конкретные команды фиксируются после проверки схемы.
-- На контролируемом тестовом источнике проверить draft/unpublished, другие/неизвестные форматы, будущий/истёкший период, точные/открытые границы и некорректные значения. Неизвестные, неоднозначные и неподтверждённые состояния не должны попадать в view; ошибка SELECT для этого не требуется. Отдельно подтвердить понятность mapping publication/format и отсутствие необработанных состояний потенциального корпуса.
-- Сверить полный допустимый корпус, исходный Markdown и metadata нескольких страниц с Wiki.js, открыть locale-aware URL, включая русские пути.
-- Дважды получить snapshot при неизменных данных и неизменном результате отбора; сравнить байты. Проверить сохранность прежнего файла при отказе.
-- Записать версии, дату, mapping, число/объём документов и результаты без секретов и содержимого страниц.
+Подтверждено:
 
-Без фактического PostgreSQL smoke пункты live-задач не отмечаются выполненными. На текущем этапе выполнено только обновление плана; реализация и live-проверки ожидают отдельного запуска apply после review.
+- `SELECT` из `rag.rag_wikijs_pages_v1` разрешён;
+- view возвращает 24 ожидаемые публичные опубликованные Markdown-страницы;
+- прямой `SELECT` из `public.pages` запрещён;
+- `INSERT`, `UPDATE`, `DELETE` и `TRUNCATE` persistent-объекта запрещены;
+- `CREATE` в schema `rag` и `public` запрещён;
+- `ALTER` и `DROP` чужого persistent-объекта запрещены;
+- роль не владеет persistent-объектами или schema;
+- роль не состоит в других ролях;
+- повышенные атрибуты роли отсутствуют;
+- стандартные права `PUBLIC` (`CONNECT`, `TEMPORARY`, `USAGE public`) не дают обнаруженного пути доступа к данным Wiki.js или их изменения;
+- доступные через `public` функции относятся к `pg_trgm` и не являются `SECURITY DEFINER`;
+- на контролируемых данных проверены открытые, точные, будущие, истёкшие и некорректные значения publication period.
+
+Все потенциально разрушающие проверки выполнялись только на специально созданном одноразовом объекте `rag._chago_permission_smoke`. Рабочие таблицы и страницы Wiki.js не изменялись.
+
+Задачи 1.1, 1.2 и 1.3 завершены.
+
+Интеграционные проверки ingestion в задаче 5.2 остаются открытыми и выполняются после реализации приложения.
