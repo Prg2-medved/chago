@@ -7,6 +7,16 @@ services:
       LLM_BASE_URL: "${LLM_BASE_URL:-http://llm:8080}"
       LLM_MODEL_NAME: "${LLM_MODEL_NAME:-Qwen3-4B-Instruct-2507}"
       LLM_MAX_TOKENS: "${LLM_MAX_TOKENS:-768}"
+      WIKI_DB_HOST: "${WIKI_DB_HOST:-}"
+      WIKI_DB_PORT: "${WIKI_DB_PORT:-5432}"
+      WIKI_DB_NAME: "${WIKI_DB_NAME:-}"
+      WIKI_DB_USER: "${WIKI_DB_USER:-}"
+      WIKI_DB_PASSWORD: "${WIKI_DB_PASSWORD:-}"
+      WIKI_DB_VIEW: "${WIKI_DB_VIEW:-rag.rag_wikijs_pages_v1}"
+      WIKI_DB_TIMEOUT_SECONDS: "${WIKI_DB_TIMEOUT_SECONDS:-30}"
+      WIKI_SOURCE_ORIGIN: "${WIKI_SOURCE_ORIGIN:-}"
+    volumes:
+      - ./data:/data
     ports:
       - "${APP_HOST:-127.0.0.1}:${APP_PORT:-8000}:8000"
 

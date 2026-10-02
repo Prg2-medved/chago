@@ -4,7 +4,7 @@
 
 См. proposal.md и SPEC.md §6–8, §30. По предоставленной live-проверке Wiki.js 2.5.307 read-only API token выполняет `pages.list`, но `pages.single` возвращает `PageViewForbidden 6013`. Расширять права до manage/delete/Full Access нельзя. Change ещё не реализован; старый GraphQL-дизайн заменяется целиком.
 
-Существующий HTTP startup и `/health` остаются независимыми от ingestion и доступности источника. Реальная схема PostgreSQL 15.12 и mapping пока не проверены; этот документ определяет внешний контракт view, а не имена внутренних колонок Wiki.js.
+Существующий HTTP startup и `/health` остаются независимыми от ingestion и доступности источника. Реальная схема PostgreSQL 15.12 и mapping проверены административно; результаты и определение view приведены в docs/wikijs-markdown-ingestion.md.
 
 ## Goals / Non-Goals
 
@@ -47,7 +47,7 @@ CLI из app/: `python -m app.ingestion --output ../data/wiki-documents.json`. �
 
 Выбран вариант 1: view возвращает только допустимые опубликованные Markdown-страницы. Это уменьшает раскрываемый ingestion-роли корпус и исключает дублирование правил отбора в Python. Допуск для общей LAN-аудитории проверяется администратором по SPEC §3.1; права Wiki.js автоматически через PostgreSQL не наследуются.
 
-Публичные aliases view: `page_id` (положительный integer), `locale`, `path`, `title`, `markdown` (text), `updated_at` (timestamp with time zone). Это новые имена контракта Chago, не предположения об именах колонок Wiki.js. Все поля NOT NULL на уровне контракта, пустой markdown допустим; locale/path/title непустые. ID уникален. Стабильное имя по умолчанию `rag.rag_wikijs_pages_v1`.
+Публичные aliases view: `page_id` (положительный integer), `locale`, `path`, `title`, `markdown` (text), `updated_at` (ISO 8601 text с timezone). View сохраняет исходный `pages.updatedAt`, проверенный как UTC text с `Z`; parsing и нормализация в UTC выполняются Python при построении документа. Это имена контракта Chago. Все поля NOT NULL на уровне контракта, пустой markdown допустим; locale/path/title непустые. ID уникален. Стабильное имя по умолчанию `rag.rag_wikijs_pages_v1`.
 
 Первая live-задача проверяет фактические таблицы, raw Markdown, editor/format, publication state/period, locale/path/title/id/updated timestamp и mapping в aliases. Только после этого администратор фиксирует определение view. Один SELECT оценивает публикацию на единый момент начала его read-only transaction в БД. Точные границы периода и открытые границы устанавливаются по реальной Wiki.js, не угадываются.
 

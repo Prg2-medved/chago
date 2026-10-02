@@ -1,0 +1,18 @@
+[
+  {
+    "page_id": 2,
+    "locale": "ru",
+    "path": "справка/Начало работы",
+    "title": "Начало работы",
+    "updated_at": "2026-10-01T12:34:56.789Z",
+    "markdown": "# Пример 😀\r\n\r\n  Пробелы  \r\n```bash\r\nprintf 'Привет\\n'\r\n```\r\n\r\n| Имя | Значение |\r\n| --- | --- |\r\n| Тест | 42 |\r\n\r\n[Ссылка](https://example.org)\r\n![Изображение](https://example.org/image.png)\r\n"
+  },
+  {
+    "page_id": 1,
+    "locale": "en",
+    "path": "справка/Начало работы",
+    "title": "Empty page",
+    "updated_at": "2026-10-01T15:34:56.789+03:00",
+    "markdown": ""
+  }
+]

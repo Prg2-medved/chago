@@ -30,7 +30,7 @@ View возвращает 24 ожидаемые публичные опубли�
 
 Проверены эффективные права через `PUBLIC`, доступные функции `public` и основные варианты publication period. Обнаруженного пути обхода read-only границы Wiki.js нет.
 
-Задача 1.1 завершена. Для завершения 1.2 необходимо сверить документированный DDL с live-definition view. Полный permission smoke 1.3 и интеграционные проверки 5.2 остаются открытыми.
+Задачи 1.1–1.3 завершены. Интеграционная live-проверка CLI в задаче 5.2 остаётся открытой.
 
 ---
 
@@ -301,12 +301,12 @@ chago_rag
 | Переменная | Значение |
 | --- | --- |
 | `WIKI_DB_HOST` | обязательный PostgreSQL host |
-| `WIKI_DB_PORT` | `5432` по умолчанию |
+| `WIKI_DB_PORT` | integer 1..65535, `5432` по умолчанию |
 | `WIKI_DB_NAME` | обязательная БД Wiki.js |
 | `WIKI_DB_USER` | отдельная ingestion-роль |
 | `WIKI_DB_PASSWORD` | обязательный secret |
 | `WIKI_DB_VIEW` | `rag.rag_wikijs_pages_v1` |
-| `WIKI_DB_TIMEOUT_SECONDS` | `30` по умолчанию |
+| `WIKI_DB_TIMEOUT_SECONDS` | integer 1..2147483, `30` по умолчанию |
 | `WIKI_SOURCE_ORIGIN` | HTTP(S) origin Wiki.js |
 
 `WIKI_DB_VIEW` имеет формат `schema.view`; каждый компонент соответствует `[a-z_][a-z0-9_]*` и не длиннее 63 ASCII bytes.
@@ -325,7 +325,19 @@ docker compose config --quiet
 
 ---
 
-## Планируемый ingestion
+## Ручной ingestion
+
+Установить зависимости из `app/`:
+
+```text
+python -m pip install -r requirements.txt
+```
+
+Подготовить каталог `data` в корне проекта (`New-Item -ItemType Directory -Force data`
+в PowerShell или `mkdir -p data` в POSIX shell), доступный на запись оператору/контейнеру.
+Loader читает переменные окружения текущего процесса; локальный Python не загружает `.env`.
+Compose использует `.env` и передаёт те же имена, но HTTP startup не проверяет ingestion settings.
+Пароль получить из secret manager в environment без вывода его значения.
 
 Локальный запуск из `app/`:
 
@@ -336,8 +348,8 @@ python -m app.ingestion --output ../data/wiki-documents.json
 Через Compose:
 
 ```text
-docker compose run --rm --no-deps app \
-  python -m app.ingestion --output /data/wiki-documents.json
+docker compose build app
+docker compose run --rm --no-deps app python -m app.ingestion --output /data/wiki-documents.json
 ```
 
 Compose передаёт настройки PostgreSQL и монтирует:
@@ -347,6 +359,12 @@ Compose передаёт настройки PostgreSQL и монтирует:
 ```
 
 LLM для ingestion не требуется.
+
+Команда выполняется из корня проекта и подходит для PowerShell и POSIX shell.
+Dockerfile задаёт `WORKDIR /app`, копирует Python package в `/app/app` и не имеет
+`ENTRYPOINT`: команда `run` заменяет HTTP `CMD` на ingestion CLI.
+Все восемь ingestion-переменных передаются через Compose; пустые обязательные
+значения разрешены при HTTP startup и проверяются только ingestion loader.
 
 Runtime выполняет только фиксированный `SELECT` явных полей из versioned view в read-only transaction и необходимые transaction/timeout команды.
 
@@ -358,11 +376,11 @@ schema migrations
 fallback к внутренним таблицам Wiki.js
 ```
 
-При ошибке configuration, connection, permission, timeout, query, validation или output CLI завершается с ненулевым кодом и не заменяет предыдущий snapshot.
+Безопасные категории ошибок: `configuration` (с именем переменной), `connection`, `permission`, `query timeout`, `query`, `invalid row`, `output`. CLI возвращает 1; неверный вызов argparse — 2. При ошибке прежний snapshot сохраняется, при первом отказе target не создаётся.
 
 Driver exceptions, credentials и параметры подключения в лог не выводятся.
 
-Автоматических retries нет.
+Автоматических retries нет. После исправления причины повторить ту же команду целиком; ручные запуски выполнять последовательно.
 
 ---
 
@@ -403,6 +421,12 @@ Markdown сохраняется дословно, включая whitespace, Uni
 
 `content_sha256` вычисляется по UTF-8 исходной строки Markdown.
 
+`updated_at` — ISO 8601 UTC с шестью знаками дробной части и `Z`.
+CLI после успешной замены файла выводит title/path/length каждого документа,
+UTC-время начала, duration, received/saved counts и output path.
+Length — Unicode code points (`len(markdown)`), не bytes и не graphemes.
+Время запуска не включается в snapshot. Число исключённых внутренних страниц не выводится.
+
 Изображения и attachments не скачиваются.
 
 `NULL`/missing content — ошибка; пустая строка допустима.
@@ -433,10 +457,12 @@ indent=2
 
 ### Offline
 
-После реализации:
+Из `app/`, без Wiki.js/PostgreSQL, Docker и моделей:
 
 ```text
-python -m pytest tests/test_wiki_client.py tests/test_ingestion.py
+python -m pip install -r requirements-dev.txt
+python -m pytest tests/test_ingestion_config.py tests/test_wiki_client.py tests/test_ingestion.py
+python -m pytest tests/test_config.py tests/test_health.py tests/test_llm_check.py
 ```
 
 Также выполняются ingestion config tests и существующие health/llm_check regression tests.
@@ -455,6 +481,24 @@ Fixtures/mock DB должны покрывать:
 Fixtures используют обезличенные данные без credentials.
 
 Mock tests не доказывают корректность административного view или реальных PostgreSQL permissions.
+
+Проверка реализации 2026-10-01: все 126 offline-тестов config/client/ingestion,
+включая запись snapshot и CLI, прошли; 46 regression-тестов config/health/llm_check
+прошли. Целевые тесты выполнены вне sandbox после разрешения пользователя:
+sandbox блокировал временные каталоги pytest (`WinError 5`). `docker compose config --quiet`
+не выполнен: Docker CLI отсутствует. Live CLI smoke не выполнен: необходимые
+WIKI_DB_* и WIKI_SOURCE_ORIGIN не заданы в environment текущего процесса.
+
+Повторная проверка 2026-10-02 по задаче 4.3: передача всех восьми переменных,
+defaults, mount `./data:/data` и команда запуска сверены с config loader,
+HTTP entry point и Dockerfile. Все 126 целевых offline-тестов и 46 regression-тестов
+прошли вне sandbox (внутри sandbox временные каталоги pytest блокируются `WinError 5`).
+`docker compose config --quiet` выполнить невозможно: Docker CLI отсутствует
+в PATH и стандартном пути установки Docker Desktop. Задача 4.3 остаётся открытой
+до выполнения этой обязательной проверки в тестовом окружении без resolved secrets.
+Live smoke 5.2 не выполнялся: обязательные `WIKI_DB_HOST`, `WIKI_DB_NAME`,
+`WIKI_DB_USER`, `WIKI_DB_PASSWORD`, `WIKI_SOURCE_ORIGIN` не заданы ни в environment
+процесса, ни в локальном `.env`. Задача 5.2 остаётся открытой.
 
 ## Live smoke
 
@@ -480,3 +524,9 @@ Mock tests не доказывают корректность администр
 Задачи 1.1, 1.2 и 1.3 завершены.
 
 Интеграционные проверки ingestion в задаче 5.2 остаются открытыми и выполняются после реализации приложения.
+
+Для CLI smoke выполнить два последовательных запуска в разные файлы при неизменном источнике
+и сравнить их байты. Администратор отдельно сверяет полный допустимый корпус, Markdown,
+metadata и locale-aware URL нескольких страниц. Границы и fail-closed состояния проверяются
+на контролируемых данных без изменения рабочих страниц. В отчёте сохранить только версии,
+число документов, размер snapshot и результат проверок, без credentials и содержимого страниц.
