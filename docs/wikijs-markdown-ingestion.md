@@ -300,7 +300,7 @@ chago_rag
 
 | Переменная | Значение |
 | --- | --- |
-| `WIKI_DB_HOST` | обязательный PostgreSQL host |
+| `WIKI_DB_HOST` | обязательный PostgreSQL host; `db` для целевой Docker-топологии |
 | `WIKI_DB_PORT` | integer 1..65535, `5432` по умолчанию |
 | `WIKI_DB_NAME` | обязательная БД Wiki.js |
 | `WIKI_DB_USER` | отдельная ingestion-роль |
@@ -324,6 +324,46 @@ docker compose config --quiet
 Старые `WIKI_BASE_URL`, `WIKI_TOKEN`, `WIKI_TIMEOUT_SECONDS` новым ingestion не используются.
 
 ---
+
+## Docker networks и требования запуска
+
+Wiki.js и PostgreSQL работают в отдельном Compose-проекте. Сеть `wiki_default`
+принадлежит этому проекту; PostgreSQL имеет в ней стабильный Docker DNS alias `db`.
+Chago подключает только `app` одновременно к двум сетям: своей `default` для связи
+с `llm` по `http://llm:8080` и `wiki_default` для PostgreSQL ingestion.
+Сервис `llm` остаётся только в default-сети Chago и не получает доступа к Wiki.js network.
+
+В Chago сеть `wiki_default` объявлена с `external: true` и явным именем.
+Chago не создаёт эту сеть и не управляет её жизненным циклом: она должна существовать
+до запуска Chago, после подготовки отдельного Wiki.js Compose-проекта.
+Отсутствие внешней сети препятствует запуску `app`, даже если ingestion не вызывается.
+
+Для ingestion внутри `app` задать `WIKI_DB_HOST=db` и `WIKI_DB_PORT=5432`
+через environment/secrets. Docker DNS разрешает alias в актуальный адрес PostgreSQL;
+динамический container IP может измениться при пересоздании контейнера и не должен
+использоваться в конфигурации. Публиковать PostgreSQL port на host специально для
+Chago не требуется. Alias `db` относится к Docker network, а не к локальному Python
+процессу на Windows или host Linux.
+
+Сетевая доступность не отменяет PostgreSQL permission boundary: ingestion использует
+отдельную роль `chago_rag`, которой разрешён только `SELECT` из
+`rag.rag_wikijs_pages_v1`, без прямого доступа к внутренним таблицам Wiki.js.
+Реальные credentials остаются только в environment/secrets и не хранятся в репозитории.
+
+После deploy / `git pull` на Linux-сервере из корня Chago проверить актуальный Compose
+без вывода resolved secrets, затем пересоздать `app` с подключением к обеим сетям
+и проверить разрешение alias из запущенного контейнера:
+
+```sh
+docker compose config --quiet
+docker compose up -d --build app
+docker compose exec -T app python -c 'import socket; socket.getaddrinfo("db", 5432); print("db: DNS OK")'
+```
+
+Команды должны завершиться с exit code 0. DNS-проверка не проверяет PostgreSQL
+authentication, permissions или CLI ingestion и не закрывает live smoke 5.2.
+Эти проверки выполняются реально на целевом Linux-сервере; локальное Windows-окружение
+без целевого Docker runtime их не подтверждает.
 
 ## Ручной ingestion
 
@@ -493,9 +533,14 @@ WIKI_DB_* и WIKI_SOURCE_ORIGIN не заданы в environment текущег�
 defaults, mount `./data:/data` и команда запуска сверены с config loader,
 HTTP entry point и Dockerfile. Все 126 целевых offline-тестов и 46 regression-тестов
 прошли вне sandbox (внутри sandbox временные каталоги pytest блокируются `WinError 5`).
-`docker compose config --quiet` выполнить невозможно: Docker CLI отсутствует
-в PATH и стандартном пути установки Docker Desktop. Задача 4.3 остаётся открытой
-до выполнения этой обязательной проверки в тестовом окружении без resolved secrets.
+В локальном Windows-окружении Docker CLI отсутствует в PATH и стандартном пути
+установки Docker Desktop. По предоставленному пользователем результату на целевом
+Linux-сервере выполнены `docker compose config --quiet` и `echo $?`:
+Compose завершился с exit code 0 без вывода. Resolved secrets не выводились.
+Этот результат относится к прежней версии Compose. Для актуальной версии с внешней
+сетью `wiki_default` server-side проверку 4.3 необходимо повторить после `git pull`:
+`docker compose config --quiet` должен завершиться с exit code 0, прежде чем считать
+4.3 окончательно подтверждённой. До повторной проверки задача 4.3 открыта.
 Live smoke 5.2 не выполнялся: обязательные `WIKI_DB_HOST`, `WIKI_DB_NAME`,
 `WIKI_DB_USER`, `WIKI_DB_PASSWORD`, `WIKI_SOURCE_ORIGIN` не заданы ни в environment
 процесса, ни в локальном `.env`. Задача 5.2 остаётся открытой.

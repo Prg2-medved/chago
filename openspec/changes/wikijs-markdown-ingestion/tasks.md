@@ -68,6 +68,8 @@
 - [x] 4.2 Добавить CLI `python -m app.ingestion --output <path>` с отчётом title/path/length, временем запуска, received/saved counts и output path только после записи. Проверка — offline CLI tests на exit codes, безопасную диагностику и отсутствие ложных counts исключённых страниц; документировать локальный запуск и последовательные ручные вызовы.
 - [ ] 4.3 Передать одинаковые переменные через Compose без обязательной ingestion-валидации при старте app, добавить `./data:/data`; описать подготовку data, environment/secrets, Compose ingestion и offline pytest. Проверка — `docker compose config --quiet` в тестовом окружении и сверка команды с Dockerfile, без печати resolved secrets. README.md и ROADMAP.md не менять.
 
+Для актуальной версии Compose с внешней сетью wiki_default повторить server-side проверку 4.3 после git pull: прежний успешный docker compose config --quiet не подтверждает изменённый Compose. После пересоздания `app` проверить разрешение Docker DNS alias db из контейнера по инструкции в docs. До фактической проверки на Linux-сервере 4.3 остаётся открытой.
+
 ## 5. Интеграционная проверка
 
 - [x] 5.1 Запустить целевые config/client/ingestion tests, затем health/llm_check как регрессию общих настроек. Проверка — всё проходит offline без Wiki.js/PostgreSQL, Docker и моделей, `/health` сохраняет контракт без ingestion environment.

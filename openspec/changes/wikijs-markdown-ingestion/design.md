@@ -43,6 +43,30 @@ DB credentials поступают только из environment/secrets. Пер�
 
 CLI из app/: `python -m app.ingestion --output ../data/wiki-documents.json`. Из корня через Compose: `docker compose run --rm --no-deps app python -m app.ingestion --output /data/wiki-documents.json`. Output обязателен. Существующий HTTP app не останавливается: этот этап не меняет индекс. Полный reindex orchestration относится к следующему этапу.
 
+### Docker-соединение Compose-проектов
+
+Wiki.js и PostgreSQL работают в отдельном Compose-проекте, которому принадлежит
+существующая сеть `wiki_default`. PostgreSQL доступен в ней по стабильному Docker
+DNS alias `db`. Chago объявляет эту сеть как `external: true` с именем `wiki_default`:
+не создаёт её и не управляет ею; сеть должна существовать до запуска Chago.
+
+Только `app` подключается к двум сетям: `default` Chago сохраняет связь с `llm`,
+а `wiki_default` обеспечивает PostgreSQL ingestion. `llm` остаётся только в default-сети
+и не получает доступа к Wiki.js network. Для ingestion в контейнере используется
+`WIKI_DB_HOST=db`, port 5432. Динамический container IP не является конфигурацией:
+после пересоздания адрес может измениться, а Docker DNS разрешает стабильный alias.
+Публикация PostgreSQL port на host специально для Chago не требуется.
+
+Сеть обеспечивает достижимость, но PostgreSQL permission boundary сохраняется:
+отдельная роль `chago_rag` читает только `rag.rag_wikijs_pages_v1`, без прямого доступа
+к внутренним таблицам. Реальные credentials остаются в environment/secrets вне репозитория.
+
+После deploy / `git pull` на Linux-сервере требуется повторить проверку 4.3
+`docker compose config --quiet` для новой версии Compose и после пересоздания `app`
+проверить из него разрешение `db` (команды в docs). Прежний результат Compose-проверки
+не подтверждает изменённый файл. Windows-проверки без целевого Docker runtime
+не заменяют эти проверки; DNS resolution не закрывает отдельный live CLI smoke 5.2.
+
 ### 3. Контракт view и отбор
 
 Выбран вариант 1: view возвращает только допустимые опубликованные Markdown-страницы. Это уменьшает раскрываемый ingestion-роли корпус и исключает дублирование правил отбора в Python. Допуск для общей LAN-аудитории проверяется администратором по SPEC §3.1; права Wiki.js автоматически через PostgreSQL не наследуются.

@@ -17,6 +17,9 @@ services:
       WIKI_SOURCE_ORIGIN: "${WIKI_SOURCE_ORIGIN:-}"
     volumes:
       - ./data:/data
+    networks:
+      - default
+      - wiki_default
     ports:
       - "${APP_HOST:-127.0.0.1}:${APP_PORT:-8000}:8000"
 
@@ -53,3 +56,9 @@ services:
       - --device
       - none
       - --no-webui
+
+networks:
+  default:
+  wiki_default:
+    external: true
+    name: wiki_default
