@@ -5,6 +5,7 @@ venv/
 # Python cache
 __pycache__/
 *.py[cod]
+/app/pytest-cache-files-*/
 
 # Type checking / tests
 .mypy_cache/
