@@ -85,6 +85,7 @@ def write_snapshot(output: Path, source: str, documents: Sequence[Document]) -> 
             temporary = Path(handle.name)
             handle.write(payload)
         os.replace(temporary, output)
+        os.chmod(output, 0o644)
     except (OSError, ValueError, TypeError):
         raise IngestionError("output") from None
     finally:

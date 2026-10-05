@@ -1,7 +1,9 @@
 from dataclasses import FrozenInstanceError
 import hashlib
 import json
+import os
 from pathlib import Path
+import stat
 import subprocess
 import sys
 import tempfile
@@ -54,6 +56,34 @@ def test_snapshot_contract(rows, tmp_path):
     assert snapshot["source"] == SOURCE
     assert snapshot["documents"][1]["markdown"] == rows[0]["markdown"]
     assert set(snapshot) == {"schema_version", "source", "documents"}
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX permission bits are required")
+@pytest.mark.parametrize("existing", [True, False])
+@pytest.mark.parametrize("empty", [True, False])
+def test_snapshot_mode(rows, tmp_path, existing, empty):
+    output = tmp_path / "snapshot.json"
+    if existing:
+        output.write_bytes(b"old snapshot")
+        output.chmod(0o600)
+    write_snapshot(output, SOURCE, [] if empty else build_documents(rows, SOURCE))
+    assert stat.S_IMODE(output.stat().st_mode) == 0o644
+
+
+def test_chmod_after_publication(rows, tmp_path, monkeypatch):
+    output = tmp_path / "snapshot.json"
+    chmod = MagicMock()
+
+    def check_publication(path, mode):
+        assert path == output
+        assert mode == 0o644
+        assert len(json.loads(output.read_bytes())["documents"]) == len(rows)
+        assert not list(tmp_path.glob("*.tmp"))
+
+    chmod.side_effect = check_publication
+    monkeypatch.setattr("app.ingestion.os.chmod", chmod)
+    write_snapshot(output, SOURCE, build_documents(rows, SOURCE))
+    chmod.assert_called_once_with(output, 0o644)
 
 
 @pytest.mark.parametrize("field", ["page_id", "locale", "path", "title", "markdown", "updated_at"])
@@ -134,6 +164,9 @@ def test_failure_preserves_target(rows, settings, tmp_path, monkeypatch, existin
     output = tmp_path / "snapshot.json"
     if existing:
         output.write_bytes(b"old snapshot")
+    old_mode = output.stat().st_mode if existing else None
+    chmod = MagicMock()
+    monkeypatch.setattr("app.ingestion.os.chmod", chmod)
     monkeypatch.setattr("app.ingestion.fetch_pages", lambda _: rows)
 
     def fail(*args, **kwargs):
@@ -158,9 +191,11 @@ def test_failure_preserves_target(rows, settings, tmp_path, monkeypatch, existin
         ingest(settings, output)
     if existing:
         assert output.read_bytes() == b"old snapshot"
+        assert output.stat().st_mode == old_mode
     else:
         assert not output.exists()
     assert not list(tmp_path.glob("*.tmp"))
+    chmod.assert_not_called()
 
 
 @pytest.mark.parametrize("stage", ["fetch", "commit"])
