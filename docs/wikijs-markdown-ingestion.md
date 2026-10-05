@@ -30,7 +30,8 @@ View возвращает 24 ожидаемые публичные опубли�
 
 Проверены эффективные права через `PUBLIC`, доступные функции `public` и основные варианты publication period. Обнаруженного пути обхода read-only границы Wiki.js нет.
 
-Задачи 1.1–1.3 завершены. Интеграционная live-проверка CLI в задаче 5.2 остаётся открытой.
+Задачи 1.1–1.3, 4.3 и 5.2 завершены. Фактическое evidence с целевого Linux-сервера
+предоставлено пользователем 2026-10-05 и зафиксировано в разделе Live smoke.
 
 ---
 
@@ -537,13 +538,10 @@ HTTP entry point и Dockerfile. Все 126 целевых offline-тестов �
 установки Docker Desktop. По предоставленному пользователем результату на целевом
 Linux-сервере выполнены `docker compose config --quiet` и `echo $?`:
 Compose завершился с exit code 0 без вывода. Resolved secrets не выводились.
-Этот результат относится к прежней версии Compose. Для актуальной версии с внешней
-сетью `wiki_default` server-side проверку 4.3 необходимо повторить после `git pull`:
-`docker compose config --quiet` должен завершиться с exit code 0, прежде чем считать
-4.3 окончательно подтверждённой. До повторной проверки задача 4.3 открыта.
-Live smoke 5.2 не выполнялся: обязательные `WIKI_DB_HOST`, `WIKI_DB_NAME`,
-`WIKI_DB_USER`, `WIKI_DB_PASSWORD`, `WIKI_SOURCE_ORIGIN` не заданы ни в environment
-процесса, ни в локальном `.env`. Задача 5.2 остаётся открытой.
+Этот результат относится к прежней версии Compose. По evidence пользователя
+от 2026-10-05 актуальный Compose с внешней сетью `wiki_default` проверен на Linux:
+`docker compose config --quiet` — exit code 0; `app → db:5432` и `app → llm:8080` —
+Docker DNS OK. Задача 4.3 подтверждена. Фактический live smoke 5.2 приведён ниже.
 
 ## Live smoke
 
@@ -568,10 +566,85 @@ Live smoke 5.2 не выполнялся: обязательные `WIKI_DB_HOST
 
 Задачи 1.1, 1.2 и 1.3 завершены.
 
-Интеграционные проверки ingestion в задаче 5.2 остаются открытыми и выполняются после реализации приложения.
+### Фактический CLI smoke 5.2 на Linux
 
-Для CLI smoke выполнить два последовательных запуска в разные файлы при неизменном источнике
-и сравнить их байты. Администратор отдельно сверяет полный допустимый корпус, Markdown,
-metadata и locale-aware URL нескольких страниц. Границы и fail-closed состояния проверяются
-на контролируемых данных без изменения рабочих страниц. В отчёте сохранить только версии,
-число документов, размер snapshot и результат проверок, без credentials и содержимого страниц.
+Результаты предоставлены пользователем 2026-10-05. Smoke фактически выполнен
+на целевом Linux-сервере через реальный Wiki.js PostgreSQL после 1.1–1.3;
+при фиксации evidence локально не повторялся.
+
+```sh
+docker compose run --rm --no-deps app python -m app.ingestion --output /data/wiki-documents.json
+```
+
+Первый зафиксированный запуск:
+
+```text
+started_at=2026-10-02T13:38:50.633577+00:00
+duration_seconds=0.016
+received=24
+saved=24
+output=/data/wiki-documents.json
+snapshot_bytes=276756
+documents=24
+```
+
+При повторном ingestion с неизменным источником SHA-256 полного файла до и после
+запуска совпал: snapshot побайтово идентичны. Сам hash полного файла в evidence
+не указан.
+
+Прямое сравнение полного `rag.rag_wikijs_pages_v1` со snapshot:
+`view_count=24`, `snapshot_count=24`, `errors=0`, `FULL CORPUS MATCH: OK`.
+Для всего корпуса сравнивались `page_id`, `locale`, `path`, `title`, `markdown`,
+нормализованный `updated_at`, locale-aware `source_url`, `content_sha256`
+и длина Markdown в Unicode code points.
+
+Три реальные страницы дополнительно сравнены непосредственно с `public.pages`.
+Содержимое, названия и пути здесь не приводятся. Длины source/snapshot и SHA-256
+UTF-8 исходного Markdown совпали:
+
+| page_id | Locale | Source/snapshot length | Source/snapshot SHA-256 |
+| --- | --- | --- | --- |
+| 3 | ru | 1819 | `d4f3e22166fd7927f8d0b1970fe41b23d978bac5fce5d05955b792718f909f56` |
+| 4 | ru | 1029 | `94a94d745cefa1e113097b8d4bb76baef476ac9602ef4a64fb1044bfa7ebcd47` |
+| 17 | ru | 44912 | `67cffefdd265c6840ae8aa141c2b94e5a54f072e0db89b3736cba8e6a7d73336` |
+
+| page_id | Source updatedAt | Snapshot updated_at |
+| --- | --- | --- |
+| 3 | `2026-03-05T11:56:15.222Z` | `2026-03-05T11:56:15.222000Z` |
+| 4 | `2025-04-09T08:13:00.691Z` | `2025-04-09T08:13:00.691000Z` |
+| 17 | `2026-07-17T11:56:12.793Z` | `2026-07-17T11:56:12.793000Z` |
+
+Locale-aware URL корректны для всех трёх страниц: locale `ru` включена,
+для страниц 3 и 17 подтверждено percent-encoding русского path.
+
+Live-аудит текущего `public.pages`:
+
+| contentType | editorKey | isPublished | isPrivate | Count |
+| --- | --- | --- | --- | --- |
+| html | ckeditor | true | false | 7 |
+| markdown | markdown | true | false | 24 |
+
+Других комбинаций нет. Locale: `ru=31`. Publication period:
+`total_pages=31`, `open_start=31`, `nonempty_start=0`, `open_end=31`,
+`nonempty_end=0`. View содержит 24 страницы. Подтверждены однозначный mapping
+format/editor/publication, отсутствие дополнительных необработанных состояний
+потенциального корпуса и корректный отбор всех 24 Markdown-страниц.
+
+Проверки периода уже реально выполнены в 1.1 на контролируемых данных без изменения
+рабочих страниц: открытые границы, действующий период, future start, expired end,
+exact start, exact end, malformed period. Malformed и неподтверждённые значения
+fail-closed исключаются из view без ошибки `SELECT`. Эти результаты используются
+для 5.2; проверки на рабочих страницах не повторялись. Текущий аудит дополнительно
+подтверждает отсутствие неизвестных или неоднозначных состояний live-корпуса.
+
+| Runtime | Version |
+| --- | --- |
+| Wiki.js | 2.5.307 |
+| PostgreSQL | 15.12 |
+| Docker | 29.3.0 |
+| Docker Compose | v5.1.1 |
+| Python | 3.12.15 |
+| psycopg | 3.3.6 |
+
+Все требования 5.2 подтверждены предоставленным фактическим evidence и ранее
+выполненными контролируемыми проверками 1.1. Задача 5.2 завершена.
