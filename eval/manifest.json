@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "corpus_version": 1,
+  "live": {
+    "source": "http://192.168.12.100:8800",
+    "sha256": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+    "document_count": 24,
+    "documents": [
+      {
+        "page_id": 2,
+        "locale": "ru",
+        "path": "home",
+        "content_sha256": "0a48ee9fb05bc7477ef8e0abfdee8c4caa35cb6d273e19dad2277fe2a26beac7"
+      },
+      {
+        "page_id": 3,
+        "locale": "ru",
+        "path": "Сервер",
+        "content_sha256": "d4f3e22166fd7927f8d0b1970fe41b23d978bac5fce5d05955b792718f909f56"
+      },
+      {
+        "page_id": 4,
+        "locale": "ru",
+        "path": "wiki-set",
+        "content_sha256": "94a94d745cefa1e113097b8d4bb76baef476ac9602ef4a64fb1044bfa7ebcd47"
+      },
+      {
+        "page_id": 5,
+        "locale": "ru",
+        "path": "kamchatka/Микросервисы/br-invent",
+        "content_sha256": "73b4408abcfa8fc0c78f6ab6e5a8bebdf63519469780f001b1a7b307c822297e"
+      },
+      {
+        "page_id": 12,
+        "locale": "ru",
+        "path": "kamchatka/Обмен_данными/Redis",
+        "content_sha256": "e4404b1389b5ea8f48872dfa5f1311289b35f4943ed5fadc736d0af364cb27d2"
+      },
+      {
+        "page_id": 17,
+        "locale": "ru",
+        "path": "kamchatka/Обмен_данными/RabbitMQ",
+        "content_sha256": "67cffefdd265c6840ae8aa141c2b94e5a54f072e0db89b3736cba8e6a7d73336"
+      },
+      {
+        "page_id": 19,
+        "locale": "ru",
+        "path": "kamchatka/Микросервисы/rb-route-plan",
+        "content_sha256": "ff58a5b88759d93cd041c6bc3ea741e536419336af7bbc7e12e08fdcfbb13c1b"
+      },
+      {
+        "page_id": 20,
+        "locale": "ru",
+        "path": "kamchatka/опеределения",
+        "content_sha256": "162aaa108ab8cd4d8ac96c030895ba6a146446de948378c038f8fa68e01a9047"
+      },
+      {
+        "page_id": 22,
+        "locale": "ru",
+        "path": "kamchatka/start_application",
+        "content_sha256": "9fd521cf93833e4992acd0d89964285f9418ca65e152684da0ed401cb566e317"
+      },
+      {
+        "page_id": 23,
+        "locale": "ru",
+        "path": "kamchatka/Микросервисы/br-config",
+        "content_sha256": "14aeb15ee637a456a7f818866e11c544fa9d7b8ad5a0dc2569e686c261f58e59"
+      },
+      {
+        "page_id": 24,
+        "locale": "ru",
+        "path": "kamchatka/Микросервисы/br-monitor",
+        "content_sha256": "5fd04f1e4303df12bb598601ffaad19a58a0819689dbdeec84d6ead89c1a5173"
+      },
+      {
+        "page_id": 26,
+        "locale": "ru",
+        "path": "kamchatka/Микросервисы/br-front",
+        "content_sha256": "c9033bcda6e7488a9e6081ca179e2b0dce10cca1e174225c3a84a7d6140337bf"
+      },
+      {
+        "page_id": 27,
+        "locale": "ru",
+        "path": "kamchatka/Микросервисы/br-motion",
+        "content_sha256": "a28f57809d66c315a3a0ddc2e3d61f7b7e2cb85ee018fa9ebf6ac08e9da6279f"
+      },
+      {
+        "page_id": 29,
+        "locale": "ru",
+        "path": "kamchatka/users",
+        "content_sha256": "22d7d32f1e29e0c7a06bee1b6806b91e5ddd27f519f5e34a484d15cf8668c642"
+      },
+      {
+        "page_id": 37,
+        "locale": "ru",
+        "path": "dev_path",
+        "content_sha256": "3b8d51173c85e2fab360a48a42d80a9e6dac33e2ff4a89a8c461bb38e6acc8c7"
+      },
+      {
+        "page_id": 39,
+        "locale": "ru",
+        "path": "kamchatka/Микросервисы/br-manager",
+        "content_sha256": "7525a705f63b66b32fc16ece1c215a1e3816c44e6e9c074c0ce56f7b3fc32aef"
+      },
+      {
+        "page_id": 40,
+        "locale": "ru",
+        "path": "sla",
+        "content_sha256": "360dd043eec04d2379bc7eef6e3bc35fae77c16996f7193fb765b9a75e932a9c"
+      },
+      {
+        "page_id": 41,
+        "locale": "ru",
+        "path": "минцифра",
+        "content_sha256": "7be23abcb1be2667be6d281c2b6b8c1f575adfac12a1ca66f5053e660944c102"
+      },
+      {
+        "page_id": 42,
+        "locale": "ru",
+        "path": "Distribution_Registry",
+        "content_sha256": "1c0bdee1b8491fbae0f5bae1aeea65dea3c22c669eb3679e1b7f8fe90dd53f4b"
+      },
+      {
+        "page_id": 43,
+        "locale": "ru",
+        "path": "Сервер_на_объекте",
+        "content_sha256": "80e366886d2f507178045911ffbe6e428d6d0071a155210fe9240086c4c6b035"
+      },
+      {
+        "page_id": 44,
+        "locale": "ru",
+        "path": "kamchatka/user_manual",
+        "content_sha256": "11a864ea1160e851b0ade37045b4d9aa9499fd9697a24e31fb4a249c69d159b4"
+      },
+      {
+        "page_id": 45,
+        "locale": "ru",
+        "path": "kamchatka/Функции_WCS/Блокировка_устройства",
+        "content_sha256": "862b9c48c922e18fb9e7ee848de876cba3a855bc744a79a1ccea36c394126314"
+      },
+      {
+        "page_id": 46,
+        "locale": "ru",
+        "path": "kamchatka/scripts",
+        "content_sha256": "d346e667957fb91d432365fbd3dc1e641942d0cee000511ce84a6e4c4611bc89"
+      },
+      {
+        "page_id": 47,
+        "locale": "ru",
+        "path": "kamchatka/example-env",
+        "content_sha256": "3044626691cd835c24bf5d06e958a9942a3f1794bdfb6052dd3e7cc1d0c7487f"
+      }
+    ]
+  },
+  "synthetic": {
+    "source": "https://wiki.example",
+    "sha256": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+    "document_count": 1,
+    "documents": [
+      {
+        "page_id": 1,
+        "locale": "ru",
+        "path": "synthetic/log-retention",
+        "content_sha256": "e62868aa55cdbd0c2248837451f593a1f970fc0d20d5f59da31d5eb0e19c32e6"
+      }
+    ]
+  }
+}
