@@ -7,16 +7,17 @@ the local tokenizers API stub. OpenSpec strict validation passed. Real pinned
 E5 runs, hashes, source coverage, evidence and safe citation selections are in
 `docs/markdown-chunking.md`.
 
-Remaining verification for 3.3 and 3.4 targets the Linux repository
-`~/chago-llm/chago`. Exact commands and expected assertions are prepared in
-`docs/markdown-chunking-server-checks.sh` and `docs/markdown-chunking.md`.
-Actual server results have not been received: Compose fixture CLI and container
-app-only startup/health without assets remain unverified. Local fixture commands
-and missing-assets controlled CLI error are verified. Compose configuration,
-HTTP settings, README/ROADMAP,
-ingestion snapshots and frozen corpus are unchanged. Keep both tasks pending
-until actual container checks run; no container acceptance is inferred from
-local tests.
+Server acceptance for 3.3/3.4: the user reported successful execution of
+`docs/markdown-chunking-server-checks.sh` in `~/chago-llm/chago` on the target
+Linux server, ending with `PASS: all server checks complete`. Tokenizer asset
+SHA-256 checks passed; both Compose fixture runs were identical (1 document,
+1 chunk, max body/input 45/67 tokens). App-only startup with no tokenizer files,
+Wiki.js, LLM or network returned HTTP 200 with `{"status":"ok"}`. Missing-assets
+CLI returned exit 1 and `chunking: tokenizer_assets`, preserving the old output.
+The user confirmed README/ROADMAP, compose.yaml, frozen snapshot, evaluation
+manifest/questions/fixture and tokenizer assets remained unchanged. This is
+user-reported actual server evidence, not an independently repeated agent run.
+Both tasks are complete; no verification blockers remain.
 
 ## 1. Контракт данных и локальный token budget
 
@@ -36,8 +37,8 @@ local tests.
 
 - [x] 3.1 Реализовать stable chunk IDs, deterministic ordering и versioned chunks JSON с исходными documents; проверить побайтовый повторный output при перестановке documents, изменение IDs при изменении metadata/settings/tokenizer и отсутствие live/synthetic collisions.
 - [x] 3.2 Добавить CLI `python -m app.chunking --input ... --output ... --tokenizer-path ...`, controlled diagnostics, counts/maxima и atomic output; проверить subprocess tests на успешный запуск, invalid snapshot/settings/tokenizer, write/replace failure, сохранение старого output и защиту input/tokenizer от перезаписи, включая aliases.
-- [ ] 3.3 Использовать для Compose CLI assets в `data/tokenizers/<immutable-revision>/` через существующий mount `./data:/data`, без отдельного постоянного tokenizer mount и без изменения Compose configuration; adapter только читает assets. При необходимости описать CLI path в `.env.example`, не добавляя его validation в HTTP settings. Проверить документированный chunking run, обычный container app-only startup/health при отсутствующих tokenizer files и без Wiki.js/LLM; отдельно подтвердить controlled error CLI при отсутствии assets.
-- [ ] 3.4 Завершить local/Compose команды и recovery/output guidance в `docs/markdown-chunking.md`; выполнить команды как написано на fixture, проверить, что README.md/ROADMAP.md и ingestion snapshots не изменены.
+- [x] 3.3 Использовать для Compose CLI assets в `data/tokenizers/<immutable-revision>/` через существующий mount `./data:/data`, без отдельного постоянного tokenizer mount и без изменения Compose configuration; adapter только читает assets. При необходимости описать CLI path в `.env.example`, не добавляя его validation в HTTP settings. Проверить документированный chunking run, обычный container app-only startup/health при отсутствующих tokenizer files и без Wiki.js/LLM; отдельно подтвердить controlled error CLI при отсутствии assets.
+- [x] 3.4 Завершить local/Compose команды и recovery/output guidance в `docs/markdown-chunking.md`; выполнить команды как написано на fixture, проверить, что README.md/ROADMAP.md и ingestion snapshots не изменены.
 
 ## 4. Интеграционная приёмка на E5 и frozen corpus
 

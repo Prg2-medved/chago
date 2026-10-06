@@ -173,9 +173,8 @@ docker compose run --rm --no-deps app python -m app.chunking --input /data/chunk
 No Compose configuration or permanent tokenizer mount was added. Normal
 app-only startup does not require tokenizer files, Wiki.js or LLM. The existing
 external `wiki_default` Docker network must already exist for Compose runs.
-CLI alone requires tokenizer assets. Container acceptance remains pending until
-actual results arrive from the target Linux server; the commands above have
-not been claimed as executed there.
+CLI alone requires tokenizer assets. Container acceptance for tasks 3.3/3.4 is
+complete based on the user-reported actual target Linux server results below.
 
 ### Target Linux server checks for tasks 3.3/3.4
 
@@ -217,9 +216,27 @@ Send that final line plus `cli-1.log`, `cli-2.log`,
 `fixture-verification.log`, `health-verification.log`,
 `missing-assets-verification.log`, and `image-id.txt` from the printed directory.
 No full Markdown, `.env`, Compose environment dump or credentials are needed.
-If a check fails, send its diagnostic and exit code instead. These commands
-have been prepared, not executed on the server: tasks 3.3/3.4 remain unchecked
-until actual server results are received.
+If a future check fails, send its diagnostic and exit code instead.
+
+### Actual server acceptance results
+
+The user reported successful execution of the server check script in
+`~/chago-llm/chago` on the target Linux server. The reported final result was
+`PASS: all server checks complete`. The agent did not independently rerun
+these remote checks; the following evidence records the user's actual run:
+
+- SHA-256 checks for tokenizer assets: OK.
+- Two Compose fixture CLI runs: identical output; 1 document, 1 chunk,
+  max body 45 tokens and max full input 67 tokens.
+- Ordinary app-only startup without tokenizer/Wiki.js/LLM and without network:
+  `/health` returned HTTP 200 with `{"status":"ok"}`.
+- CLI without tokenizer assets: exit 1, `chunking: tokenizer_assets`;
+  previous output preserved.
+- README.md, ROADMAP.md, compose.yaml, frozen snapshot, evaluation manifest,
+  questions, fixture and tokenizer assets remained unchanged.
+
+These actual results complete tasks 3.3 and 3.4. No remote duration, image ID or
+artifact directory is asserted because those details were not supplied.
 
 ## Verification evidence (2026-10-06)
 
@@ -286,4 +303,4 @@ Regression emitted the existing Starlette/httpx deprecation warning. Mypy
 passed both changed modules. `openspec validate markdown-chunking --strict`
 passed. Scoped review confirmed no embeddings/retrieval/SQLite/API, Compose,
 HTTP settings, README/ROADMAP or ingestion/corpus changes. Container acceptance
-for tasks 3.3/3.4 remains pending.
+for tasks 3.3/3.4 is complete per the user-reported server results above.
