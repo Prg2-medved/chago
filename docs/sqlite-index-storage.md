@@ -114,10 +114,8 @@ From `app/`:
 
 The real chunking round-trip test uses local E5 assets when installed and skips
 explicitly when absent; it builds synthetic Markdown without changing the frozen
-corpus. CLI tests run without Wiki/LLM environment settings. On this workspace
-Docker is unavailable (no executable in PATH or the standard Docker Desktop
-location), so container acceptance remains pending. A symlink test may skip on
-Windows when the account lacks symlink privileges.
+corpus. CLI tests run without Wiki/LLM environment settings. A symlink test may
+skip on Windows when the account lacks symlink privileges.
 
 Workspace verification: storage/CLI tests passed (103 passed, 1 symlink skip),
 health/chunking CLI checks passed (9 passed, 1 symlink skip), and mypy reported
@@ -125,3 +123,11 @@ no issues. The local CLI example was exercised with isolated files under
 `tmp/storage-acceptance/`, reporting one document, one chunk and storage version 1.
 The real E5 chunking round-trip passed with the installed assets. Health tests
 emit the existing Starlette/httpx deprecation warning.
+
+Server acceptance was reported successful by the user on 2026-10-08 on Linux /
+Docker Compose. The real Compose CLI returned exit code 0 with `documents=1`,
+`chunks=1` and `storage_version=1`; the SQLite snapshot was created through the
+existing `/data` mount. `PRAGMA integrity_check` returned `ok` and
+`PRAGMA foreign_key_check` returned `[]`. Both hardlink and symlink input aliases
+were rejected with exit code 1, preserving the original JSON. This completes
+container acceptance independently of Docker availability in the local workspace.

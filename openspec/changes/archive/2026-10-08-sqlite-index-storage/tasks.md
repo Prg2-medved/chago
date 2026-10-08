@@ -16,7 +16,7 @@
 ## 3. Administrative command
 
 - [x] 3.1 Добавить python -m app.index_storage --input --output с input alias protection, безопасными error categories и counts/version report; проверить subprocess tests/test_index_storage_cli.py для успеха, input symlink/hardlink, invalid JSON и filesystem failures.
-- [ ] 3.2 Документировать рабочие local и
+- [x] 3.2 Документировать рабочие local и
   `docker compose run --rm --no-deps app python -m app.index_storage`
   команды с `/data/storage-snapshot.db` через существующий mount.
   Проверить локальный пример. Реальную Compose-команду проверить в контейнере
@@ -24,8 +24,12 @@
   оставить container acceptance незавершённым с конкретной причиной
 
   Проверка local CLI выполнена на изолированных paths в tmp/storage-acceptance:
-  documents=1, chunks=1, storage_version=1. Container acceptance не выполнен:
-  Docker отсутствует в PATH и в стандартном каталоге Docker Desktop.
+  documents=1, chunks=1, storage_version=1. Серверная container acceptance
+  подтверждена пользователем 2026-10-08 на Linux / Docker Compose:
+  реальный Compose CLI завершился с exit code 0, documents=1, chunks=1,
+  storage_version=1; SQLite snapshot создан через существующий /data mount.
+  PRAGMA integrity_check → ok, PRAGMA foreign_key_check → [].
+  Hardlink и symlink aliases отклонены с exit code 1, исходный JSON не изменился.
 
 ## 4. Integration verification
 
