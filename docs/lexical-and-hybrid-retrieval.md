@@ -1,5 +1,26 @@
 # Lexical and hybrid retrieval
 
+## Technical completion and quality handoff, 2026-10-09
+
+The project owner separated technical completion from retrieval quality
+acceptance. Implementation, regression checks, reproducible comparison and
+actual server acceptance are complete. Measured hybrid Hit@5 remains **6/12
+(50%)**; the mandatory MVP **>=90%** target has **not** been achieved.
+The original task 5.5 criterion remained unmet. Its revised completion criterion
+records the failure, [six-case diagnostics](lexical-and-hybrid-retrieval-diagnostics.md)
+and transfer of quality work to the separate `retrieval-quality-improvement`
+stage in [ROADMAP](../ROADMAP.md), with the target retained in
+[SPEC](../SPEC.md) sections 12.5, 27 and stage 4a. Technical task completion
+and archiving do not mean quality acceptance. Future functionality needs a new
+OpenSpec proposal/design; the frozen corpus, expectations, reports, retrieval
+settings and previous baselines remain unchanged. Historical task-status
+statements in the measurement records below describe the state before this decision.
+
+OpenSpec confirmed `all_done` (25/25 current task criteria). The technical
+change is [archived](../openspec/changes/archive/2026-10-09-lexical-and-hybrid-retrieval/tasks.md)
+and its lexical/hybrid/semantic delta specs are synced to main specs. The next
+step is a separate proposal from ROADMAP stage 9, not implementation in this archive.
+
 ## Storage and offline build
 
 The FTS extension preserves base storage v1 and semantic format v1. Lexical
@@ -151,6 +172,8 @@ Quality acceptance requires measured hybrid live single-question Hit@5 >=90%
 on both splits together, with separate split/follow-up results. A lower score
 leaves acceptance open and lists miss IDs; it does not authorize changing frozen
 expectations, chunking, model, reranker or denominators.
+This is an MVP quality criterion for the separate improvement stage, rather
+than an archive blocker for the completed technical lexical/hybrid stage.
 
 ## Target Linux/Docker procedure
 
@@ -200,12 +223,13 @@ Swap max si/so: 16/0 KiB/s; available RAM after the test: 7.8 GiB; free disk:
 16 GiB. Working containers were unchanged (`container_diff_exit_code=0`) and
 were not restarted. These observations describe the measured samples.
 
-**Task 5.4 is complete; task 5.5 remains open.** Hybrid quality is 50%, below
+**Historical state before the owner's completion decision: task 5.4 complete;
+original task 5.5 open.** Hybrid quality is 50%, below
 the 90% target; miss IDs are q02, q03, q04, q07, q08, q18. The server summary
 does not provide build timings, cold/warm query latency, Wiki.js p95 or separate
 split/follow-up metrics; initialization is not query latency. Further limits
 of the supplied data are listed in the server report. Development values below
-remain separate. The change has not been archived.
+remain separate. The change was not archived at the time of that server record.
 
 ## Development measurements, 2026-10-09
 
@@ -233,8 +257,8 @@ Synthetic holdout single-question is 1/1 in each mode; synthetic tuning has
 no cases. Synthetic, follow-up, refuse and clarify remain outside the live
 single-question aggregate. Hybrid changes q11 from semantic miss to hit without
 regressing semantic hits. Hybrid misses: q02, q03, q04, q07, q08, q18; follow-up
-misses q09/q10. **Quality target >=90% is not achieved. Task 5.5 remains open;
-this change has not passed retrieval quality acceptance.** Frozen corpus,
+misses q09/q10. **Quality target >=90% is not achieved; retrieval quality
+acceptance has not passed. The original task 5.5 was open at measurement time.** Frozen corpus,
 reference, chunking, model and old baseline remain unchanged.
 
 | Mode | Initialization, s | First query, s | Warm mean/query, s | Process peak memory, bytes |

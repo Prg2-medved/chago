@@ -13,6 +13,12 @@
 - Сохранить существующий semantic API/CLI и добавить сравнение semantic, lexical и hybrid на неизменном `rag-evaluation-corpus` с протоколом evidence Hit@5, разделением namespaces, splits и follow-up.
 - Выполнить измерения и явно показать достижение или недостижение целевого live Hit@5 ≥90%; не добавлять reranker, генерацию ответов или orchestration полного reindex.
 
+## Completion decision, 2026-10-09
+
+Владелец проекта отделил завершение технической реализации от общего критерия качества retrieval. Реализация и фактическая серверная приёмка завершены; измерено **6/12 (50%)**, quality acceptance **не пройден**. Исторический критерий задачи 5.5 «подтвердить ≥90%» не выполнен. Актуальный критерий этой задачи — сохранить результаты и диагностику шести misses, явно передать достижение ≥90% отдельному этапу `retrieval-quality-improvement` и согласовать требования без изменения baseline или retrieval.
+
+Технический change завершается при выполнении implementation/regression/server checks и документировании недостигнутого качества. Обязательный порог MVP сохраняется в SPEC §§12.5, 27 и ROADMAP; будущий функционал оформляется новым proposal/design. [Диагностика](../../../../docs/lexical-and-hybrid-retrieval-diagnostics.md) фиксирует причины, включая минимум шесть chunks для полного evidence q03 на исходном snapshot. Никакое закрытие tasks или архивирование не обозначает достижение quality acceptance.
+
 ## Capabilities
 
 ### New Capabilities

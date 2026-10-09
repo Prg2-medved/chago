@@ -75,7 +75,7 @@ Semantic reader SHALL открывать существующий файл бе�
 - **THEN** StorageReader и SemanticIndex SHALL отклонять snapshot по существующим base checks; SemanticIndex SHALL выполнять base validation до проверки extension
 
 ### Requirement: Ranked semantic chunk search
-Система SHALL возвращать top-k chunks по cosine similarity нормализованных embeddings, с default k=10 и явно заданным положительным целым k. При k больше inventory SHALL возвращаться все chunks, при пустом inventory — пустой список. Результаты SHALL сортироваться по убыванию score и при равенстве по chunk ID по возрастанию. Каждый результат SHALL содержать rank, finite score, chunk ID и исходные metadata/provenance для lookup и дословного цитирования; source namespaces SHALL NOT смешиваться. Scores SHALL NOT считаться вероятностью ответа либо основанием автоматического отказа. Этот этап SHALL NOT добавлять lexical search, RRF, reranking или генерацию ответов.
+Система SHALL возвращать top-k chunks по cosine similarity нормализованных embeddings, с default k=10 и явно заданным положительным целым k. При k больше inventory SHALL возвращаться все chunks, при пустом inventory — пустой список. Результаты SHALL сортироваться по убыванию score и при равенстве по chunk ID по возрастанию. Каждый результат SHALL содержать rank, finite score, chunk ID и исходные metadata/provenance для lookup и дословного цитирования; source namespaces SHALL NOT смешиваться. Scores SHALL NOT считаться вероятностью ответа либо основанием автоматического отказа. Pure semantic API/CLI SHALL NOT выполнять lexical search, RRF, reranking или генерацию ответов; отдельный hybrid mode SHALL быть вправе использовать этот semantic ranking как одну из веток, сохраняя прежний контракт pure semantic поиска.
 
 #### Scenario: Known nearest vectors and ties
 - **WHEN** query сравнивается с заранее известными нормализованными vectors, включая одинаковые scores
@@ -88,6 +88,10 @@ Semantic reader SHALL открывать существующий файл бе�
 #### Scenario: Ordinary retrieval uses only the supplied question
 - **WHEN** вызывается `search(question, k)` или query CLI
 - **THEN** retrieval SHALL использовать только переданный вопрос без хранения истории, context resolution или query rewriting
+
+#### Scenario: Semantic branch reused by hybrid mode
+- **WHEN** отдельный hybrid mode получает semantic candidates совместимого snapshot
+- **THEN** кандидаты имеют прежние cosine scores/order/provenance, а fusion выполняется отдельным режимом без изменения pure semantic API/CLI
 
 ### Requirement: Administrative commands and measured baseline
 Система SHALL предоставлять документированные offline команды build и query из app/ и Compose эквиваленты через существующий data mount. Build report SHALL включать counts и model/index identity без полного Markdown; diagnostics SHALL NOT включать credentials, вопрос или полный текст источников. Query JSON SHALL включать ranked results и provenance как явный результат поиска. Baseline SHALL использовать frozen evaluation corpus без изменения questions/reference/splits, показывать top-5 evidence hits и misses, live/synthetic и tuning/holdout отдельно, фиксировать corpus/index/model fingerprints, параметры, время и peak memory на указанной среде. Полный hit SHALL требовать покрытия всех обязательных source evidence ranges совокупностью source ranges top 5, а не совпадения страницы или generated text. Answerless/refuse/clarify SHALL показываться отдельно от denominator. Baseline SHALL NOT заявлять достигнутый MVP Hit@5 ≥90% без измерений и SHALL NOT делать этот порог условием готовности чистого semantic этапа.

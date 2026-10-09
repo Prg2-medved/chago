@@ -397,6 +397,14 @@ user question
 
 Если evaluation покажет, что нужные chunks часто находятся ниже top 5/top 6, reranker рассматривается как V2.
 
+### 12.5 Техническое завершение и качество retrieval
+
+Технический этап semantic + lexical + hybrid retrieval завершается после проверки реализации, воспроизводимого frozen comparison и серверной приёмки. Измеренный результат ниже целевого порога должен быть сохранён вместе с miss IDs и ограничениями; техническое завершение не означает прохождения quality acceptance.
+
+Достижение **live single-question evidence Hit@5 ≥90%** остаётся обязательной целью MVP (§27) и проверяется на отдельном следующем этапе `retrieval-quality-improvement`. Полный hit требует покрытия всех обязательных source ranges среди top 5; synthetic, follow-up, refuse и clarify не входят в основной denominator. Tuning/holdout и follow-up показываются отдельно.
+
+Конкретные изменения recall, сопоставления терминов, структурных границ chunks и ранжирования обосновываются в новом OpenSpec proposal/design. Перенос проверки качества не разрешает менять frozen corpus, expectations или прежние baseline, подбирать параметры по раскрытому holdout либо расширять архивированный технический change.
+
 ## 13. Ответ только по источникам
 
 LLM получает строгий system prompt.
@@ -765,6 +773,8 @@ MVP считается завершённым, когда выполняются
 - [ ] Не менее чем для 90% answerable evaluation questions все необходимые фрагменты найдены среди top 5 chunks; совпадения только page/path недостаточно.
 - [ ] Точные технические identifiers находятся keyword branch даже если semantic ranking слабый.
 
+Порог **Hit@5 ≥90%** проверяется измерениями на отдельном этапе улучшения retrieval (§12.5, этап 4а ниже). Для основной метрики используются answerable live single-question cases с evidence, отдельно публикуются tuning/holdout и follow-up результаты. Завершение технического lexical/hybrid этапа при меньшем результате не закрывает этот критерий и не означает готовность MVP.
+
 ### Answer generation
 
 - [ ] Используется локальная `Qwen3-4B-Instruct-2507` Q4_K_M.
@@ -875,7 +885,17 @@ MVP считается завершённым, когда выполняются
 - exact technical terms находятся lexical search;
 - semantic + lexical results объединяются через RRF.
 
-Проверка: evaluation retrieval Hit@5 >= 90%.
+Проверка: технические regression checks, воспроизводимый three-mode comparison на frozen corpus и фактическая серверная приёмка. Сохранить измеренный Hit@5, misses и ограничения; достижение ≥90% проверяется на следующем самостоятельном этапе.
+
+### Этап 4а — улучшение качества retrieval
+
+Результат:
+
+- причины недостаточного evidence retrieval диагностированы и устранены в отдельном OpenSpec change;
+- решения по recall, сопоставлению терминов, структурным границам chunks и ранжированию обоснованы измерениями, без заранее выбранной архитектуры;
+- frozen corpus, expectations и прежние baseline сохранены, раскрытый holdout не используется для tuning.
+
+Проверка: live single-question evidence Hit@5 ≥90% по protocol v1 с отдельными tuning/holdout/follow-up результатами и воспроизводимыми измерениями на целевом сервере. При недостижении порога quality acceptance и соответствующий критерий MVP остаются незавершёнными.
 
 ### Этап 5 — llama.cpp + Qwen
 
