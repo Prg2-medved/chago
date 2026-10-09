@@ -289,20 +289,25 @@ def _write_database(path: Path, snapshot: StorageSnapshot) -> None:
     try:
         connection.execute("PRAGMA foreign_keys=ON")
         connection.execute("PRAGMA journal_mode=DELETE")
-        connection.executescript(_SCHEMA)
-        with connection:
-            connection.execute("INSERT INTO snapshot_metadata VALUES (1, ?, ?, ?, ?, ?)",
-                               (snapshot.source, snapshot.schema_version, snapshot.algorithm_version,
-                                _json(snapshot.tokenizer), _json(snapshot.settings)))
-            connection.executemany("INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                                   [(snapshot.source, *asdict(doc).values()) for doc in snapshot.documents])
-            connection.executemany("INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                                   [(chunk.chunk_id, chunk.source, chunk.document.page_id, chunk.ordinal,
-                                     _json(chunk.heading_path), _json(chunk.segments), _json(chunk.source_ranges),
-                                     chunk.search_text, chunk.body_tokens, chunk.input_tokens, _json(chunk.structure))
-                                    for chunk in snapshot.chunks])
+        _write_base_snapshot(connection, snapshot)
     finally:
         connection.close()
+
+
+def _write_base_snapshot(connection: sqlite3.Connection, snapshot: StorageSnapshot) -> None:
+    """Internal base v1 writer shared by complete storage and semantic snapshots."""
+    connection.executescript(_SCHEMA)
+    with connection:
+        connection.execute("INSERT INTO snapshot_metadata VALUES (1, ?, ?, ?, ?, ?)",
+                           (snapshot.source, snapshot.schema_version, snapshot.algorithm_version,
+                            _json(snapshot.tokenizer), _json(snapshot.settings)))
+        connection.executemany("INSERT INTO documents VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                               [(snapshot.source, *asdict(doc).values()) for doc in snapshot.documents])
+        connection.executemany("INSERT INTO chunks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                               [(chunk.chunk_id, chunk.source, chunk.document.page_id, chunk.ordinal,
+                                 _json(chunk.heading_path), _json(chunk.segments), _json(chunk.source_ranges),
+                                 chunk.search_text, chunk.body_tokens, chunk.input_tokens, _json(chunk.structure))
+                                for chunk in snapshot.chunks])
 
 
 class StorageReader:

@@ -1,7 +1,45 @@
 import os
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from urllib.parse import urlsplit
+
+from app.chunk_tokenizer import MODEL_ID, REVISION
+
+
+@dataclass(frozen=True)
+class EmbeddingSettings:
+    model_path: Path
+    model_id: str = MODEL_ID
+    revision: str = REVISION
+    batch_size: int = 16
+    cpu_threads: int = 4
+
+
+def load_embedding_settings() -> EmbeddingSettings:
+    """Explicit administrative configuration; never called by HTTP startup."""
+    model_path = os.environ.get("EMBEDDING_MODEL_PATH", f"/data/models/{REVISION}")
+    if not model_path.strip() or "\x00" in model_path:
+        raise ValueError("configuration: EMBEDDING_MODEL_PATH is required")
+    model_id = os.environ.get("EMBEDDING_MODEL_ID", MODEL_ID)
+    revision = os.environ.get("EMBEDDING_MODEL_REVISION", REVISION)
+    if model_id != MODEL_ID or revision != REVISION:
+        raise ValueError("configuration: embedding_identity")
+
+    def positive(name: str, default: int) -> int:
+        try:
+            value = int(os.environ.get(name, str(default)))
+        except ValueError:
+            raise ValueError(f"configuration: {name} must be a positive integer") from None
+        if value < 1:
+            raise ValueError(f"configuration: {name} must be a positive integer")
+        return value
+
+    return EmbeddingSettings(
+        model_path=Path(model_path), model_id=model_id, revision=revision,
+        batch_size=positive("EMBEDDING_BATCH_SIZE", 16),
+        cpu_threads=positive("EMBEDDING_CPU_THREADS", 4),
+    )
 
 
 @dataclass(frozen=True)

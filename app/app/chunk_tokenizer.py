@@ -54,3 +54,6 @@ class LocalE5:
     @lru_cache(maxsize=2048)
     def count(self, text: str, special: bool = False) -> int:
         return len(self._tokenizer.encode(text, add_special_tokens=special).ids)
+
+    def ids(self, text: str, special: bool = True) -> list[int]:
+        return self._tokenizer.encode(text, add_special_tokens=special).ids
