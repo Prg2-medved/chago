@@ -8,6 +8,40 @@ from app.chunk_tokenizer import MODEL_ID, REVISION
 
 
 @dataclass(frozen=True)
+class RetrievalSettings:
+    semantic_candidates: int = 10
+    lexical_candidates: int = 10
+    rrf_constant: int = 60
+    top_k: int = 6
+
+    def __post_init__(self) -> None:
+        for value in (self.semantic_candidates, self.lexical_candidates, self.rrf_constant, self.top_k):
+            if type(value) is not int or value < 1:
+                raise ValueError("configuration: retrieval_settings")
+
+
+def load_retrieval_settings(*, semantic_candidates: int | None = None, lexical_candidates: int | None = None,
+                            rrf_constant: int | None = None, top_k: int | None = None) -> RetrievalSettings:
+    """Administrative settings only; explicit overrides take precedence over environment."""
+    def positive(name: str, default: int, override: int | None) -> int:
+        if override is not None:
+            if type(override) is not int or override < 1:
+                raise ValueError("configuration: retrieval_settings")
+            return override
+        raw = os.environ.get(name, str(default))
+        if not re.fullmatch(r"[0-9]+", raw) or int(raw) < 1:
+            raise ValueError("configuration: retrieval_settings")
+        return int(raw)
+
+    return RetrievalSettings(
+        semantic_candidates=positive("RETRIEVAL_SEMANTIC_CANDIDATES", 10, semantic_candidates),
+        lexical_candidates=positive("RETRIEVAL_LEXICAL_CANDIDATES", 10, lexical_candidates),
+        rrf_constant=positive("RETRIEVAL_RRF_CONSTANT", 60, rrf_constant),
+        top_k=positive("RETRIEVAL_TOP_K", 6, top_k),
+    )
+
+
+@dataclass(frozen=True)
 class EmbeddingSettings:
     model_path: Path
     model_id: str = MODEL_ID

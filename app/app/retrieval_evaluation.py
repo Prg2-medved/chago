@@ -1,19 +1,40 @@
 """Frozen corpus protocol v1, separate from ordinary question-only retrieval."""
 
 from dataclasses import asdict
+from collections.abc import Sequence
 import hashlib
 import json
 from pathlib import Path
 import platform
 import sys
 from time import perf_counter
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from app.evaluation import ValidationError, read_json, validate_package
-from app.retrieval import SearchResult, SemanticIndex
+from app.index_storage import StorageSnapshot, StoredChunk
+
+if TYPE_CHECKING:
+    from app.retrieval import SemanticIndex
 
 
 PROTOCOL_VERSION = 1
+
+
+class RankedResult(Protocol):
+    @property
+    def rank(self) -> int: ...
+    @property
+    def chunk(self) -> StoredChunk: ...
+
+
+class SearchIndex(Protocol):
+    @property
+    def snapshot(self) -> StorageSnapshot: ...
+    @property
+    def chunks(self) -> tuple[StoredChunk, ...]: ...
+    @property
+    def metadata(self) -> dict[str, Any]: ...
+    def search(self, question: str, k: int = 10) -> Sequence[RankedResult]: ...
 
 
 def _hash_inputs(inputs: dict[str, Path]) -> dict[str, str]:
@@ -67,7 +88,7 @@ def covers(ranges: list[tuple[int, int]], start: int, end: int) -> bool:
     return False
 
 
-def evidence_hit(case: dict[str, Any], results: tuple[SearchResult, ...], source: str) -> bool:
+def evidence_hit(case: dict[str, Any], results: Sequence[RankedResult], source: str) -> bool:
     ranges: dict[int, list[tuple[int, int]]] = {}
     for result in results[:5]:
         chunk = result.chunk
@@ -87,9 +108,12 @@ def _metrics(cases: list[dict[str, Any]]) -> dict[str, Any]:
             "hit_ids": hits, "miss_ids": misses}
 
 
-def evaluate(questions: Path, manifest: Path, snapshot: Path, live: SemanticIndex,
-             fixtures: Path | None = None, synthetic: SemanticIndex | None = None,
-             index_paths: dict[str, Path] | None = None) -> dict[str, Any]:
+def evaluate(questions: Path, manifest: Path, snapshot: Path, live: SearchIndex,
+             fixtures: Path | None = None, synthetic: SearchIndex | None = None,
+             index_paths: dict[str, Path] | None = None, *, split: str = "all",
+             runtime_metadata: dict[str, dict[str, Any]] | None = None) -> dict[str, Any]:
+    if split not in {"all", "tuning", "holdout"}:
+        raise ValidationError("evaluation: split")
     inputs = {"questions": questions, "manifest": manifest, "live_reference": snapshot}
     if fixtures is not None:
         inputs["synthetic_reference"] = fixtures
@@ -117,6 +141,8 @@ def evaluate(questions: Path, manifest: Path, snapshot: Path, live: SemanticInde
             raise ValidationError(f"index: {namespace} settings")
     cases = []
     for case in corpus["questions"]:
+        if split != "all" and case["split"] != split:
+            continue
         index = indices[case["source_set"]]
         timer = perf_counter()
         results = index.search(protocol_input(case), 5)
@@ -126,7 +152,9 @@ def evaluate(questions: Path, manifest: Path, snapshot: Path, live: SemanticInde
                       "follow_up": "follow_up" in case["tags"], "answerable": answerable,
                       "expected_behavior": case["expected_behavior"],
                       "hit": evidence_hit(case, results, index.snapshot.source) if answerable else None,
-                      "ranking": [{"chunk_id": result.chunk.chunk_id, "score": result.score} for result in results],
+                      "ranking": [{"chunk_id": result.chunk.chunk_id,
+                                   "score": getattr(result, "score", getattr(result, "bm25_score", None))}
+                                  for result in results],
                       "duration_seconds": duration})
     groups: dict[str, dict[str, Any]] = {}
     for namespace in ("live", "synthetic"):
@@ -142,14 +170,20 @@ def evaluate(questions: Path, manifest: Path, snapshot: Path, live: SemanticInde
     after = _hash_inputs(inputs)
     if hashes != after:
         raise ValidationError("fingerprint: inputs changed")
+    def runtime(name: str, index: SearchIndex) -> dict[str, Any]:
+        if runtime_metadata is not None:
+            return runtime_metadata[name]
+        # Preserve the existing semantic report when no explicit adapter metadata is supplied.
+        semantic = cast("SemanticIndex", index)
+        return {"batch_size": semantic.encoder.settings.batch_size,
+                "cpu_threads": semantic.encoder.settings.cpu_threads}
     return {"protocol_version": PROTOCOL_VERSION, "corpus_version": integrity.corpus_version,
             "environment": {"platform": platform.platform(), "processor": platform.processor(),
                             "python": platform.python_version()},
             "fingerprints": hashes, "reference_fingerprints": integrity.fingerprints,
             "indices": {name: {"identity": index.metadata, "chunk_settings": index.snapshot.settings,
                                "algorithm_version": index.snapshot.algorithm_version,
-                               "batch_size": index.encoder.settings.batch_size,
-                               "cpu_threads": index.encoder.settings.cpu_threads,
+                               **runtime(name, index),
                                "documents": len(index.snapshot.documents), "chunks": len(index.chunks)}
                         for name, index in indices.items()},
             "groups": groups, "cases": cases, "peak_memory_bytes": peak_memory_bytes()}

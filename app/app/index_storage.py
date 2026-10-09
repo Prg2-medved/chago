@@ -320,6 +320,7 @@ class StorageReader:
             self._connection = connection
             connection.row_factory = sqlite3.Row
             connection.execute("PRAGMA query_only=ON")
+            connection.execute("BEGIN")
             if connection.execute("PRAGMA user_version").fetchone()[0] != STORAGE_VERSION:
                 raise StorageError("storage_version")
             _check_schema(connection)

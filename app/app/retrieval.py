@@ -6,13 +6,17 @@ from dataclasses import asdict, dataclass, replace
 import json
 from pathlib import Path
 import sys
-from typing import Any, Never
+from typing import TYPE_CHECKING, Any, Never
 
 from app.config import load_embedding_settings
 from app.evaluation import ValidationError
 from app.embeddings import EmbeddingError, LocalEncoder
 from app.index_storage import StorageError, StoredChunk
 from app.semantic_storage import SemanticReader, SemanticStorageError
+
+if TYPE_CHECKING:
+    from numpy import float32
+    from numpy.typing import NDArray
 
 
 class RetrievalError(ValueError):
@@ -40,6 +44,15 @@ class SearchResult:
 class SemanticIndex:
     def __init__(self, path: Path, encoder: LocalEncoder) -> None:
         reader = SemanticReader(path)
+        self._initialize(reader, encoder)
+
+    @classmethod
+    def _from_reader(cls, reader: SemanticReader, encoder: LocalEncoder) -> "SemanticIndex":
+        index = cls.__new__(cls)
+        index._initialize(reader, encoder)
+        return index
+
+    def _initialize(self, reader: SemanticReader, encoder: LocalEncoder) -> None:
         if any(reader.metadata.get(key) != value for key, value in encoder.identity.items()):
             raise RetrievalError("retrieval_identity_rebuild")
         self.encoder = encoder
@@ -53,10 +66,15 @@ class SemanticIndex:
             raise RetrievalError("retrieval_k")
         # Even an empty index validates the supplied question and budget.
         query = self.encoder.encode_query(question)
-        scores = self.matrix @ query
-        order = sorted(range(len(self.chunks)), key=lambda index: (-float(scores[index]), self.chunks[index].chunk_id))
-        return tuple(SearchResult(rank, float(scores[index]), self.chunks[index])
-                     for rank, index in enumerate(order[:k], 1))
+        return rank_cosine(self.chunks, self.matrix, query, k)
+
+
+def rank_cosine(chunks: tuple[StoredChunk, ...], matrix: "NDArray[float32]",
+                query: "NDArray[float32]", k: int) -> tuple[SearchResult, ...]:
+    scores = matrix @ query
+    order = sorted(range(len(chunks)), key=lambda index: (-float(scores[index]), chunks[index].chunk_id))
+    return tuple(SearchResult(rank, float(scores[index]), chunks[index])
+                 for rank, index in enumerate(order[:k], 1))
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -69,6 +69,19 @@ class SemanticReader:
     def __init__(self, path: Path) -> None:
         # Base checks run first and keep their original error categories.
         base = StorageReader(path)
+        try:
+            self._load(base)
+        finally:
+            base.close()
+
+    @classmethod
+    def _from_base(cls, base: StorageReader) -> "SemanticReader":
+        """Load the extension within an already validated, retained transaction."""
+        reader = cls.__new__(cls)
+        reader._load(base)
+        return reader
+
+    def _load(self, base: StorageReader) -> None:
         self.snapshot = base.snapshot
         try:
             # Read the extension through the same file handle validated by base.
@@ -115,8 +128,6 @@ class SemanticReader:
             raise
         except (sqlite3.Error, OSError, ValueError, TypeError, KeyError):
             raise SemanticStorageError("semantic_read") from None
-        finally:
-            base.close()
 
 
 def protect_paths(input_path: Path, output: Path, assets: Path) -> None:
