@@ -32,4 +32,4 @@
 ## 5. Интеграционная приёмка
 
 - [x] 5.1 Выполнить целевые embedding/storage/retrieval/evaluation tests, затем полный app suite ввиду изменений нескольких компонентов, и принятые проверки typing проекта; проверка — успешные результаты без suppressions, storage-only и health работают без assets, все реальные asset skips перечислены явно.
-- [ ] 5.2 Проверить build→закрытие→query/evaluate на CPU целевого сервера с runtime network disabled; зафиксировать ресурсы и отзывчивость Wiki.js в `docs/semantic-retrieval.md`. Проверка — нет downloads/внешнего inference, прежний output сохраняется при контролируемом failure, measured semantic baseline отделён от итогового MVP порога; недоступные server measurements оставить незавершёнными с явным ограничением.
+- [x] 5.2 Проверить build→закрытие→query/evaluate на CPU целевого сервера с runtime network disabled; зафиксировать ресурсы и отзывчивость Wiki.js в `docs/semantic-retrieval.md`. Проверка — нет downloads/внешнего inference, прежний output сохраняется при контролируемом failure, measured semantic baseline отделён от итогового MVP порога; недоступные server measurements оставить незавершёнными с явным ограничением.

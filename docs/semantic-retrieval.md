@@ -198,11 +198,37 @@ process took 5.474 s. These are development-machine measurements. The pure
 semantic baseline does not achieve the final MVP 90% target on this corpus;
 that target is not a semantic-stage acceptance condition.
 
-## Target-server acceptance remains open
+## Target-server acceptance, 2026-10-09
 
-Task 5.2 has not been measured on the target i5-14400/15 GiB/Linux server. No
-server access was supplied. Development results cannot establish Wiki.js
-responsiveness, swap behavior or server resource usage.
+Task 5.2 is complete based on the operator-reported acceptance results from the
+target Linux server (i5-14400, 15 GiB RAM). The offline CPU E5 build, followed by
+query/evaluation after the build process closed, succeeded in Docker with
+`--network none`, without runtime downloads or external inference. These are
+server measurements, separate from the Windows development baseline above;
+the server checks were not repeated when recording this acceptance.
+
+| Check | Reported result |
+| --- | --- |
+| Live index | 24 documents, 910 chunks; build 19.24 s; peak RSS 1,452,089,344 bytes |
+| Synthetic index | 1 document, 1 chunk |
+| Semantic query | Top-10 returned with correct sorting |
+| Live tuning single-question Hit@5 | 5/9 (55.56%) |
+| Live holdout single-question Hit@5 | 0/3 (0%) |
+| Synthetic holdout single-question Hit@5 | 1/1 (100%) |
+| Repeatability | Two evaluation runs produced identical results |
+| Evaluation peak memory | 1,121,673,216 bytes |
+| File integrity | SHA-256 comparisons matched for all source data and indices |
+| Controlled failure with missing model | Exit code 1, category `embedding_assets`; previous index unchanged |
+| Wiki.js responsiveness | Baseline 18.10 ms; during build mean 12.57 ms; no HTTP errors or observed visual delays |
+| Swap activity | Brief writes; maximum `so` 29,856 KiB/s, `si=0` |
+
+The reported server summary does not supply separate follow-up metrics; the
+development follow-up results above are not attributed to the server. Live
+holdout remains 0/3: the pure semantic baseline does not reach the final MVP
+90% target, which is not an acceptance condition for this semantic stage.
+Brief swap writes were observed without swap reads or reported Wiki.js delays.
+
+### Offline server procedure
 
 On that server, preinstall dependencies/assets, prepare the frozen inputs and
 build the app image. Run build in a separate disposable container with
