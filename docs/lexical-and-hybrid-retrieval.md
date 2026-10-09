@@ -175,7 +175,37 @@ The detailed [Linux/Docker acceptance procedure](lexical-and-hybrid-retrieval-se
 targets `/home/prg2/chago-llm/chago`, separates image provisioning and repeated
 offline checks, and records lossless checks, controlled failures, per-mode
 measurements and Wiki.js impact without restarting existing containers. Task
-5.4 remains open until the operator supplies actual server results.
+5.4 is complete based on the operator's actual server report recorded below.
+
+## Target Linux/Docker results, 2026-10-09
+
+The operator supplied actual acceptance results for Git `7c8ee21`, image
+`sha256:c7182f9156933781c2bcdef63cfa5a34141eac8fe773ff682df9e2d17bdf2187`,
+SQLite 3.46.1 with FTS5 unicode61, PyTorch 2.7.1+cpu and manifest-checked E5.
+Runtime used `--network none`, 4 CPU and a 5 GiB memory limit. The
+[server report and criterion mapping](lexical-and-hybrid-retrieval-server-acceptance.md#фактический-серверный-отчёт-2026-10-09)
+record the result directory, lossless validation, failure preservation,
+snapshot SHA-256 preservation and identical rankings/scores/counts in two runs.
+The primary server files were not read during this documentation update.
+
+| Mode | Initialization, s | Peak RSS, bytes | Live single-question Hit@5 |
+| --- | --- | --- | --- |
+| Semantic | 0.754 | 1123176448 | 5/12 (41.67%) |
+| Lexical | 0.052 | 51920896 | 3/12 (25%) |
+| Hybrid | 0.667 | 1123598336 | 6/12 (50%) |
+
+Wiki.js baseline: 20 requests, 0 errors, mean 19.57 ms, max 32.91 ms.
+During evaluation: 11 requests, 0 errors, mean 12.07 ms, max 25.50 ms.
+Swap max si/so: 16/0 KiB/s; available RAM after the test: 7.8 GiB; free disk:
+16 GiB. Working containers were unchanged (`container_diff_exit_code=0`) and
+were not restarted. These observations describe the measured samples.
+
+**Task 5.4 is complete; task 5.5 remains open.** Hybrid quality is 50%, below
+the 90% target; miss IDs are q02, q03, q04, q07, q08, q18. The server summary
+does not provide build timings, cold/warm query latency, Wiki.js p95 or separate
+split/follow-up metrics; initialization is not query latency. Further limits
+of the supplied data are listed in the server report. Development values below
+remain separate. The change has not been archived.
 
 ## Development measurements, 2026-10-09
 
@@ -183,7 +213,7 @@ The measured [comparison report](lexical-and-hybrid-retrieval-baseline.json)
 contains fingerprints, environment/SQLite identity, all case rankings/scores,
 split/follow-up metrics, transitions, per-query cold/warm timings, per-process
 peak memory, build audit, tuning grid and repeat verification. These are Windows
-Python 3.12 development results, separate from pending Linux/Docker acceptance.
+Python 3.12 development results, separate from the Linux/Docker results above.
 
 Defaults 10/10/60/6 gave tuning single-question semantic 5/9, lexical 3/9,
 hybrid 4/9. Tuning tried semantic candidates 5/10/20/40, lexical candidates

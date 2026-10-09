@@ -1,6 +1,8 @@
 # Приёмка lexical-and-hybrid-retrieval на Linux/Docker
 
-Задача 5.4 остаётся открытой до фактического серверного отчёта. Эта инструкция
+Задача 5.4 закрыта по предоставленному оператором [серверному отчёту от
+2026-10-09](#фактический-серверный-отчёт-2026-10-09). Задача 5.5 остаётся открытой.
+Эта инструкция
 сверена с `app/Dockerfile`, `compose.yaml` и реализацией CLI. Команды выполняются
 последовательно в **одной Bash-сессии** из проекта `/home/prg2/chago-llm/chago`.
 Python работает только внутри отдельного image. Runtime-контейнеры используют
@@ -582,3 +584,87 @@ tuning 6/9, holdout 0/3, follow-up 0/1 в каждом split. Miss IDs: q02, q03
 q07, q08, q18. Серверный технический успех не закрывает этот недостигнутый
 quality criterion и не разрешает менять frozen expectations или tuning по
 новым holdout misses.
+
+## Фактический серверный отчёт, 2026-10-09
+
+Источник записи — фактическая сводка оператора о выполненной приёмке на целевом
+Linux/Docker. Первичные серверные результаты находятся в каталоге:
+
+```text
+/home/prg2/chago-llm/chago/data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/
+```
+
+Сводка предоставлена для документирования; первичные файлы этого каталога в
+рамках данного обновления не читались, серверные проверки повторно не запускались.
+Эти результаты отделены от development measurements и не заменяют прежний baseline.
+
+### Окружение
+
+- Git: `7c8ee21`.
+- Image ID: `sha256:c7182f9156933781c2bcdef63cfa5a34141eac8fe773ff682df9e2d17bdf2187`.
+- SQLite 3.46.1; FTS5 со стандартным `unicode61` работает.
+- PyTorch 2.7.1+cpu; модель E5 проверена по manifest.
+- Runtime: `--network none`, 4 CPU, memory limit 5 GiB.
+
+### Сверка с задачей 5.4
+
+| Критерий 5.4 | Фактическое подтверждение оператора |
+| --- | --- |
+| Build/query/evaluate на целевом Linux/Docker без runtime network | Построены live hybrid snapshot (24 documents, 910 chunks) и synthetic snapshot (1 document, 1 chunk); lexical query и hybrid query с настоящей E5 успешны; выполнены два evaluation запуска с `--network none` |
+| FTS5/SQLite identity и reopen/lossless проверки | SQLite 3.46.1, FTS5 `unicode61`; SQLite integrity, LexicalReader и FTS postings validation успешны; исходные таблицы, embedding BLOBs, metadata и provenance сохранены без изменений |
+| Сохранность snapshots | Финальная проверка SHA-256 обоих semantic и обоих hybrid snapshots подтвердила совпадение с контрольными значениями |
+| Failure preservation и защита путей | Fault injection для `_write_extension`, `validate_lexical`, `os.replace` сохранил input и прежний output; input/output alias protection работает; missing model assets дали ожидаемую `hybrid: embedding_assets` |
+| Lexical без heavy embedding imports и повторяемость evaluation | Lexical search без heavy embedding imports успешен; два evaluation запуска дали идентичные rankings/scores/counts |
+| Timings и peak memory | Измерены initialization и per-mode peak RSS, приведённые ниже |
+| Влияние на Wiki.js и рабочие контейнеры | HTTP-пробы до и во время evaluation без ошибок; swap и доступные ресурсы приведены ниже; рабочие контейнеры не перезапускались, `container_diff_exit_code=0` |
+
+Предоставленного фактического отчёта достаточно для закрытия технической задачи
+5.4. Это решение не означает прохождения отдельного quality acceptance 5.5.
+
+### Измеренные ресурсы и Wiki.js
+
+| Mode | Initialization, s | Peak RSS, bytes |
+| --- | --- | --- |
+| Semantic | 0.754 | 1123176448 |
+| Lexical | 0.052 | 51920896 |
+| Hybrid | 0.667 | 1123598336 |
+
+Initialization — отдельное измерение; эти значения не обозначают latency первого
+или последующих query.
+
+| Wiki.js HTTP-пробы | Requests | Errors | Mean, ms | Max, ms |
+| --- | --- | --- | --- | --- |
+| Baseline до нагрузки | 20 | 0 | 19.57 | 32.91 |
+| Во время evaluation | 11 | 0 | 12.07 | 25.50 |
+
+В этих пробах ошибок не было, наблюдавшиеся mean/max во время evaluation ниже
+baseline. Это наблюдение относится к указанным выборкам, а не к неизмеренным
+интервалам или задержкам интерфейса. Swap: max `si` 16 KiB/s, max `so` 0 KiB/s.
+RAM available после теста — 7.8 GiB; свободное место — 16 GiB. Состояние всех
+рабочих контейнеров неизменно: `container_diff_exit_code=0`; перезапусков не было.
+
+### Качество и границы предоставленных данных
+
+| Mode | Live single-question Hit@5 |
+| --- | --- |
+| Semantic | 5/12 (41.67%) |
+| Lexical | 3/12 (25%) |
+| Hybrid | 6/12 (50%) |
+
+Hybrid miss IDs: `q02`, `q03`, `q04`, `q07`, `q08`, `q18`.
+**Целевой порог 90% не достигнут; задача 5.5 остаётся открытой.** Серверная сводка
+содержит aggregate; отдельные server split/follow-up/synthetic scores и effective
+retrieval settings в ней не приведены. Development split metrics и configuration
+выше не выдаются за серверные измерения. Holdout уже был раскрыт в прежнем baseline;
+этот запуск не является blind evaluation и не даёт основания для нового tuning
+по holdout misses.
+
+В предоставленной сводке также нет численных build timings, cold/warm query
+latency, Wiki.js p95, измерений отзывчивости интерфейса или HTTP-проб именно во
+время build. Не приведены сами SHA-256 digest values, SQLite compile options,
+модель CPU, версия ОС и отдельные результаты hash checks corpus/reference,
+прежнего baseline и model assets до/после. Эти сведения здесь не заявляются
+измеренными или проверенными. Указанные initialization/peak RSS, проверки
+snapshots и наблюдения Wiki.js подтверждают соответствующие пункты 5.4 в пределах
+предоставленного отчёта. Frozen corpus и прежний baseline при документировании
+не изменялись; change не архивирован.
