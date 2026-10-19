@@ -1,0 +1,534 @@
+{
+  "experiment_protocol_version": 2,
+  "evidence_scorer_protocol_version": 1,
+  "committed_at": "2026-10-19T07:12:35.159581+00:00",
+  "protocol_path": "docs/retrieval-quality-experiment-protocol-v2.md",
+  "protocol_sha256": "6efdb9a7cbd836145926483669e60735f76409222e8fe459d631dff1493e7a47",
+  "code_revision_before_v2": "f25948b8b6d58be22bca69164981b89f4d57a124",
+  "worktree_before_v2": {
+    "git_status_porcelain_v1": " M app/app/chunking.py\n M app/app/hybrid_retrieval.py\n M app/app/index_storage.py\n M app/app/lexical_retrieval.py\n M app/app/lexical_storage.py\n M app/app/retrieval_comparison.py\n M app/app/retrieval_evaluation.py\n M app/tests/test_lexical_storage.py\n?? app/app/retrieval_quality.py\n?? app/tests/test_chunking_packing.py\n?? app/tests/test_literal_policy_v2.py\n?? app/tests/test_retrieval_diagnostics.py\n?? app/tests/test_retrieval_quality.py\n?? app/tests/test_storage_algorithms.py\n?? docs/retrieval-quality-build-report.json\n?? docs/retrieval-quality-development.json\n?? docs/retrieval-quality-experiment-protocol-v2.md\n?? docs/retrieval-quality-experiment-protocol.md\n?? docs/retrieval-quality-improvement.md\n?? docs/retrieval-quality-literal-builds.json\n?? docs/retrieval-quality-packing-feasibility.json\n?? docs/retrieval-quality-protocol-receipt.json\n?? docs/retrieval-quality-result.md\n?? docs/retrieval-quality-tuning-grid.json\n?? docs/retrieval-quality-verification.json\n?? openspec/changes/retrieval-quality-improvement/.openspec.yaml\n?? openspec/changes/retrieval-quality-improvement/design.md\n?? openspec/changes/retrieval-quality-improvement/proposal.md\n?? openspec/changes/retrieval-quality-improvement/specs/hybrid-retrieval/spec.md\n?? openspec/changes/retrieval-quality-improvement/specs/lexical-retrieval/spec.md\n?? openspec/changes/retrieval-quality-improvement/specs/markdown-chunking/spec.md\n?? openspec/changes/retrieval-quality-improvement/specs/rag-evaluation-corpus/spec.md\n?? openspec/changes/retrieval-quality-improvement/tasks.md\n",
+    "changed_file_sha256": {
+      "app/app/chunking.py": "c46f873c41e83adbc50cb73f6b31175435eb744f95dca0e221cb8677f3555c6f",
+      "app/app/hybrid_retrieval.py": "a02a64595b5ae7cab3375a3c4749e24a2bb92f491c3fe092f5508544ef9f53ce",
+      "app/app/index_storage.py": "341c9bfd36e99dac311b9a6998a1bcc65e908cc95bb9a74aed7344f8d996c35b",
+      "app/app/lexical_retrieval.py": "2e720b70a7d59c82e7e25dd3b4434d39c51fdfaa94ed097a2dac975e080ed146",
+      "app/app/lexical_storage.py": "3c33eaf157e2e821ad709b10185dc52e47059917244f5da895b9e8bd3a9da337",
+      "app/app/retrieval_comparison.py": "d4f652b6622b893e900219be7bd45484eb32427d22bec6993d1e862ca8beb62e",
+      "app/app/retrieval_evaluation.py": "cac4759a5aeef26f7c81f3f3f22650610765d60e4f31d372289a203164a6f74e",
+      "app/tests/test_lexical_storage.py": "a3d4fc8e9deb5f857507f7080472a50ad964ace2a858573c3f1d4dc3fe9e5ae5",
+      "app/app/retrieval_quality.py": "367f8e549ec2a790584da52296e76269b37add9a9149dfd8d1c9531853b16679",
+      "app/tests/test_chunking_packing.py": "66a4a9175bff29d1bbe1ab8a5c1fbe2a198a88428ec94f2890ab18ab579b3f19",
+      "app/tests/test_literal_policy_v2.py": "61cb76b3a1b13d76cb088e5ac8ff4b89e6ae71003932ad93c1ef56c344107e35",
+      "app/tests/test_retrieval_diagnostics.py": "8e385352efe11819803d3dc3dbe7b777c135b089aa806d19f92f4716cd0ed15e",
+      "app/tests/test_retrieval_quality.py": "82485fac068fd209e4bd5d97b3b9e7d152622554285d1b9fb1a0c76feed12ab6",
+      "app/tests/test_storage_algorithms.py": "3956b338c2cb514f524ad0a84fdb2ffbfe48d1c78bd32506587cac3254340689",
+      "docs/retrieval-quality-build-report.json": "13ccd1e476d291df304caaea393d8fb013e4d29dba7676f4e647ddc2ad15c330",
+      "docs/retrieval-quality-development.json": "11d5899d00d7c75813f787a7f3e5343885d33537d3f7f11422767b9cf5c5bbd9",
+      "docs/retrieval-quality-experiment-protocol-v2.md": "6efdb9a7cbd836145926483669e60735f76409222e8fe459d631dff1493e7a47",
+      "docs/retrieval-quality-experiment-protocol.md": "c41b1156d04cc368e3db4f0de8ffbaf20fb250c7a56429230d78d7abe2ea2e5a",
+      "docs/retrieval-quality-improvement.md": "2a8a9440f799b02f11839617cb075b77857b798cf907dc509c0a8c5be7e843dd",
+      "docs/retrieval-quality-literal-builds.json": "9071e4d39eca946480108621b1bb4a499e96d605cc4fe4308144884357043215",
+      "docs/retrieval-quality-packing-feasibility.json": "d990b03ccb4fcc0d4b23cf7c5855d29bcd27b4678f03e961c60101c73a649b76",
+      "docs/retrieval-quality-protocol-receipt.json": "8ab70b2d4df35a42da2529dfe0118107ec5ef7c3d2fdbdc613057914b0aa4a03",
+      "docs/retrieval-quality-result.md": "49008ac640564014fc4e2e5d4fabaaa766a472102ae671f35f11a9c607f58a42",
+      "docs/retrieval-quality-tuning-grid.json": "131bd790c6ac0e8c93c6ed439de594fa8f22b6d94e035238aa996fdac90839f4",
+      "docs/retrieval-quality-verification.json": "eb71237edc1f8fa85e80d19ed1149f14b9f6d1957d84c59b915174d3782e9e78",
+      "openspec/changes/retrieval-quality-improvement/.openspec.yaml": "9cfa2ab963a8c9b58eecdb9fd5b55544e988fee8de8b887226ffc32d27744459",
+      "openspec/changes/retrieval-quality-improvement/design.md": "1a5117ca56b44c7bab9524ec242d4fa8922eba1f32adb11d63d3146d4346e1ef",
+      "openspec/changes/retrieval-quality-improvement/proposal.md": "5d2234f9008de9ee54517cbd23160768c510ab6be2ca8b6dca06ef3347ce5550",
+      "openspec/changes/retrieval-quality-improvement/specs/hybrid-retrieval/spec.md": "c5a4883adbfd1e7466b8c10fabefafdee70ec22b381bd2729fbf21ce2f174e7f",
+      "openspec/changes/retrieval-quality-improvement/specs/lexical-retrieval/spec.md": "93dc11bbeebca450c00e4d63dd47d5d9ba4d21d579c096c4c8c4a7aae1c4331f",
+      "openspec/changes/retrieval-quality-improvement/specs/markdown-chunking/spec.md": "78354149bd8b0101df9a22849391ebc671aaea0e66f7015ed4eff21619a73a66",
+      "openspec/changes/retrieval-quality-improvement/specs/rag-evaluation-corpus/spec.md": "c24ef2c82f9909079f6e46b605d20b8c25498afa9cade6ead21661b1b54f0ac1",
+      "openspec/changes/retrieval-quality-improvement/tasks.md": "ab141f6e1867f537fab3bc42e32491b957f9d62181119734db44f0c618e3e230"
+    },
+    "changed_file_manifest_sha256": "df97bc1f02ae6394c1ddcc1e5e08aa7a192e1f34eb169e628953c4995a3f1368",
+    "scope": "HEAD plus modified and untracked files, before v2 receipt and task checkbox; not acceptance lock"
+  },
+  "protected_input_checks": [
+    {
+      "path": "data/eval/1/wiki-documents.json",
+      "expected_sha256": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+      "actual_sha256": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+      "matches": true
+    },
+    {
+      "path": "data/hybrid-live.db",
+      "expected_sha256": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+      "actual_sha256": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+      "matches": true
+    },
+    {
+      "path": "data/hybrid-synthetic.db",
+      "expected_sha256": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89",
+      "actual_sha256": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89",
+      "matches": true
+    },
+    {
+      "path": "data/semantic-live.db",
+      "expected_sha256": "0130ec7090df603f8f3ab8db456936ac40c48f39fb6d98b8e11d16174d157090",
+      "actual_sha256": "0130ec7090df603f8f3ab8db456936ac40c48f39fb6d98b8e11d16174d157090",
+      "matches": true
+    },
+    {
+      "path": "data/semantic-synthetic.db",
+      "expected_sha256": "22154d7b104d683615a8adec4fac4a9756415288bb7e683d3dc07bea06b11243",
+      "actual_sha256": "22154d7b104d683615a8adec4fac4a9756415288bb7e683d3dc07bea06b11243",
+      "matches": true
+    },
+    {
+      "path": "docs/semantic-retrieval-baseline.json",
+      "expected_sha256": "7b2a836271d66a4467cdb9ae56222201315edb80f1101a061cf087e2ed0f2515",
+      "actual_sha256": "7b2a836271d66a4467cdb9ae56222201315edb80f1101a061cf087e2ed0f2515",
+      "matches": true
+    },
+    {
+      "path": "eval/fixtures/wiki-documents.json",
+      "expected_sha256": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+      "actual_sha256": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+      "matches": true
+    },
+    {
+      "path": "eval/manifest.json",
+      "expected_sha256": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+      "actual_sha256": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+      "matches": true
+    },
+    {
+      "path": "eval/questions.yaml",
+      "expected_sha256": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+      "actual_sha256": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+      "matches": true
+    }
+  ],
+  "v1_implementation_hashes_verified": {
+    "app/app/chunking.py": "c46f873c41e83adbc50cb73f6b31175435eb744f95dca0e221cb8677f3555c6f",
+    "app/app/index_storage.py": "341c9bfd36e99dac311b9a6998a1bcc65e908cc95bb9a74aed7344f8d996c35b",
+    "app/app/retrieval_evaluation.py": "cac4759a5aeef26f7c81f3f3f22650610765d60e4f31d372289a203164a6f74e",
+    "app/app/hybrid_retrieval.py": "a02a64595b5ae7cab3375a3c4749e24a2bb92f491c3fe092f5508544ef9f53ce",
+    "app/app/lexical_retrieval.py": "2e720b70a7d59c82e7e25dd3b4434d39c51fdfaa94ed097a2dac975e080ed146",
+    "app/app/lexical_storage.py": "3c33eaf157e2e821ad709b10185dc52e47059917244f5da895b9e8bd3a9da337",
+    "app/app/retrieval_comparison.py": "d4f652b6622b893e900219be7bd45484eb32427d22bec6993d1e862ca8beb62e",
+    "app/app/retrieval_quality.py": "367f8e549ec2a790584da52296e76269b37add9a9149dfd8d1c9531853b16679"
+  },
+  "immutable_v1_artifact_sha256": {
+    "docs/retrieval-quality-experiment-protocol.md": "c41b1156d04cc368e3db4f0de8ffbaf20fb250c7a56429230d78d7abe2ea2e5a",
+    "docs/retrieval-quality-protocol-receipt.json": "8ab70b2d4df35a42da2529dfe0118107ec5ef7c3d2fdbdc613057914b0aa4a03",
+    "docs/retrieval-quality-result.md": "49008ac640564014fc4e2e5d4fabaaa766a472102ae671f35f11a9c607f58a42",
+    "docs/retrieval-quality-tuning-grid.json": "131bd790c6ac0e8c93c6ed439de594fa8f22b6d94e035238aa996fdac90839f4",
+    "docs/retrieval-quality-development.json": "11d5899d00d7c75813f787a7f3e5343885d33537d3f7f11422767b9cf5c5bbd9",
+    "docs/retrieval-quality-packing-feasibility.json": "d990b03ccb4fcc0d4b23cf7c5855d29bcd27b4678f03e961c60101c73a649b76",
+    "docs/retrieval-quality-build-report.json": "13ccd1e476d291df304caaea393d8fb013e4d29dba7676f4e647ddc2ad15c330",
+    "docs/retrieval-quality-literal-builds.json": "9071e4d39eca946480108621b1bb4a499e96d605cc4fe4308144884357043215",
+    "docs/retrieval-quality-verification.json": "eb71237edc1f8fa85e80d19ed1149f14b9f6d1957d84c59b915174d3782e9e78"
+  },
+  "v1_reports": [
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l1-s10-l1.json",
+      "sha256": "277605c18ef4ca5fccf84d187e9cf4621e3e8b02f6abdcf9c721f9e90286b538",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l1-s10-l10.json",
+      "sha256": "bf4a6c91fee71890f829af0f3ee7831bc284f3edbfe90ca3489f4a93268af697",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l1-s10-l20.json",
+      "sha256": "e286d919008d8c8fd802d6ba9f7747aafa713c7c01baebc8b487a7d9d5a72b07",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l1-s40-l1.json",
+      "sha256": "27dee079571d5dd36d4f416ecb582b6d5cd1d70175f799d2dfaa25bfd5ef51c0",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l1-s40-l10.json",
+      "sha256": "0a489372c1acbe8d9125b3cd39d4f8d9ab2a0b4a3954e60e97fb0f735747df30",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l1-s40-l20.json",
+      "sha256": "4c3386e8be463a9ab8044329a808da69c1819392e99dfbf89db7cd2bedb12dfb",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l1-s120-l1.json",
+      "sha256": "0ac9bfce495466f4efdc5ed212ff298f07d3db8a151e417eec247d2ec949f057",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l1-s120-l10.json",
+      "sha256": "c9b477f622a964b801626e8cd5e106f70a5086f3328c6c4d4cfc431629ce4284",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l1-s120-l20.json",
+      "sha256": "48df9eec0bb796b738f747e8ccfef426b93aff6d34b4c3c23395c2b6b79a81e0",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l2-s10-l1.json",
+      "sha256": "aec22f87307cc8ec8dc767471c692db36d3bad998c4449b97dd2432b84ca1394",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l2-s10-l10.json",
+      "sha256": "4549ad3434f0835fe9c8280a9e7885779fc6a4ef21936678fe0c2feff7df2d6e",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l2-s10-l20.json",
+      "sha256": "39b748f724a83d204331f9840b308ae9a89452e525849cf212474296d824debb",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l2-s40-l1.json",
+      "sha256": "8a9f2fb1bb1f33d9f91a9956dc588bfc9a40ec5785e31e52764f29d2a0326f86",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l2-s40-l10.json",
+      "sha256": "ab826318e114d3104eed524650ffda5b4ecb4be24bfe04d57f2643f32ca95add",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l2-s40-l20.json",
+      "sha256": "2e99bd07baffcf4e1f13b02bfa721ec2dd7220428e39c2292abdc9d37e3b9048",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l2-s120-l1.json",
+      "sha256": "c9935264784ec67afdfa029528f8f4cf676b6e57474b5e0564a320e3fe38ca0f",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l2-s120-l10.json",
+      "sha256": "45408c33742c0839262ba5315d45e244e30f32b252d5e840a052d60e0768635a",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c1-l2-s120-l20.json",
+      "sha256": "a5fdec34ce79de3da89a84b14db2162dc65d0f2bd7ce18c9e76bd15a9bcc0ff9",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l1-s10-l1.json",
+      "sha256": "0539832c39462e632ea886b00f65daa3c3eda31dc9c7bdb1585dad4b404e29f1",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l1-s10-l10.json",
+      "sha256": "1320d909d8e995bf46190577bac03a2bbbd1d0e1ef71ff61f67ac7463868afe2",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l1-s10-l20.json",
+      "sha256": "f9b3b5a8d3bc1109fde3e8c283e88d3d12418c7a1bc5c26ef50e5607856e4c57",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l1-s40-l1.json",
+      "sha256": "8df9148ca8b47b3d72a457f628d386e80a88f6da51691bc66d26a8efe847e8be",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l1-s40-l10.json",
+      "sha256": "4894a58f592ab77aebe19c57a4a473f9248274bfcbe30ba62030bf6c726d1100",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l1-s40-l20.json",
+      "sha256": "de12ce69cd457739b9d5142065f1019374f9f5cc2d428c42267e5587481080cb",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l1-s120-l1.json",
+      "sha256": "ab0198c6750b5ed307ae7e986115b16bc0f79c6d4fc019fc24e7bc1e4b443fdd",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l1-s120-l10.json",
+      "sha256": "b8f33f1cad1187ea26348e0323d2c02b893b919da3d54cfd3f87b0a3605a23e0",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l1-s120-l20.json",
+      "sha256": "b8fa6f9d106ada3b9b62a82786615c2a5fdd48a9b4c9dc97868c20284d339d54",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l2-s10-l1.json",
+      "sha256": "6f5a129d374e043ab83130bd8b3c150a2c36921e414387e2bbc9dd1c2e748a4e",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l2-s10-l10.json",
+      "sha256": "9ff3e0b0c1149c692b12f213983618a72b714076bda819bb808082d8eb80fd3f",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l2-s10-l20.json",
+      "sha256": "b92b4f636f4a693b096e1e16385877957cc547b7bed0665bb631946210cae376",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l2-s40-l1.json",
+      "sha256": "745093b07adb331770672aaca91875535f997918d6bf8b784d8a2772e695c66d",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l2-s40-l10.json",
+      "sha256": "0c94e9730bd21289dd4263eae660a15ebd1bb65223051e3cb64d8b77b38d7fa8",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l2-s40-l20.json",
+      "sha256": "c6069c4be4d3921dab68e0b432cbd01fc73b4e4bc4c7ee32b1bd79d22c9b2feb",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l2-s120-l1.json",
+      "sha256": "df0370936dd826551bdb25040e7d5b9df9392e4ff042e61fe5fefffb4a2f873e",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l2-s120-l10.json",
+      "sha256": "02d035de0e6e3b7dbd0f61aaf5ad8b769329316196846366d821cf64f5ec2928",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    },
+    {
+      "path": "data/retrieval-quality-improvement/grid/c2-l2-s120-l20.json",
+      "sha256": "db7f842bbd3b365f4830399493250e83ad71eff6cbf49bf9e0281279141df593",
+      "evidence_scorer_protocol": 1,
+      "single_question_denominator": 9,
+      "tuning_only": true
+    }
+  ],
+  "confirmed_experiment": {
+    "model_repository": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+    "model_revision": "1427fd652930e4ba29e8149678df786c240d8825",
+    "weights_sha256": "5daeca2481a76b5976a2bdc32f0a78532b6716da4f8cd3ff59460ef8d2f359b4",
+    "tokenizer_sha256": "62c24cdc13d4c9952d63718d6c9fa4c287974249e16b7ade6d5a85e7bbb75626",
+    "algorithm": "markdown-chunking-1",
+    "literal_policy": 1,
+    "snapshot": "data/hybrid-live.db",
+    "snapshot_sha256": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+    "semantic_candidates": 120,
+    "lexical_candidates": 1,
+    "rrf_constant": 60,
+    "top_k": 6,
+    "precision": "FP32",
+    "device": "cpu",
+    "tuning_single_question_denominator": 9,
+    "frozen_single_question_denominator": 12,
+    "scorer_top_k": 5
+  },
+  "development_holdout_read_or_executed": false,
+  "closed_validation_opened_or_executed": false,
+  "model_bundle_gate": "passed task 5.5; verified offline loading only, no quality inference or resource acceptance",
+  "final_gate_order": [
+    "lock",
+    "frozen_v1",
+    "target_server",
+    "independent_validation"
+  ],
+  "quality_acceptance": false,
+  "runtime_metadata_precheck": {
+    "torch": "2.7.1+cpu",
+    "transformers": "4.57.3",
+    "tokenizers": "0.22.2",
+    "status": "installed package metadata matches protocol; offline model compatibility not yet checked"
+  },
+  "model_bundle_verification": {
+    "verified_at": "2026-10-19T07:29:48.867155+00:00",
+    "repository": "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1",
+    "revision": "1427fd652930e4ba29e8149678df786c240d8825",
+    "local_path": "data/models/1427fd652930e4ba29e8149678df786c240d8825",
+    "files": {
+      "config.json": {
+        "sha256": "cc2cfe51aa3fd759d21d21acf5dfd6994aa67a3c9210636d22e143699d336c77",
+        "bytes": 891,
+        "source_url": "https://huggingface.co/cross-encoder/mmarco-mMiniLMv2-L12-H384-v1/resolve/1427fd652930e4ba29e8149678df786c240d8825/config.json"
+      },
+      "tokenizer.json": {
+        "sha256": "62c24cdc13d4c9952d63718d6c9fa4c287974249e16b7ade6d5a85e7bbb75626",
+        "bytes": 17082660,
+        "source_url": "https://huggingface.co/cross-encoder/mmarco-mMiniLMv2-L12-H384-v1/resolve/1427fd652930e4ba29e8149678df786c240d8825/tokenizer.json"
+      },
+      "tokenizer_config.json": {
+        "sha256": "e7fbfbfa6347b4e414c1cee50d142e2c2f9a895dad68b068ae83a8b564c3837e",
+        "bytes": 435,
+        "source_url": "https://huggingface.co/cross-encoder/mmarco-mMiniLMv2-L12-H384-v1/resolve/1427fd652930e4ba29e8149678df786c240d8825/tokenizer_config.json"
+      },
+      "special_tokens_map.json": {
+        "sha256": "378eb3bf733eb16e65792d7e3fda5b8a4631387ca04d2015199c4d4f22ae554d",
+        "bytes": 239,
+        "source_url": "https://huggingface.co/cross-encoder/mmarco-mMiniLMv2-L12-H384-v1/resolve/1427fd652930e4ba29e8149678df786c240d8825/special_tokens_map.json"
+      },
+      "model.safetensors": {
+        "sha256": "5daeca2481a76b5976a2bdc32f0a78532b6716da4f8cd3ff59460ef8d2f359b4",
+        "bytes": 470592698,
+        "source_url": "https://huggingface.co/cross-encoder/mmarco-mMiniLMv2-L12-H384-v1/resolve/1427fd652930e4ba29e8149678df786c240d8825/model.safetensors"
+      },
+      "model-card.md": {
+        "sha256": "474736a65d6393a060119a8dc304563af67af4d8d86ccfee4a05dd0df107fc11",
+        "bytes": 2278,
+        "source_url": "https://huggingface.co/cross-encoder/mmarco-mMiniLMv2-L12-H384-v1/resolve/1427fd652930e4ba29e8149678df786c240d8825/README.md"
+      }
+    },
+    "manifest_sha256": "4c533e53d25f58e107c938953b532d1d271ed77d8813618af2ce2aa8072fe84f",
+    "bundle_bytes": 487679201,
+    "runtime": {
+      "packages": {
+        "torch": "2.7.1+cpu",
+        "transformers": "4.57.3",
+        "tokenizers": "0.22.2",
+        "safetensors": "0.8.0"
+      },
+      "python": "3.12.7",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "processor": "Intel64 Family 6 Model 154 Stepping 4, GenuineIntel",
+      "container": null,
+      "cuda": null
+    },
+    "offline_load": {
+      "passed": true,
+      "network_attempts": 0,
+      "socket_connections_denied": true,
+      "local_files_only": true,
+      "trust_remote_code": false,
+      "use_safetensors": true,
+      "fast_tokenizer": true,
+      "pair_special_tokens": 4,
+      "weight_dtypes": [
+        "F32",
+        "I64"
+      ],
+      "integer_buffers": {
+        "roberta.embeddings.position_ids": "I64"
+      },
+      "parameter_dtype": "torch.float32",
+      "architecture": "XLMRobertaForSequenceClassification",
+      "attention": "eager",
+      "load_seconds_including_imports": 5.518016100046225,
+      "inference_performed": false
+    },
+    "git_ignored": true,
+    "operator_reported_server_resources": {
+      "free_disk_GB": 12,
+      "available_RAM_GiB": 8.1,
+      "vmstat_si": 0,
+      "vmstat_so": 0,
+      "provenance": "user report, 2026-10-19; not measured by this verification"
+    }
+  },
+  "implementation_verification": {
+    "files_sha256": {
+      "app/app/reranking.py": "81d80fd568b5180d236c016f23cedeb914ee6146b32d6d0a72dd351ba2f5d85c",
+      "app/app/reranker_manifest.json": "90a3134a914f9fecb0d8a9665d6bb8ae2ad58352450015a265c3cf625157d1f3",
+      "app/tests/test_reranking.py": "b189124aef72cc8e69fff6a9ecc4e00d1b368ef62c1ae410d7d6a6b042eb76d3",
+      "docs/retrieval-quality-preflight-v2.json": "7fde596612e52592dd924662ef7083d2a1f29fcdad81cc2e33075a1a54065765",
+      "data/retrieval-quality-improvement/reranker-v2/full-preflight.json": "dfa925db2c0e740c771e8be4327cb744635ee1c8ac930a371c75e41a59240237",
+      "data/retrieval-quality-improvement/reranker-v2/verify_bundle.py": "52f39f52e7a23157533bcb1f253147274e426b78c50ef83b1a4342339e333f7d",
+      "data/retrieval-quality-improvement/reranker-v2/preflight.py": "ac6546da5538d8c89a828367e7a6e5cea7721bde742b2d0f6da6a3a8d4ec5fc8"
+    },
+    "protected_inputs_and_v1_artifacts_unchanged": true,
+    "tests": [
+      {
+        "scope": "reranking, hybrid, config, health, comparison, evaluation",
+        "passed": 74,
+        "warning": "existing Starlette/httpx deprecation"
+      },
+      {
+        "scope": "reranking including added exact 512 boundary",
+        "passed": 12
+      },
+      {
+        "scope": "pure semantic retrieval",
+        "passed": 11
+      }
+    ],
+    "typing": "mypy: no issues in app/reranking.py",
+    "all_tuning_preflight": {
+      "cases": 14,
+      "pairs": 1682,
+      "maximum_pair_tokens": 469,
+      "passed": true
+    },
+    "git_model_assets_tracked": false,
+    "task_5_7": "pending target Linux/Docker server access; no quality inference",
+    "acceptance_lock": false
+  }
+}

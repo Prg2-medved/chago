@@ -149,6 +149,8 @@ def load_snapshot(path: Path) -> Snapshot:
 
 
 ALGORITHM_VERSION = "markdown-chunking-1"
+PACKING_VERSION = "markdown-chunking-2"
+SUPPORTED_ALGORITHMS = (ALGORITHM_VERSION, PACKING_VERSION)
 
 
 @dataclass(frozen=True)
@@ -268,7 +270,9 @@ def scan(markdown: str) -> list[Block]:
 
 
 def chunk_document(source: str, document: Document, tokenizer: LocalE5,
-                   settings: ChunkSettings) -> list[Chunk]:
+                   settings: ChunkSettings, algorithm_version: str = ALGORITHM_VERSION) -> list[Chunk]:
+    if algorithm_version not in SUPPORTED_ALGORITHMS:
+        raise ChunkingError("algorithm_version")
     chunks: list[Chunk] = []
     pending: list[SourceSegment | GeneratedSegment] = []
     pending_headings: tuple[str, ...] = ()
@@ -294,7 +298,7 @@ def chunk_document(source: str, document: Document, tokenizer: LocalE5,
         description = {"source": source, "document": asdict(document), "headings": headings,
                        "ordinal": ordinal, "segments": [asdict(segment) for segment in segments],
                        "structure": structure or {}, "settings": asdict(settings),
-                       "tokenizer": tokenizer.identity, "algorithm_version": ALGORITHM_VERSION}
+                       "tokenizer": tokenizer.identity, "algorithm_version": algorithm_version}
         chunk_id = hashlib.sha256(json.dumps(description, ensure_ascii=False, sort_keys=True,
                                             separators=(",", ":")).encode()).hexdigest()
         chunks.append(Chunk(chunk_id, source, document, headings, ordinal, tuple(segments), text,
@@ -351,7 +355,11 @@ def chunk_document(source: str, document: Document, tokenizer: LocalE5,
         if block.kind in ("code", "table"):
             block_id = hashlib.sha256(f"{source}:{document.page_id}:{block.start}:{block.end}".encode()).hexdigest()
             if fits([segment], block.headings):
-                flush()
+                pack = (algorithm_version == PACKING_VERSION and block.kind == "code" and bool(pending)
+                        and isinstance(pending[-1], SourceSegment) and pending[-1].role == "text"
+                        and pending[-1].end == block.start and fits([*pending, segment], block.headings))
+                if not pack:
+                    flush()
                 structure: dict[str, object]
                 if block.kind == "code":
                     structure = {"block_id": block_id, "part_index": 0,
@@ -362,7 +370,8 @@ def chunk_document(source: str, document: Document, tokenizer: LocalE5,
                     structure = {"table_id": block_id, "part_index": 0,
                                  "rows": [{"row_index": index, "start": start, "end": end}
                                           for index, (start, end) in enumerate(block.rows)]}
-                emit([segment], block.headings, structure)
+                emit([*pending, segment] if pack else [segment], block.headings, structure)
+                pending = []
                 continue
             flush()
             if block.kind == "code":
@@ -422,9 +431,12 @@ def chunk_document(source: str, document: Document, tokenizer: LocalE5,
     return chunks
 
 
-def build_output(snapshot: Snapshot, tokenizer: LocalE5, settings: ChunkSettings) -> dict[str, object]:
+def build_output(snapshot: Snapshot, tokenizer: LocalE5, settings: ChunkSettings,
+                 algorithm_version: str = ALGORITHM_VERSION) -> dict[str, object]:
+    if algorithm_version not in SUPPORTED_ALGORITHMS:
+        raise ChunkingError("algorithm_version")
     chunks = [chunk for document in snapshot.documents
-              for chunk in chunk_document(snapshot.source, document, tokenizer, settings)]
+              for chunk in chunk_document(snapshot.source, document, tokenizer, settings, algorithm_version)]
     records: list[dict[str, object]] = []
     for chunk in chunks:
         metadata = asdict(chunk.document)
@@ -436,7 +448,7 @@ def build_output(snapshot: Snapshot, tokenizer: LocalE5, settings: ChunkSettings
                                           if isinstance(segment, SourceSegment)],
                         "search_text": chunk.search_text, "body_tokens": chunk.body_tokens,
                         "input_tokens": chunk.input_tokens, "structure": chunk.structure})
-    return {"schema_version": 1, "algorithm_version": ALGORITHM_VERSION,
+    return {"schema_version": 1, "algorithm_version": algorithm_version,
             "source": snapshot.source, "tokenizer": tokenizer.identity, "settings": asdict(settings),
             "documents": [asdict(document) for document in snapshot.documents], "chunks": records}
 
@@ -484,6 +496,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--maximum", type=int, default=450)
     parser.add_argument("--overlap", type=int, default=50)
     parser.add_argument("--input-limit", type=int, default=512)
+    parser.add_argument("--algorithm-version", choices=SUPPORTED_ALGORITHMS, default=ALGORITHM_VERSION)
     args = parser.parse_args(argv)
     timer = monotonic()
     try:
@@ -491,7 +504,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         settings = ChunkSettings(args.target, args.maximum, args.overlap, args.input_limit)
         snapshot = load_snapshot(args.input)
         tokenizer = LocalE5(args.tokenizer_path)
-        result = build_output(snapshot, tokenizer, settings)
+        result = build_output(snapshot, tokenizer, settings, args.algorithm_version)
         write_output(args.output, output_bytes(result))
     except (ValueError, OSError) as error:
         category = (str(error) if isinstance(error, ChunkingError) else

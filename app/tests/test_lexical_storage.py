@@ -72,7 +72,7 @@ def test_content_inventory_corruption(lexical_file, sql):
 
 
 @pytest.mark.parametrize("key,value", [("format_version", 2), ("query_policy_version", True),
-                                       ("literal_policy_version", 2), ("input_format_version", 2),
+                                       ("literal_policy_version", 3), ("input_format_version", 2),
                                        ("options", {"tokenizer": "porter"}), ("chunks", 7)])
 def test_metadata_versions(lexical_file, key, value):
     with sqlite3.connect(lexical_file) as connection:

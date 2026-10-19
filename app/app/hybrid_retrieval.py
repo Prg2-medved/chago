@@ -89,6 +89,9 @@ class HybridIndex:
         try:
             semantic = self._semantic.search(question, self.settings.semantic_candidates)
             lexical = self._lexical.search(question, self.settings.lexical_candidates)
+            union = {result.chunk.chunk_id: result.chunk for result in semantic}
+            union.update({result.chunk.chunk_id: result.chunk for result in lexical})
+            self.last_branch_union = tuple(union.values())
             return fuse(semantic, lexical, self.settings.rrf_constant, final_k)
         except (StorageError, SemanticStorageError, EmbeddingError, RetrievalError,
                 LexicalStorageError, LexicalRetrievalError, HybridRetrievalError):

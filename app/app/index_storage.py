@@ -105,6 +105,8 @@ def parse_output(payload: object) -> StorageSnapshot:
     if not valid:
         raise StorageError("validation")
     algorithm = _text(row.get("algorithm_version"))
+    if algorithm not in ("markdown-chunking-1", "markdown-chunking-2"):
+        raise StorageError("algorithm_version")
     tokenizer = _object(row.get("tokenizer"))
     for name in ("model_id", "revision", "package", "package_version"):
         _text(tokenizer.get(name))

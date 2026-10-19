@@ -100,6 +100,103 @@ def evidence_hit(case: dict[str, Any], results: Sequence[RankedResult], source: 
     )
 
 
+def source_cover(case: dict[str, Any], chunks: Sequence[StoredChunk], source: str,
+                 *, max_states: int = 100000) -> dict[str, Any]:
+    """Exact bounded set cover over original evidence intervals, never generated text."""
+    atoms: list[tuple[int, int, int]] = []
+    eligible: dict[int, list[tuple[StoredChunk, list[tuple[int, int]]]]] = {}
+    for evidence in case["evidence"]:
+        page = evidence["page_id"]
+        entries = []
+        for chunk in chunks:
+            if chunk.source != source or chunk.document.page_id != page:
+                continue
+            if any(getattr(chunk.document, key) != evidence[key]
+                   for key in ("locale", "path", "content_sha256") if key in evidence):
+                continue
+            ranges = [(max(left, segment["start"]), min(right, segment["end"]))
+                      for left, right in chunk.source_ranges for segment in chunk.segments
+                      if segment["kind"] == "source"
+                      and max(left, segment["start"]) < min(right, segment["end"])]
+            entries.append((chunk, ranges))
+        eligible[page] = entries
+        for span in evidence["spans"]:
+            start, end = span["start"], span["end"]
+            endpoints = sorted({start, end} | {point for _, ranges in entries
+                                              for pair in ranges for point in pair if start < point < end})
+            atoms.extend((page, left, right) for left, right in zip(endpoints, endpoints[1:]))
+    masks: dict[int, StoredChunk] = {}
+    for page, entries in eligible.items():
+        for chunk, ranges in entries:
+            mask = sum(1 << i for i, (p, left, right) in enumerate(atoms)
+                       if p == page and covers(ranges, left, right))
+            if mask and (mask not in masks or chunk.chunk_id < masks[mask].chunk_id):
+                masks[mask] = chunk
+    full = (1 << len(atoms)) - 1
+    union = 0
+    for mask in masks:
+        union |= mask
+    missing = [{"page_id": page, "start": left, "end": right}
+               for i, (page, left, right) in enumerate(atoms) if not union & (1 << i)]
+    if not full or union != full:
+        return {"covered": False, "status": "impossible", "minimum": None,
+                "lower_bound": None, "upper_bound": None, "witness": [], "missing_ranges": missing}
+    # A mask contained in another cannot improve the minimum cardinality.
+    options = sorted((mask for mask in masks if not any(mask != other and mask | other == other for other in masks)),
+                     key=lambda mask: masks[mask].chunk_id)
+    greedy: list[int] = []
+    covered = 0
+    while covered != full:
+        best = max(options, key=lambda mask: (mask & ~covered).bit_count())
+        covered |= best
+        greedy.append(best)
+    lower = (len(atoms) + max(mask.bit_count() for mask in options) - 1) // max(mask.bit_count() for mask in options)
+    witness = greedy
+    minimum: int | None = None
+    states = 0
+    frontier: dict[int, list[int]] = {0: []}
+    seen = {0}
+    for depth in range(1, len(greedy) + 1):
+        next_frontier: dict[int, list[int]] = {}
+        exhausted = False
+        for covered, path in frontier.items():
+            for mask in options:
+                states += 1
+                if states > max_states:
+                    exhausted = True
+                    break
+                merged = covered | mask
+                if merged == full:
+                    witness, minimum = [*path, mask], depth
+                    break
+                if merged not in seen:
+                    seen.add(merged)
+                    next_frontier[merged] = [*path, mask]
+            if exhausted or minimum is not None:
+                break
+        if exhausted or minimum is not None:
+            break
+        lower = max(lower, depth + 1)
+        frontier = next_frontier
+    return {"covered": True, "status": "exact" if minimum is not None else "unknown",
+            "minimum": minimum, "lower_bound": minimum if minimum is not None else lower,
+            "upper_bound": len(witness), "states": states, "missing_ranges": [],
+            "witness": [{"chunk_id": masks[mask].chunk_id,
+                         "page_id": masks[mask].document.page_id,
+                         "source_ranges": [list(pair) for pair in masks[mask].source_ranges]} for mask in witness]}
+
+
+def retrieval_diagnostics(case: dict[str, Any], inventory: Sequence[StoredChunk],
+                          branch_union: Sequence[StoredChunk], results: Sequence[RankedResult],
+                          source: str) -> dict[str, Any]:
+    inventory_cover = source_cover(case, inventory, source)
+    branch = source_cover(case, branch_union, source)
+    final = source_cover(case, [result.chunk for result in results[:5]], source)
+    return {"inventory": inventory_cover, "branch_union": branch, "final_top_5": final,
+            "candidate_loss": inventory_cover["covered"] and not branch["covered"],
+            "ranking_loss": branch["covered"] and not final["covered"]}
+
+
 def _metrics(cases: list[dict[str, Any]]) -> dict[str, Any]:
     hits = [case["id"] for case in cases if case["hit"]]
     misses = [case["id"] for case in cases if not case["hit"]]
@@ -155,7 +252,10 @@ def evaluate(questions: Path, manifest: Path, snapshot: Path, live: SearchIndex,
                       "ranking": [{"chunk_id": result.chunk.chunk_id,
                                    "score": getattr(result, "score", getattr(result, "bm25_score", None))}
                                   for result in results],
-                      "duration_seconds": duration})
+                      "duration_seconds": duration,
+                      "diagnostics": retrieval_diagnostics(
+                          case, index.chunks, getattr(index, "last_branch_union", tuple(result.chunk for result in results)),
+                          results, index.snapshot.source) if answerable else None})
     groups: dict[str, dict[str, Any]] = {}
     for namespace in ("live", "synthetic"):
         groups[namespace] = {}

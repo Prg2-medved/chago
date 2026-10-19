@@ -53,12 +53,16 @@ class LexicalResult:
 _PATH = re.compile(r"(?<![\w:/\\])(?:[A-Za-z]:[\\/]|\\\\|\.{1,2}/|/|[\w.-]+/)[^\s`\"'<>|,;!?()\[\]{}]+")
 _IP = re.compile(r"(?<![\w.:])(?:[0-9]{1,3}(?:\.[0-9]{1,3}){3}|[0-9A-Fa-f]*:[0-9A-Fa-f:.%]+)(?![\w:])")
 _NAME = re.compile(r"(?<![\w-])[^\W_]+(?:-[^\W_]+)+(?![\w-])", re.UNICODE)
+_UNDERSCORE = re.compile(r"(?<![\w-])[^\W_]+(?:[-_][^\W_]+)*_[^\W_]+(?:[-_][^\W_]+)*(?![\w-])", re.UNICODE)
 _QUOTED = re.compile(r"(?<!`)`([^`]+)`(?!`)")
 
 
-def _unquoted(text: str) -> list[Literal]:
+def _unquoted(text: str, policy_version: int = 1) -> list[Literal]:
     candidates = []
-    for pattern, kind in ((_PATH, "path"), (_IP, "ip"), (_NAME, "identifier")):
+    patterns = [(_PATH, "path"), (_IP, "ip"), (_NAME, "identifier")]
+    if policy_version == 2:
+        patterns.append((_UNDERSCORE, "identifier"))
+    for pattern, kind in patterns:
         for match in pattern.finditer(text):
             value = match.group().rstrip(".:" if kind == "path" else ".")
             if kind == "ip":
@@ -75,18 +79,20 @@ def _unquoted(text: str) -> list[Literal]:
     return sorted(chosen, key=lambda item: item.start)
 
 
-def extract_literals(question: str) -> tuple[Literal, ...]:
+def extract_literals(question: str, policy_version: int = 1) -> tuple[Literal, ...]:
+    if type(policy_version) is not int or policy_version not in (1, 2):
+        raise LexicalRetrievalError("lexical_policy")
     quoted = []
     masked = list(question)
     for match in _QUOTED.finditer(question):
         value = match.group(1)
         if not value.strip():
             continue
-        technical = _unquoted(value)
+        technical = _unquoted(value, policy_version)
         kind = technical[0].kind if len(technical) == 1 and technical[0].value == value else "quoted"
         quoted.append(Literal(value, kind, match.start(1), match.end(1)))
         masked[match.start():match.end()] = " " * (match.end() - match.start())
-    return tuple(sorted([*quoted, *_unquoted("".join(masked))], key=lambda item: item.start))
+    return tuple(sorted([*quoted, *_unquoted("".join(masked), policy_version)], key=lambda item: item.start))
 
 
 def _continues(text: str, position: int, kind: str, direction: int) -> bool:
@@ -195,7 +201,7 @@ class LexicalIndex:
                 (expression,))} if expression else {}
             if any(not math.isfinite(score) for score in scores.values()):
                 raise LexicalRetrievalError("lexical_query")
-            literals = extract_literals(question)
+            literals = extract_literals(question, self.metadata["literal_policy_version"])
             candidates = []
             for chunk in self.chunks:
                 matches = literal_matches(chunk, literals)

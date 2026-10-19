@@ -18,6 +18,7 @@ from app.index_storage import StorageError, StorageReader, StorageSnapshot, _jso
 LEXICAL_VERSION = 1
 QUERY_POLICY_VERSION = 1
 LITERAL_POLICY_VERSION = 1
+SUPPORTED_LITERAL_POLICIES = (1, 2)
 _FTS_SCHEMA = """CREATE VIRTUAL TABLE chunk_fts USING fts5(
     chunk_id UNINDEXED, title, heading_path, search_text,
     tokenize='unicode61', detail=full
@@ -50,11 +51,13 @@ def probe_fts5() -> None:
             connection.close()
 
 
-def lexical_metadata(snapshot: StorageSnapshot) -> dict[str, Any]:
+def lexical_metadata(snapshot: StorageSnapshot, literal_policy_version: int = LITERAL_POLICY_VERSION) -> dict[str, Any]:
+    if type(literal_policy_version) is not int or literal_policy_version not in SUPPORTED_LITERAL_POLICIES:
+        raise LexicalStorageError("lexical_version")
     with closing(sqlite3.connect(":memory:")) as connection:
         options = sorted(row[0] for row in connection.execute("PRAGMA compile_options"))
     return {"format_version": LEXICAL_VERSION, "input_format_version": 1,
-            "query_policy_version": QUERY_POLICY_VERSION, "literal_policy_version": LITERAL_POLICY_VERSION,
+            "query_policy_version": QUERY_POLICY_VERSION, "literal_policy_version": literal_policy_version,
             "options": _OPTIONS, "documents": len(snapshot.documents), "chunks": len(snapshot.chunks),
             "sqlite_version": sqlite3.sqlite_version, "compile_options": options}
 
@@ -81,9 +84,12 @@ def validate_lexical(base: StorageReader) -> dict[str, Any]:
         expected = lexical_metadata(base.snapshot)
         if not isinstance(metadata, dict) or set(metadata) != set(expected):
             raise LexicalStorageError("lexical_metadata")
-        for key in ("format_version", "input_format_version", "query_policy_version", "literal_policy_version"):
+        for key in ("format_version", "input_format_version", "query_policy_version"):
             if type(metadata[key]) is not int or metadata[key] != expected[key]:
                 raise LexicalStorageError("lexical_version")
+        if (type(metadata["literal_policy_version"]) is not int
+                or metadata["literal_policy_version"] not in SUPPORTED_LITERAL_POLICIES):
+            raise LexicalStorageError("lexical_version")
         if _json(metadata["options"]) != _json(_OPTIONS):
             raise LexicalStorageError("lexical_options")
         for key in ("documents", "chunks"):
@@ -162,10 +168,13 @@ def protect_paths(input_path: Path, output: Path, assets: Path) -> None:
         raise LexicalStorageError("lexical_path") from None
 
 
-def build(input_path: Path, output: Path, assets: Path | None = None) -> dict[str, Any]:
+def build(input_path: Path, output: Path, assets: Path | None = None, *,
+          literal_policy_version: int = LITERAL_POLICY_VERSION) -> dict[str, Any]:
     """Backup one generation and publish only a closed, fully validated extension."""
     from app.config import load_embedding_settings
     from app.semantic_storage import SemanticReader, SemanticStorageError
+    if type(literal_policy_version) is not int or literal_policy_version not in SUPPORTED_LITERAL_POLICIES:
+        raise LexicalStorageError("lexical_version")
     protect_paths(input_path, output, assets if assets is not None else load_embedding_settings().model_path)
     probe_fts5()
     temporary: Path | None = None
@@ -183,7 +192,7 @@ def build(input_path: Path, output: Path, assets: Path | None = None) -> dict[st
             source.close()
         semantic = SemanticReader(temporary)
         vectors = _raw_vectors(temporary)
-        metadata = lexical_metadata(semantic.snapshot)
+        metadata = lexical_metadata(semantic.snapshot, literal_policy_version)
         _write_extension(temporary, semantic.snapshot, metadata)
         reopened = SemanticReader(temporary)
         with LexicalReader(temporary) as lexical:
@@ -213,10 +222,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     command.add_argument("--input", type=Path, required=True)
     command.add_argument("--output", type=Path, required=True)
     command.add_argument("--model-path", type=Path)
+    command.add_argument("--literal-policy-version", type=int, choices=SUPPORTED_LITERAL_POLICIES, default=LITERAL_POLICY_VERSION)
     args = parser.parse_args(argv)
     from app.semantic_storage import SemanticStorageError
     try:
-        report = build(args.input, args.output, args.model_path)
+        report = build(args.input, args.output, args.model_path, literal_policy_version=args.literal_policy_version)
     except (StorageError, SemanticStorageError, LexicalStorageError) as error:
         print(f"lexical: {error}", file=sys.stderr)
         return 1

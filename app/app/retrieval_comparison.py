@@ -16,7 +16,7 @@ from typing import Any, Never
 from app.config import RetrievalSettings, load_embedding_settings, load_retrieval_settings
 from app.evaluation import ValidationError
 from app.lexical_retrieval import LexicalIndex
-from app.lexical_storage import LITERAL_POLICY_VERSION, QUERY_POLICY_VERSION
+from app.lexical_storage import QUERY_POLICY_VERSION
 from app.retrieval_evaluation import SearchIndex, _hash_inputs, _metrics, evaluate, peak_memory_bytes
 
 
@@ -75,9 +75,21 @@ def worker(args: argparse.Namespace, settings: RetrievalSettings) -> dict[str, A
         for position, (case, warm) in enumerate(zip(report["cases"], repeat["cases"], strict=True)):
             case["cold"] = position == 0
             case["warm_duration_seconds"] = warm["duration_seconds"]
+        literal_versions = set()
+        for name in indices:
+            identity = report["indices"][name]["identity"]
+            if args.mode == "hybrid":
+                identity = identity["lexical"]
+            if args.mode == "semantic":
+                from app.lexical_storage import LexicalReader
+                with LexicalReader(indices[name]) as reader:
+                    identity = reader.metadata
+            literal_versions.add(identity["literal_policy_version"])
+        if len(literal_versions) != 1:
+            raise ValidationError("comparison: mixed literal policies")
         report.update(mode=args.mode, requested_split=args.split, effective_settings=asdict(settings),
                       embedding_settings={"batch_size": embedding.batch_size, "cpu_threads": embedding.cpu_threads},
-                      policy_versions={"query": QUERY_POLICY_VERSION, "literal": LITERAL_POLICY_VERSION},
+                      policy_versions={"query": QUERY_POLICY_VERSION, "literal": literal_versions.pop()},
                       initialization_seconds=initialization, peak_memory_bytes=peak_memory_bytes(),
                       measurement={"process_isolation": True, "cold": "first query includes lazy model load; initialization separate",
                                    "warm": "second pass with retained indexes/encoder; no page-cache clearing",

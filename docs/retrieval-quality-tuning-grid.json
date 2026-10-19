@@ -1,0 +1,2062 @@
+{
+  "protocol_sha256": "c41b1156d04cc368e3db4f0de8ffbaf20fb250c7a56429230d78d7abe2ea2e5a",
+  "split": "tuning",
+  "grid_count": 36,
+  "candidates": [
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 6,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q11",
+        "q12",
+        "q19"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q07"
+      ],
+      "lost_legacy_hit_ids": [],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 0,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+        "synthetic_index": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89"
+      },
+      "peak_memory_bytes": 1021468672,
+      "warm_mean_seconds": 0.03286819999941924,
+      "name": "c1-l1-s10-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l1-s10-l1.json",
+      "report_sha256": "277605c18ef4ca5fccf84d187e9cf4621e3e8b02f6abdcf9c721f9e90286b538",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 10,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 4,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q12"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q07",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 0,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+        "synthetic_index": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89"
+      },
+      "peak_memory_bytes": 1019465728,
+      "warm_mean_seconds": 0.03538399285649315,
+      "name": "c1-l1-s10-l10",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l1-s10-l10.json",
+      "report_sha256": "bf4a6c91fee71890f829af0f3ee7831bc284f3edbfe90ca3489f4a93268af697",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 20,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 0,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+        "synthetic_index": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89"
+      },
+      "peak_memory_bytes": 1020153856,
+      "warm_mean_seconds": 0.041469835713672056,
+      "name": "c1-l1-s10-l20",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l1-s10-l20.json",
+      "report_sha256": "e286d919008d8c8fd802d6ba9f7747aafa713c7c01baebc8b487a7d9d5a72b07",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 40,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 6,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q11",
+        "q12",
+        "q19"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q07"
+      ],
+      "lost_legacy_hit_ids": [],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 0,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+        "synthetic_index": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89"
+      },
+      "peak_memory_bytes": 1017839616,
+      "warm_mean_seconds": 0.042351992855921186,
+      "name": "c1-l1-s40-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l1-s40-l1.json",
+      "report_sha256": "27dee079571d5dd36d4f416ecb582b6d5cd1d70175f799d2dfaa25bfd5ef51c0",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 40,
+        "lexical_candidates": 10,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 4,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q12"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q07",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 0,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+        "synthetic_index": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89"
+      },
+      "peak_memory_bytes": 1021054976,
+      "warm_mean_seconds": 0.033337928571979446,
+      "name": "c1-l1-s40-l10",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l1-s40-l10.json",
+      "report_sha256": "0a489372c1acbe8d9125b3cd39d4f8d9ab2a0b4a3954e60e97fb0f735747df30",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 40,
+        "lexical_candidates": 20,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 0,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+        "synthetic_index": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89"
+      },
+      "peak_memory_bytes": 1020899328,
+      "warm_mean_seconds": 0.04196038571327725,
+      "name": "c1-l1-s40-l20",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l1-s40-l20.json",
+      "report_sha256": "4c3386e8be463a9ab8044329a808da69c1819392e99dfbf89db7cd2bedb12dfb",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 120,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 6,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q11",
+        "q12",
+        "q19"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q07"
+      ],
+      "lost_legacy_hit_ids": [],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 0,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+        "synthetic_index": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89"
+      },
+      "peak_memory_bytes": 1021431808,
+      "warm_mean_seconds": 0.04511947143224201,
+      "name": "c1-l1-s120-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l1-s120-l1.json",
+      "report_sha256": "0ac9bfce495466f4efdc5ed212ff298f07d3db8a151e417eec247d2ec949f057",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 120,
+        "lexical_candidates": 10,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 4,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q12"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q07",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 0,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+        "synthetic_index": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89"
+      },
+      "peak_memory_bytes": 1022926848,
+      "warm_mean_seconds": 0.04938310714143362,
+      "name": "c1-l1-s120-l10",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l1-s120-l10.json",
+      "report_sha256": "c9b477f622a964b801626e8cd5e106f70a5086f3328c6c4d4cfc431629ce4284",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 120,
+        "lexical_candidates": 20,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 0,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+        "synthetic_index": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89"
+      },
+      "peak_memory_bytes": 1021673472,
+      "warm_mean_seconds": 0.03536193571718676,
+      "name": "c1-l1-s120-l20",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l1-s120-l20.json",
+      "report_sha256": "48df9eec0bb796b738f747e8ccfef426b93aff6d34b4c3c23395c2b6b79a81e0",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 6,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q11",
+        "q12",
+        "q19"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q07"
+      ],
+      "lost_legacy_hit_ids": [],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cadadf3b5c4903d93c62875524ee37aa0f2c54576780ef895bab1d60fecc613e",
+        "synthetic_index": "30144e83f6532e0cdae212cc517ee59c6f4f07aaa0472ece8abc14f145025de3"
+      },
+      "peak_memory_bytes": 1022611456,
+      "warm_mean_seconds": 0.03354981428440494,
+      "name": "c1-l2-s10-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l2-s10-l1.json",
+      "report_sha256": "aec22f87307cc8ec8dc767471c692db36d3bad998c4449b97dd2432b84ca1394",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 10,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cadadf3b5c4903d93c62875524ee37aa0f2c54576780ef895bab1d60fecc613e",
+        "synthetic_index": "30144e83f6532e0cdae212cc517ee59c6f4f07aaa0472ece8abc14f145025de3"
+      },
+      "peak_memory_bytes": 1020878848,
+      "warm_mean_seconds": 0.036497157142938316,
+      "name": "c1-l2-s10-l10",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l2-s10-l10.json",
+      "report_sha256": "4549ad3434f0835fe9c8280a9e7885779fc6a4ef21936678fe0c2feff7df2d6e",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 20,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cadadf3b5c4903d93c62875524ee37aa0f2c54576780ef895bab1d60fecc613e",
+        "synthetic_index": "30144e83f6532e0cdae212cc517ee59c6f4f07aaa0472ece8abc14f145025de3"
+      },
+      "peak_memory_bytes": 1021014016,
+      "warm_mean_seconds": 0.03630977857184397,
+      "name": "c1-l2-s10-l20",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l2-s10-l20.json",
+      "report_sha256": "39b748f724a83d204331f9840b308ae9a89452e525849cf212474296d824debb",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 40,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 6,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q11",
+        "q12",
+        "q19"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q07"
+      ],
+      "lost_legacy_hit_ids": [],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cadadf3b5c4903d93c62875524ee37aa0f2c54576780ef895bab1d60fecc613e",
+        "synthetic_index": "30144e83f6532e0cdae212cc517ee59c6f4f07aaa0472ece8abc14f145025de3"
+      },
+      "peak_memory_bytes": 1021652992,
+      "warm_mean_seconds": 0.03668577142629407,
+      "name": "c1-l2-s40-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l2-s40-l1.json",
+      "report_sha256": "8a9f2fb1bb1f33d9f91a9956dc588bfc9a40ec5785e31e52764f29d2a0326f86",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 40,
+        "lexical_candidates": 10,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cadadf3b5c4903d93c62875524ee37aa0f2c54576780ef895bab1d60fecc613e",
+        "synthetic_index": "30144e83f6532e0cdae212cc517ee59c6f4f07aaa0472ece8abc14f145025de3"
+      },
+      "peak_memory_bytes": 1021566976,
+      "warm_mean_seconds": 0.03625412142407315,
+      "name": "c1-l2-s40-l10",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l2-s40-l10.json",
+      "report_sha256": "ab826318e114d3104eed524650ffda5b4ecb4be24bfe04d57f2643f32ca95add",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 40,
+        "lexical_candidates": 20,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cadadf3b5c4903d93c62875524ee37aa0f2c54576780ef895bab1d60fecc613e",
+        "synthetic_index": "30144e83f6532e0cdae212cc517ee59c6f4f07aaa0472ece8abc14f145025de3"
+      },
+      "peak_memory_bytes": 1021456384,
+      "warm_mean_seconds": 0.022769742856326047,
+      "name": "c1-l2-s40-l20",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l2-s40-l20.json",
+      "report_sha256": "2e99bd07baffcf4e1f13b02bfa721ec2dd7220428e39c2292abdc9d37e3b9048",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 120,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 6,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q11",
+        "q12",
+        "q19"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q07"
+      ],
+      "lost_legacy_hit_ids": [],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cadadf3b5c4903d93c62875524ee37aa0f2c54576780ef895bab1d60fecc613e",
+        "synthetic_index": "30144e83f6532e0cdae212cc517ee59c6f4f07aaa0472ece8abc14f145025de3"
+      },
+      "peak_memory_bytes": 1020751872,
+      "warm_mean_seconds": 0.0235407999986949,
+      "name": "c1-l2-s120-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l2-s120-l1.json",
+      "report_sha256": "c9935264784ec67afdfa029528f8f4cf676b6e57474b5e0564a320e3fe38ca0f",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 120,
+        "lexical_candidates": 10,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cadadf3b5c4903d93c62875524ee37aa0f2c54576780ef895bab1d60fecc613e",
+        "synthetic_index": "30144e83f6532e0cdae212cc517ee59c6f4f07aaa0472ece8abc14f145025de3"
+      },
+      "peak_memory_bytes": 1019252736,
+      "warm_mean_seconds": 0.049908400002875296,
+      "name": "c1-l2-s120-l10",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l2-s120-l10.json",
+      "report_sha256": "45408c33742c0839262ba5315d45e244e30f32b252d5e840a052d60e0768635a",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 120,
+        "lexical_candidates": 20,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cadadf3b5c4903d93c62875524ee37aa0f2c54576780ef895bab1d60fecc613e",
+        "synthetic_index": "30144e83f6532e0cdae212cc517ee59c6f4f07aaa0472ece8abc14f145025de3"
+      },
+      "peak_memory_bytes": 1016971264,
+      "warm_mean_seconds": 0.035705657144717406,
+      "name": "c1-l2-s120-l20",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l2-s120-l20.json",
+      "report_sha256": "a5fdec34ce79de3da89a84b14db2162dc65d0f2bd7ce18c9e76bd15a9bcc0ff9",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q11",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "565d06b8df137f676a55df508e8b20ed7928ea80586b86c792e3e36b219089b1",
+        "synthetic_index": "cb186cd0cfafee9e3a30c4bb66631ec8c0c88760189119c325b841c383b0dc18"
+      },
+      "peak_memory_bytes": 1021640704,
+      "warm_mean_seconds": 0.031079614283433848,
+      "name": "c2-l1-s10-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l1-s10-l1.json",
+      "report_sha256": "0539832c39462e632ea886b00f65daa3c3eda31dc9c7bdb1585dad4b404e29f1",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 10,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 3,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q07",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "565d06b8df137f676a55df508e8b20ed7928ea80586b86c792e3e36b219089b1",
+        "synthetic_index": "cb186cd0cfafee9e3a30c4bb66631ec8c0c88760189119c325b841c383b0dc18"
+      },
+      "peak_memory_bytes": 1019752448,
+      "warm_mean_seconds": 0.029417478570914164,
+      "name": "c2-l1-s10-l10",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l1-s10-l10.json",
+      "report_sha256": "1320d909d8e995bf46190577bac03a2bbbd1d0e1ef71ff61f67ac7463868afe2",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 20,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 4,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "565d06b8df137f676a55df508e8b20ed7928ea80586b86c792e3e36b219089b1",
+        "synthetic_index": "cb186cd0cfafee9e3a30c4bb66631ec8c0c88760189119c325b841c383b0dc18"
+      },
+      "peak_memory_bytes": 1013305344,
+      "warm_mean_seconds": 0.030917892859309046,
+      "name": "c2-l1-s10-l20",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l1-s10-l20.json",
+      "report_sha256": "f9b3b5a8d3bc1109fde3e8c283e88d3d12418c7a1bc5c26ef50e5607856e4c57",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 40,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q11",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "565d06b8df137f676a55df508e8b20ed7928ea80586b86c792e3e36b219089b1",
+        "synthetic_index": "cb186cd0cfafee9e3a30c4bb66631ec8c0c88760189119c325b841c383b0dc18"
+      },
+      "peak_memory_bytes": 1020620800,
+      "warm_mean_seconds": 0.033721035714344386,
+      "name": "c2-l1-s40-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l1-s40-l1.json",
+      "report_sha256": "8df9148ca8b47b3d72a457f628d386e80a88f6da51691bc66d26a8efe847e8be",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 40,
+        "lexical_candidates": 10,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 3,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q07",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "565d06b8df137f676a55df508e8b20ed7928ea80586b86c792e3e36b219089b1",
+        "synthetic_index": "cb186cd0cfafee9e3a30c4bb66631ec8c0c88760189119c325b841c383b0dc18"
+      },
+      "peak_memory_bytes": 1018265600,
+      "warm_mean_seconds": 0.03594109285664412,
+      "name": "c2-l1-s40-l10",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l1-s40-l10.json",
+      "report_sha256": "4894a58f592ab77aebe19c57a4a473f9248274bfcbe30ba62030bf6c726d1100",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 40,
+        "lexical_candidates": 20,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 4,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "565d06b8df137f676a55df508e8b20ed7928ea80586b86c792e3e36b219089b1",
+        "synthetic_index": "cb186cd0cfafee9e3a30c4bb66631ec8c0c88760189119c325b841c383b0dc18"
+      },
+      "peak_memory_bytes": 1021022208,
+      "warm_mean_seconds": 0.03182127142957013,
+      "name": "c2-l1-s40-l20",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l1-s40-l20.json",
+      "report_sha256": "de12ce69cd457739b9d5142065f1019374f9f5cc2d428c42267e5587481080cb",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 120,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q11",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "565d06b8df137f676a55df508e8b20ed7928ea80586b86c792e3e36b219089b1",
+        "synthetic_index": "cb186cd0cfafee9e3a30c4bb66631ec8c0c88760189119c325b841c383b0dc18"
+      },
+      "peak_memory_bytes": 1022857216,
+      "warm_mean_seconds": 0.03396294285734517,
+      "name": "c2-l1-s120-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l1-s120-l1.json",
+      "report_sha256": "ab0198c6750b5ed307ae7e986115b16bc0f79c6d4fc019fc24e7bc1e4b443fdd",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 120,
+        "lexical_candidates": 10,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 3,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q07",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "565d06b8df137f676a55df508e8b20ed7928ea80586b86c792e3e36b219089b1",
+        "synthetic_index": "cb186cd0cfafee9e3a30c4bb66631ec8c0c88760189119c325b841c383b0dc18"
+      },
+      "peak_memory_bytes": 1020751872,
+      "warm_mean_seconds": 0.0370644071424197,
+      "name": "c2-l1-s120-l10",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l1-s120-l10.json",
+      "report_sha256": "b8f33f1cad1187ea26348e0323d2c02b893b919da3d54cfd3f87b0a3605a23e0",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 120,
+        "lexical_candidates": 20,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 4,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "565d06b8df137f676a55df508e8b20ed7928ea80586b86c792e3e36b219089b1",
+        "synthetic_index": "cb186cd0cfafee9e3a30c4bb66631ec8c0c88760189119c325b841c383b0dc18"
+      },
+      "peak_memory_bytes": 1022812160,
+      "warm_mean_seconds": 0.03510179285513004,
+      "name": "c2-l1-s120-l20",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l1-s120-l20.json",
+      "report_sha256": "b8fa6f9d106ada3b9b62a82786615c2a5fdd48a9b4c9dc97868c20284d339d54",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q11",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 2,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cc54691c45acd40707319e74e62fabc45f509a7ebc3af0554a2eb5894dbe6f9f",
+        "synthetic_index": "74573400bc6b2407fa6287aabc83c4bb10e981bc8eadf30a9566f09bce84f945"
+      },
+      "peak_memory_bytes": 1019092992,
+      "warm_mean_seconds": 0.0328639785678076,
+      "name": "c2-l2-s10-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l2-s10-l1.json",
+      "report_sha256": "6f5a129d374e043ab83130bd8b3c150a2c36921e414387e2bbc9dd1c2e748a4e",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 10,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 4,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 2,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cc54691c45acd40707319e74e62fabc45f509a7ebc3af0554a2eb5894dbe6f9f",
+        "synthetic_index": "74573400bc6b2407fa6287aabc83c4bb10e981bc8eadf30a9566f09bce84f945"
+      },
+      "peak_memory_bytes": 1021579264,
+      "warm_mean_seconds": 0.03261867143010022,
+      "name": "c2-l2-s10-l10",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l2-s10-l10.json",
+      "report_sha256": "9ff3e0b0c1149c692b12f213983618a72b714076bda819bb808082d8eb80fd3f",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 20,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 4,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 2,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cc54691c45acd40707319e74e62fabc45f509a7ebc3af0554a2eb5894dbe6f9f",
+        "synthetic_index": "74573400bc6b2407fa6287aabc83c4bb10e981bc8eadf30a9566f09bce84f945"
+      },
+      "peak_memory_bytes": 1021022208,
+      "warm_mean_seconds": 0.02551407142579722,
+      "name": "c2-l2-s10-l20",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l2-s10-l20.json",
+      "report_sha256": "b92b4f636f4a693b096e1e16385877957cc547b7bed0665bb631946210cae376",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 40,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q11",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 2,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cc54691c45acd40707319e74e62fabc45f509a7ebc3af0554a2eb5894dbe6f9f",
+        "synthetic_index": "74573400bc6b2407fa6287aabc83c4bb10e981bc8eadf30a9566f09bce84f945"
+      },
+      "peak_memory_bytes": 1021784064,
+      "warm_mean_seconds": 0.021367764285449602,
+      "name": "c2-l2-s40-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l2-s40-l1.json",
+      "report_sha256": "745093b07adb331770672aaca91875535f997918d6bf8b784d8a2772e695c66d",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 40,
+        "lexical_candidates": 10,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 4,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 2,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cc54691c45acd40707319e74e62fabc45f509a7ebc3af0554a2eb5894dbe6f9f",
+        "synthetic_index": "74573400bc6b2407fa6287aabc83c4bb10e981bc8eadf30a9566f09bce84f945"
+      },
+      "peak_memory_bytes": 1019330560,
+      "warm_mean_seconds": 0.032811757141774124,
+      "name": "c2-l2-s40-l10",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l2-s40-l10.json",
+      "report_sha256": "0c94e9730bd21289dd4263eae660a15ebd1bb65223051e3cb64d8b77b38d7fa8",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 40,
+        "lexical_candidates": 20,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 4,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 2,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cc54691c45acd40707319e74e62fabc45f509a7ebc3af0554a2eb5894dbe6f9f",
+        "synthetic_index": "74573400bc6b2407fa6287aabc83c4bb10e981bc8eadf30a9566f09bce84f945"
+      },
+      "peak_memory_bytes": 1023373312,
+      "warm_mean_seconds": 0.04306419285941437,
+      "name": "c2-l2-s40-l20",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l2-s40-l20.json",
+      "report_sha256": "c6069c4be4d3921dab68e0b432cbd01fc73b4e4bc4c7ee32b1bd79d22c9b2feb",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 120,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q11",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 2,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cc54691c45acd40707319e74e62fabc45f509a7ebc3af0554a2eb5894dbe6f9f",
+        "synthetic_index": "74573400bc6b2407fa6287aabc83c4bb10e981bc8eadf30a9566f09bce84f945"
+      },
+      "peak_memory_bytes": 1019158528,
+      "warm_mean_seconds": 0.03186412143155134,
+      "name": "c2-l2-s120-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l2-s120-l1.json",
+      "report_sha256": "df0370936dd826551bdb25040e7d5b9df9392e4ff042e61fe5fefffb4a2f873e",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 120,
+        "lexical_candidates": 10,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 4,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 2,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cc54691c45acd40707319e74e62fabc45f509a7ebc3af0554a2eb5894dbe6f9f",
+        "synthetic_index": "74573400bc6b2407fa6287aabc83c4bb10e981bc8eadf30a9566f09bce84f945"
+      },
+      "peak_memory_bytes": 1015853056,
+      "warm_mean_seconds": 0.03066953571500822,
+      "name": "c2-l2-s120-l10",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l2-s120-l10.json",
+      "report_sha256": "02d035de0e6e3b7dbd0f61aaf5ad8b769329316196846366d821cf64f5ec2928",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 120,
+        "lexical_candidates": 20,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 4,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q11",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q11",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 2,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cc54691c45acd40707319e74e62fabc45f509a7ebc3af0554a2eb5894dbe6f9f",
+        "synthetic_index": "74573400bc6b2407fa6287aabc83c4bb10e981bc8eadf30a9566f09bce84f945"
+      },
+      "peak_memory_bytes": 1022603264,
+      "warm_mean_seconds": 0.034152071431370654,
+      "name": "c2-l2-s120-l20",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l2-s120-l20.json",
+      "report_sha256": "db7f842bbd3b365f4830399493250e83ad71eff6cbf49bf9e0281279141df593",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    }
+  ],
+  "selected": {
+    "algorithm": "markdown-chunking-1",
+    "literal_policy": 1,
+    "settings": {
+      "semantic_candidates": 10,
+      "lexical_candidates": 1,
+      "rrf_constant": 60,
+      "top_k": 6
+    },
+    "count": 9,
+    "hits": 6,
+    "hit_ids": [
+      "q01",
+      "q05",
+      "q06",
+      "q11",
+      "q12",
+      "q19"
+    ],
+    "miss_ids": [
+      "q02",
+      "q03",
+      "q07"
+    ],
+    "lost_legacy_hit_ids": [],
+    "new_hit_ids": [],
+    "follow_up_hits": 0,
+    "changed_policies": 0,
+    "fingerprints": {
+      "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+      "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+      "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+      "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+      "live_index": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+      "synthetic_index": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89"
+    },
+    "peak_memory_bytes": 1021468672,
+    "warm_mean_seconds": 0.03286819999941924,
+    "name": "c1-l1-s10-l1",
+    "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l1-s10-l1.json",
+    "report_sha256": "277605c18ef4ca5fccf84d187e9cf4621e3e8b02f6abdcf9c721f9e90286b538",
+    "mandatory_development_checks_passed": true,
+    "exclusion_reasons": [],
+    "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+    "server_resource_gate": "pending actual locked target-server runs"
+  },
+  "best_tuning_hits": 6,
+  "frozen_upper_bound_if_perfect_holdout": 9,
+  "stop_required": true,
+  "server_resource_gate": "pending; development selection cannot establish server acceptance",
+  "holdout_candidates_executed": false,
+  "independent_package_opened": false,
+  "protected_inputs_unchanged": true,
+  "ablations_at_legacy_limits": [
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 6,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q11",
+        "q12",
+        "q19"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q07"
+      ],
+      "lost_legacy_hit_ids": [],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 0,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+        "synthetic_index": "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89"
+      },
+      "peak_memory_bytes": 1021468672,
+      "warm_mean_seconds": 0.03286819999941924,
+      "name": "c1-l1-s10-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l1-s10-l1.json",
+      "report_sha256": "277605c18ef4ca5fccf84d187e9cf4621e3e8b02f6abdcf9c721f9e90286b538",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-1",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 6,
+      "hit_ids": [
+        "q01",
+        "q05",
+        "q06",
+        "q11",
+        "q12",
+        "q19"
+      ],
+      "miss_ids": [
+        "q02",
+        "q03",
+        "q07"
+      ],
+      "lost_legacy_hit_ids": [],
+      "new_hit_ids": [],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cadadf3b5c4903d93c62875524ee37aa0f2c54576780ef895bab1d60fecc613e",
+        "synthetic_index": "30144e83f6532e0cdae212cc517ee59c6f4f07aaa0472ece8abc14f145025de3"
+      },
+      "peak_memory_bytes": 1022611456,
+      "warm_mean_seconds": 0.03354981428440494,
+      "name": "c1-l2-s10-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c1-l2-s10-l1.json",
+      "report_sha256": "aec22f87307cc8ec8dc767471c692db36d3bad998c4449b97dd2432b84ca1394",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 1,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q11",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "565d06b8df137f676a55df508e8b20ed7928ea80586b86c792e3e36b219089b1",
+        "synthetic_index": "cb186cd0cfafee9e3a30c4bb66631ec8c0c88760189119c325b841c383b0dc18"
+      },
+      "peak_memory_bytes": 1021640704,
+      "warm_mean_seconds": 0.031079614283433848,
+      "name": "c2-l1-s10-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l1-s10-l1.json",
+      "report_sha256": "0539832c39462e632ea886b00f65daa3c3eda31dc9c7bdb1585dad4b404e29f1",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    },
+    {
+      "algorithm": "markdown-chunking-2",
+      "literal_policy": 2,
+      "settings": {
+        "semantic_candidates": 10,
+        "lexical_candidates": 1,
+        "rrf_constant": 60,
+        "top_k": 6
+      },
+      "count": 9,
+      "hits": 5,
+      "hit_ids": [
+        "q05",
+        "q06",
+        "q07",
+        "q11",
+        "q12"
+      ],
+      "miss_ids": [
+        "q01",
+        "q02",
+        "q03",
+        "q19"
+      ],
+      "lost_legacy_hit_ids": [
+        "q01",
+        "q19"
+      ],
+      "new_hit_ids": [
+        "q07"
+      ],
+      "follow_up_hits": 0,
+      "changed_policies": 2,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "cc54691c45acd40707319e74e62fabc45f509a7ebc3af0554a2eb5894dbe6f9f",
+        "synthetic_index": "74573400bc6b2407fa6287aabc83c4bb10e981bc8eadf30a9566f09bce84f945"
+      },
+      "peak_memory_bytes": 1019092992,
+      "warm_mean_seconds": 0.0328639785678076,
+      "name": "c2-l2-s10-l1",
+      "report_path": "data\\retrieval-quality-improvement\\grid\\c2-l2-s10-l1.json",
+      "report_sha256": "6f5a129d374e043ab83130bd8b3c150a2c36921e414387e2bbc9dd1c2e748a4e",
+      "mandatory_development_checks_passed": true,
+      "exclusion_reasons": [],
+      "functional_integrity_evidence": "targeted suites, full provenance validation, protected hash checks",
+      "server_resource_gate": "pending actual locked target-server runs"
+    }
+  ]
+}

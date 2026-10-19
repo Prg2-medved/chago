@@ -1,0 +1,73 @@
+﻿{
+    "final_gate_order":  [
+                             "lock",
+                             "frozen_v1",
+                             "target_server",
+                             "independent_validation"
+                         ],
+    "committed_at":  "2026-10-16T09:26:40.3977443+03:00",
+    "grid_count":  36,
+    "independent_evaluator":  "not appointed",
+    "source_receipt_sha256":  "9c8a78584600e584fa7621d2b39b1dea398d392912198c24b8863592d776d555",
+    "protected_baseline_sha256":  "d616ab6b53722654edb2aba53ba7bf979383200a5692f4cbaf6bf39a41353a69",
+    "protocol_version":  1,
+    "code_revision_before_implementation":  "f25948b8b6d58be22bca69164981b89f4d57a124",
+    "protocol_sha256":  "c41b1156d04cc368e3db4f0de8ffbaf20fb250c7a56429230d78d7abe2ea2e5a",
+    "closed_package":  "not supplied",
+    "handoff_checks":  [
+                           {
+                               "expected":  "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+                               "path":  "data/eval/1/wiki-documents.json",
+                               "actual":  "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+                               "matches":  true
+                           },
+                           {
+                               "expected":  "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+                               "path":  "data/hybrid-live.db",
+                               "actual":  "87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44",
+                               "matches":  true
+                           },
+                           {
+                               "expected":  "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89",
+                               "path":  "data/hybrid-synthetic.db",
+                               "actual":  "e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89",
+                               "matches":  true
+                           },
+                           {
+                               "expected":  "0130ec7090df603f8f3ab8db456936ac40c48f39fb6d98b8e11d16174d157090",
+                               "path":  "data/semantic-live.db",
+                               "actual":  "0130ec7090df603f8f3ab8db456936ac40c48f39fb6d98b8e11d16174d157090",
+                               "matches":  true
+                           },
+                           {
+                               "expected":  "22154d7b104d683615a8adec4fac4a9756415288bb7e683d3dc07bea06b11243",
+                               "path":  "data/semantic-synthetic.db",
+                               "actual":  "22154d7b104d683615a8adec4fac4a9756415288bb7e683d3dc07bea06b11243",
+                               "matches":  true
+                           },
+                           {
+                               "expected":  "7b2a836271d66a4467cdb9ae56222201315edb80f1101a061cf087e2ed0f2515",
+                               "path":  "docs/semantic-retrieval-baseline.json",
+                               "actual":  "7b2a836271d66a4467cdb9ae56222201315edb80f1101a061cf087e2ed0f2515",
+                               "matches":  true
+                           },
+                           {
+                               "expected":  "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+                               "path":  "eval/fixtures/wiki-documents.json",
+                               "actual":  "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+                               "matches":  true
+                           },
+                           {
+                               "expected":  "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+                               "path":  "eval/manifest.json",
+                               "actual":  "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+                               "matches":  true
+                           },
+                           {
+                               "expected":  "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+                               "path":  "eval/questions.yaml",
+                               "actual":  "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+                               "matches":  true
+                           }
+                       ]
+}
