@@ -8,6 +8,8 @@ Roadmap намеренно не хранит статус выполнения �
 
 Первые фундаментальные этапы также включены в roadmap, чтобы вся архитектурная последовательность проекта была видна в одном месте.
 
+Обязательный путь к функциональному MVP после lexical/hybrid retrieval: `atomic-full-reindex` → `grounded-chat-api` → `session-follow-up` → `minimal-web-ui-and-health` → `offline-mvp-acceptance`. По решению владельца достижение Hit@5 ≥90% вынесено в post-MVP и не блокирует этот путь. Grounded answers, sources, refusal, read-only Wiki.js, local/offline runtime и безопасность остаются обязательными критериями выпуска.
+
 Роли документов:
 
 ```text
@@ -301,27 +303,11 @@ Hybrid retrieval должен использовать как минимум:
 
 Результат этапа: система возвращает итоговый набор chunks на основе hybrid retrieval, а качество можно сравнить с чистым semantic retrieval.
 
-Техническое завершение требует проверенной реализации, воспроизводимого comparison и серверной приёмки с честным отчётом о качестве. Достижение обязательного MVP Hit@5 ≥90% проверяется на следующем самостоятельном этапе.
+Техническое завершение требует проверенной реализации, воспроизводимого comparison и серверной приёмки с честным отчётом о качестве. Измеренный Hit@5, misses и ограничения сохраняются; достижение Hit@5 ≥90% проверяется в post-MVP. Следующий функциональный этап — `atomic-full-reindex`.
 
 ---
 
-## 9. `retrieval-quality-improvement`
-
-### Brief для OpenSpec
-
-Создать отдельный change `retrieval-quality-improvement` через `$openspec-propose`.
-
-Цель: диагностировать и устранить причины недостаточного evidence retrieval и подтвердить обязательный MVP **live single-question evidence Hit@5 ≥90%** по protocol v1.
-
-Использовать существующие frozen corpus, snapshots, baseline и [диагностику miss cases](docs/lexical-and-hybrid-retrieval-diagnostics.md), включая структурную невозможность полного Hit@5 для q03 на исходном snapshot. Разделить проблемы наличия evidence, recall, сопоставления терминов, структурных границ chunks, candidate limits и ранжирования. Конкретные решения, совместимость, стоимость на CPU/RAM и проверки обосновать в новом proposal/design; не выбирать заранее chunking policy, модель, reranker или другую архитектуру.
-
-Сохранить frozen corpus, expectations и прежние baseline. Раскрытый holdout использовать только для отчёта, не для tuning; до выбора решений определить допустимый development/validation protocol. Новые варианты индекса и reports хранить отдельно с fingerprints и исходными source ranges, не изменяя protocol v1 и denominator ради улучшения метрики.
-
-Результат этапа: воспроизводимо достигнут Hit@5 ≥90%, опубликованы отдельные tuning/holdout/follow-up результаты, проверены регрессии, provenance и ресурсы на целевом сервере. Если порог не достигнут, quality acceptance остаётся незавершённым. Не добавлять generation, RAG API или UI и не расширять архивированный lexical/hybrid change.
-
----
-
-## 10. `atomic-full-reindex`
+## 9. `atomic-full-reindex`
 
 ### Brief для OpenSpec
 
@@ -339,7 +325,7 @@ Hybrid retrieval должен использовать как минимум:
 
 ---
 
-## 11. `grounded-chat-api`
+## 10. `grounded-chat-api`
 
 ### Brief для OpenSpec
 
@@ -373,7 +359,7 @@ Hybrid retrieval должен использовать как минимум:
 
 ---
 
-## 12. `session-follow-up`
+## 11. `session-follow-up`
 
 ### Brief для OpenSpec
 
@@ -391,7 +377,7 @@ Hybrid retrieval должен использовать как минимум:
 
 ---
 
-## 13. `minimal-web-ui-and-health`
+## 12. `minimal-web-ui-and-health`
 
 ### Brief для OpenSpec
 
@@ -412,7 +398,7 @@ Web UI должен позволять:
 
 ---
 
-## 14. `offline-mvp-acceptance`
+## 13. `offline-mvp-acceptance`
 
 ### Brief для OpenSpec
 
@@ -453,4 +439,22 @@ Wiki.js
 - отсутствие необязательной инфраструктуры;
 - приемлемую работу на целевом CPU/RAM.
 
-Результат этапа: подтверждён полностью локальный read-only RAG MVP, соответствующий `SPEC.md`.
+Сохранить отчёт о фактическом качестве retrieval: Hit@5, misses и ограничения, отдельно tuning/holdout и follow-up результаты. Достижение Hit@5 ≥90% не требуется для выпуска; недостаток найденных данных должен приводить к обозначенному частичному ответу, уточнению или отказу без неподтверждённых утверждений.
+
+Результат этапа: подтверждён полностью локальный read-only RAG MVP, соответствующий обязательным критериям выпуска в `SPEC.md` §27.
+
+---
+
+## Post-MVP. `post-mvp-retrieval-quality`
+
+### Brief для OpenSpec
+
+Создать новый отдельный change `post-mvp-retrieval-quality` через `$openspec-propose`. Не переиспользовать архивированный `retrieval-quality-improvement` и не изменять архивированные changes или исторические результаты экспериментов.
+
+Цель: диагностировать и устранить причины недостаточного evidence retrieval и подтвердить целевое требование post-MVP **live single-question evidence Hit@5 ≥90%** по protocol v1. Этот этап не является условием выпуска функционального MVP.
+
+Использовать существующие frozen corpus, snapshots, baseline и [диагностику miss cases](docs/lexical-and-hybrid-retrieval-diagnostics.md), включая структурную невозможность полного Hit@5 для q03 на исходном snapshot. Разделить проблемы наличия evidence, recall, сопоставления терминов, структурных границ chunks, candidate limits и ранжирования. Конкретные решения, совместимость, стоимость на CPU/RAM и проверки обосновать в новом proposal/design; не выбирать заранее chunking policy, модель, reranker или другую архитектуру.
+
+Сохранить frozen corpus, expectations и прежние baseline. Раскрытый holdout использовать только для отчёта, не для tuning; до выбора решений определить допустимый development/validation protocol. Новые варианты индекса и reports хранить отдельно с fingerprints и исходными source ranges, не изменяя protocol v1 и denominator ради улучшения метрики.
+
+Результат этапа: воспроизводимо достигнут Hit@5 ≥90%, опубликованы отдельные tuning/holdout/follow-up результаты, проверены регрессии, provenance и ресурсы на целевом сервере. Если порог не достигнут, post-MVP цель качества остаётся незавершённой. Сохранить обязательные требования grounded answers, sources, refusal, read-only Wiki.js, local/offline runtime и безопасности.
