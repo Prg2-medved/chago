@@ -1,3 +1,3 @@
 # Preserve original LF/CRLF evidence bytes and recognize CR as a line ending.
 /openspec/changes/archive/2026-10-20-retrieval-quality-improvement/** -text whitespace=cr-at-eol
-/docs/retrieval-quality-result-v1-frozen.md -text
+/docs/experiments/retrieval-quality-improvement/retrieval-quality* -text whitespace=cr-at-eol

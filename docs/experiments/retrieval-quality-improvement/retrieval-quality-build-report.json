@@ -1,0 +1,242 @@
+{
+  "model_identity": {
+    "model_id": "intfloat/multilingual-e5-small",
+    "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+    "assets_fingerprint": "914fc30cc2e7d2f87cc991e265f2737e9da6f4791a511170f8f503fe075ca1bc",
+    "dimension": 384,
+    "dtype": "<f4",
+    "normalized": true,
+    "input_format_version": 1,
+    "tokenizer_fingerprint": "573b6457b17946a70015f085b8b467715631438ac1a72ba8c4e2784813848850"
+  },
+  "builds": {
+    "live": {
+      "chunk_seconds_two_builds": 1.7322942999890074,
+      "storage_seconds": 0.08915719999640714,
+      "embedding_seconds": 42.085820699998294,
+      "lexical_seconds": 0.18997559999115765,
+      "hashes": {
+        "data\\retrieval-quality-improvement\\packing\\chunks-live.json": "27da815289cc041cd7fb8743c194a701c823cecacd23d58681e8b2f68eabb873",
+        "data\\retrieval-quality-improvement\\packing\\storage-live.db": "7f09bae8e6f1c760f0ea5e8ce72f741d5a8ea1efa326496f36b8488d3b137ab9",
+        "data\\retrieval-quality-improvement\\packing\\semantic-live.db": "0c97eaf30c1246a0d5ae0cd8863fac2621a149e96d56f54f94c379c45b54b9ae",
+        "data\\retrieval-quality-improvement\\packing\\hybrid-live.db": "565d06b8df137f676a55df508e8b20ed7928ea80586b86c792e3e36b219089b1"
+      },
+      "disk_bytes": {
+        "data\\retrieval-quality-improvement\\packing\\chunks-live.json": 1447028,
+        "data\\retrieval-quality-improvement\\packing\\storage-live.db": 1052672,
+        "data\\retrieval-quality-improvement\\packing\\semantic-live.db": 2506752,
+        "data\\retrieval-quality-improvement\\packing\\hybrid-live.db": 3153920
+      },
+      "semantic_build": {
+        "documents": 24,
+        "chunks": 674,
+        "identity": {
+          "model_id": "intfloat/multilingual-e5-small",
+          "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+          "assets_fingerprint": "914fc30cc2e7d2f87cc991e265f2737e9da6f4791a511170f8f503fe075ca1bc",
+          "dimension": 384,
+          "dtype": "<f4",
+          "normalized": true,
+          "input_format_version": 1,
+          "tokenizer_fingerprint": "573b6457b17946a70015f085b8b467715631438ac1a72ba8c4e2784813848850",
+          "format_version": 1,
+          "runtime": {
+            "sentence-transformers": "5.1.2",
+            "transformers": "4.57.3",
+            "torch": "2.7.1+cpu",
+            "numpy": "2.2.6",
+            "tokenizers": "0.22.2"
+          }
+        }
+      },
+      "lexical_build": {
+        "documents": 24,
+        "chunks": 674,
+        "identity": {
+          "format_version": 1,
+          "input_format_version": 1,
+          "query_policy_version": 1,
+          "literal_policy_version": 1,
+          "options": {
+            "tokenizer": "unicode61",
+            "detail": "full",
+            "content": "internal",
+            "weights": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "documents": 24,
+          "chunks": 674,
+          "sqlite_version": "3.45.3",
+          "compile_options": [
+            "ATOMIC_INTRINSICS=0",
+            "COMPILER=msvc-1941",
+            "DEFAULT_AUTOVACUUM",
+            "DEFAULT_CACHE_SIZE=-2000",
+            "DEFAULT_FILE_FORMAT=4",
+            "DEFAULT_JOURNAL_SIZE_LIMIT=-1",
+            "DEFAULT_MMAP_SIZE=0",
+            "DEFAULT_PAGE_SIZE=4096",
+            "DEFAULT_PCACHE_INITSZ=20",
+            "DEFAULT_RECURSIVE_TRIGGERS",
+            "DEFAULT_SECTOR_SIZE=4096",
+            "DEFAULT_SYNCHRONOUS=2",
+            "DEFAULT_WAL_AUTOCHECKPOINT=1000",
+            "DEFAULT_WAL_SYNCHRONOUS=2",
+            "DEFAULT_WORKER_THREADS=0",
+            "DIRECT_OVERFLOW_READ",
+            "ENABLE_FTS3",
+            "ENABLE_FTS4",
+            "ENABLE_FTS5",
+            "ENABLE_MATH_FUNCTIONS",
+            "ENABLE_RTREE",
+            "MALLOC_SOFT_LIMIT=1024",
+            "MAX_ATTACHED=10",
+            "MAX_COLUMN=2000",
+            "MAX_COMPOUND_SELECT=500",
+            "MAX_DEFAULT_PAGE_SIZE=8192",
+            "MAX_EXPR_DEPTH=1000",
+            "MAX_FUNCTION_ARG=127",
+            "MAX_LENGTH=1000000000",
+            "MAX_LIKE_PATTERN_LENGTH=50000",
+            "MAX_MMAP_SIZE=0x7fff0000",
+            "MAX_PAGE_COUNT=0xfffffffe",
+            "MAX_PAGE_SIZE=65536",
+            "MAX_SQL_LENGTH=1000000000",
+            "MAX_TRIGGER_DEPTH=1000",
+            "MAX_VARIABLE_NUMBER=32766",
+            "MAX_VDBE_OP=250000000",
+            "MAX_WORKER_THREADS=8",
+            "MUTEX_W32",
+            "OMIT_AUTOINIT",
+            "SYSTEM_MALLOC",
+            "TEMP_STORE=1",
+            "THREADSAFE=1"
+          ]
+        }
+      },
+      "repeat_chunk_hash_equal": true,
+      "full_new_vector_inventory": true,
+      "failure_preserved_inputs_outputs": true,
+      "repeat_embedding_seconds": 55.36015530000441,
+      "repeat_semantic_and_lexical_bytes_equal": true,
+      "raw_vectors_sha256": "101bb1d9c01a04bff92ccb2862f551e90db9c12285eb28b72b21f9a0ac3caddf"
+    },
+    "synthetic": {
+      "chunk_seconds_two_builds": 0.0033700999920256436,
+      "storage_seconds": 0.018994999991264194,
+      "embedding_seconds": 0.07130480000341777,
+      "lexical_seconds": 0.024478999999701045,
+      "hashes": {
+        "data\\retrieval-quality-improvement\\packing\\chunks-synthetic.json": "0500b1ddd9c9b0855c29ed6fd28794db39c75e5b7aa52c38649dc88d6979f833",
+        "data\\retrieval-quality-improvement\\packing\\storage-synthetic.db": "62f263672b5b28690dba046323225b48ae0c2601e8a55b9bc5fbf50fc5098213",
+        "data\\retrieval-quality-improvement\\packing\\semantic-synthetic.db": "a57b1ca2d92fa4216c014328f96a702b47e542dd2fd653bf79508c8968574c26",
+        "data\\retrieval-quality-improvement\\packing\\hybrid-synthetic.db": "cb186cd0cfafee9e3a30c4bb66631ec8c0c88760189119c325b841c383b0dc18"
+      },
+      "disk_bytes": {
+        "data\\retrieval-quality-improvement\\packing\\chunks-synthetic.json": 2887,
+        "data\\retrieval-quality-improvement\\packing\\storage-synthetic.db": 32768,
+        "data\\retrieval-quality-improvement\\packing\\semantic-synthetic.db": 45056,
+        "data\\retrieval-quality-improvement\\packing\\hybrid-synthetic.db": 69632
+      },
+      "semantic_build": {
+        "documents": 1,
+        "chunks": 1,
+        "identity": {
+          "model_id": "intfloat/multilingual-e5-small",
+          "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+          "assets_fingerprint": "914fc30cc2e7d2f87cc991e265f2737e9da6f4791a511170f8f503fe075ca1bc",
+          "dimension": 384,
+          "dtype": "<f4",
+          "normalized": true,
+          "input_format_version": 1,
+          "tokenizer_fingerprint": "573b6457b17946a70015f085b8b467715631438ac1a72ba8c4e2784813848850",
+          "format_version": 1,
+          "runtime": {
+            "sentence-transformers": "5.1.2",
+            "transformers": "4.57.3",
+            "torch": "2.7.1+cpu",
+            "numpy": "2.2.6",
+            "tokenizers": "0.22.2"
+          }
+        }
+      },
+      "lexical_build": {
+        "documents": 1,
+        "chunks": 1,
+        "identity": {
+          "format_version": 1,
+          "input_format_version": 1,
+          "query_policy_version": 1,
+          "literal_policy_version": 1,
+          "options": {
+            "tokenizer": "unicode61",
+            "detail": "full",
+            "content": "internal",
+            "weights": [
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "documents": 1,
+          "chunks": 1,
+          "sqlite_version": "3.45.3",
+          "compile_options": [
+            "ATOMIC_INTRINSICS=0",
+            "COMPILER=msvc-1941",
+            "DEFAULT_AUTOVACUUM",
+            "DEFAULT_CACHE_SIZE=-2000",
+            "DEFAULT_FILE_FORMAT=4",
+            "DEFAULT_JOURNAL_SIZE_LIMIT=-1",
+            "DEFAULT_MMAP_SIZE=0",
+            "DEFAULT_PAGE_SIZE=4096",
+            "DEFAULT_PCACHE_INITSZ=20",
+            "DEFAULT_RECURSIVE_TRIGGERS",
+            "DEFAULT_SECTOR_SIZE=4096",
+            "DEFAULT_SYNCHRONOUS=2",
+            "DEFAULT_WAL_AUTOCHECKPOINT=1000",
+            "DEFAULT_WAL_SYNCHRONOUS=2",
+            "DEFAULT_WORKER_THREADS=0",
+            "DIRECT_OVERFLOW_READ",
+            "ENABLE_FTS3",
+            "ENABLE_FTS4",
+            "ENABLE_FTS5",
+            "ENABLE_MATH_FUNCTIONS",
+            "ENABLE_RTREE",
+            "MALLOC_SOFT_LIMIT=1024",
+            "MAX_ATTACHED=10",
+            "MAX_COLUMN=2000",
+            "MAX_COMPOUND_SELECT=500",
+            "MAX_DEFAULT_PAGE_SIZE=8192",
+            "MAX_EXPR_DEPTH=1000",
+            "MAX_FUNCTION_ARG=127",
+            "MAX_LENGTH=1000000000",
+            "MAX_LIKE_PATTERN_LENGTH=50000",
+            "MAX_MMAP_SIZE=0x7fff0000",
+            "MAX_PAGE_COUNT=0xfffffffe",
+            "MAX_PAGE_SIZE=65536",
+            "MAX_SQL_LENGTH=1000000000",
+            "MAX_TRIGGER_DEPTH=1000",
+            "MAX_VARIABLE_NUMBER=32766",
+            "MAX_VDBE_OP=250000000",
+            "MAX_WORKER_THREADS=8",
+            "MUTEX_W32",
+            "OMIT_AUTOINIT",
+            "SYSTEM_MALLOC",
+            "TEMP_STORE=1",
+            "THREADSAFE=1"
+          ]
+        }
+      },
+      "repeat_chunk_hash_equal": true,
+      "full_new_vector_inventory": true,
+      "failure_preserved_inputs_outputs": true,
+      "repeat_embedding_seconds": 0.14634260001184884,
+      "repeat_semantic_and_lexical_bytes_equal": true,
+      "raw_vectors_sha256": "1426a593dc9efccf3763b0d5229ca8eb8a775f39f6badad5a5509c453e7c2fa5"
+    }
+  }
+}
