@@ -12,7 +12,7 @@ import time
 import pytest
 
 
-pytestmark = pytest.mark.skipif(sys.platform != "linux", reason="actual Linux Bash/flock/signals required")
+linux_only = pytest.mark.skipif(sys.platform != "linux", reason="actual Linux Bash/flock/signals required")
 ROOT = Path(__file__).resolve().parents[2]
 
 FAKE_DOCKER = r'''#!/usr/bin/env python3
@@ -24,16 +24,30 @@ with (root/'calls').open('a') as f:
     f.write(json.dumps(args)+'\n')
 scenario=os.environ.get('SCENARIO','success')
 statefile=root/'container.json'
+appfile=root/'app.json'
 def load():
     return json.loads(statefile.read_text()) if statefile.exists() else None
 def save(state):
     statefile.write_text(json.dumps(state))
+def load_app():
+    return json.loads(appfile.read_text()) if appfile.exists() else None
+def save_app(state):
+    appfile.write_text(json.dumps(state))
+def resolve(target):
+    for state in (load(), load_app()):
+        if state and target in (state['id'], state['name'], '/'+state['name']):
+            return state
+    return None
 if args[0]=='compose':
     args=args[5:]
     if args[:2]==['config','--format']:
         print(json.dumps({'name':'test-project'}))
     elif args[0]=='stop':
-        sys.exit(1 if scenario=='stop-failure' else 0)
+        if scenario=='stop-failure': sys.exit(1)
+        state=load_app()
+        if state:
+            state['status']='exited'
+            save_app(state)
     elif args[0]=='run':
         if scenario=='launch-failure': sys.exit(1)
         if scenario=='creation-delay':
@@ -49,24 +63,31 @@ if args[0]=='compose':
         if scenario=='lost-id': sys.exit(1)
         print(state['id'])
     elif args[0]=='up':
-        sys.exit(1 if scenario in ('up-failure','both-failure') else 0)
+        if scenario in ('up-failure','both-failure'): sys.exit(1)
+        status='exited' if scenario=='app-exit' else 'restarting' if scenario=='app-restarting' else 'running'
+        save_app({'id':'app-a','name':'app','project':'test-project',
+                  'status':status,'code':0,'restart_count':0})
     elif args[0]=='ps':
         counter=root/'ps-count'
         count=int(counter.read_text()) if counter.exists() else 0
         counter.write_text(str(count+1))
-        print('app-b' if scenario=='changed-id' and count>0 else 'app-a')
+        state=load_app()
+        if state:
+            if scenario=='changed-id' and count>0:
+                state['id']='app-b'
+                save_app(state)
+            print(state['id'])
     else: sys.exit(2)
 elif args[0]=='inspect':
-    state=load()
+    state=resolve(args[-1])
     if not state: sys.exit(1)
     if scenario=='docker-unavailable' and (root/'allow-failure').exists(): sys.exit(1)
     if '--format' not in args: print('{}'); sys.exit(0)
     fmt=args[args.index('--format')+1]
     if '.Config.Labels' in fmt:
-        print('|'.join([state['id'],'/'+state['name'],state['label'],state['project']]))
+        print('|'.join([state['id'],'/'+state['name'],state.get('label',''),state['project']]))
     elif '.RestartCount' in fmt:
-        status='exited' if scenario=='app-exit' else 'restarting' if scenario=='app-restarting' else 'running'
-        print(status+'|0')
+        print(state['status']+'|'+str(state.get('restart_count',0)))
     else:
         print(state['status']+'|'+str(state['code']))
 elif args[:2]==['container','ls']:
@@ -74,6 +95,8 @@ elif args[:2]==['container','ls']:
     if scenario=='docker-unavailable': sys.exit(1)
     if state: print(state['name'])
 elif args[0]=='exec':
+    state=load_app()
+    if not state or args[1]!=state['id'] or state['status']!='running': sys.exit(1)
     counter=root/'probe-count'
     count=int(counter.read_text()) if counter.exists() else 0
     counter.write_text(str(count+1))
@@ -81,11 +104,15 @@ elif args[0]=='exec':
     if scenario in ('http-timeout','bad-json'): sys.exit(1)
 elif args[0]=='stop':
     state=load()
+    if not state or args[-1] not in (state['id'],state['name']): sys.exit(1)
     if scenario!='kill-required': state['status']='exited'; state['code']=143; save(state)
 elif args[0]=='kill':
-    state=load(); state['status']='exited'; state['code']=137; save(state)
+    state=load()
+    if not state or args[-1] not in (state['id'],state['name']): sys.exit(1)
+    state['status']='exited'; state['code']=137; save(state)
 elif args[0]=='rm':
     state=load()
+    if not state or args[-1] not in (state['id'],state['name']): sys.exit(1)
     assert state['status']=='exited'
     (root/'removed').write_text(json.dumps(state))
     statefile.unlink()
@@ -121,6 +148,7 @@ def run(host, scenario):
                           capture_output=True, text=True, timeout=20)
 
 
+@linux_only
 @pytest.mark.parametrize("scenario,status", [
     ("success", 0), ("build-failure", 7), ("both-failure", 7), ("up-failure", 1),
     ("app-exit", 1), ("app-restarting", 1), ("http-timeout", 1), ("bad-json", 1),
@@ -158,6 +186,7 @@ def wait_for(root, predicate, process):
     pytest.fail("fake Docker synchronization timed out")
 
 
+@linux_only
 @pytest.mark.parametrize("scenario", ["inference", "creation-delay", "kill-required", "docker-unavailable"])
 @pytest.mark.parametrize("sig,status", [(signal.SIGINT, 130), (signal.SIGTERM, 143)])
 def test_signal_terminates_only_owned_container(host, scenario, sig, status):
@@ -190,6 +219,7 @@ def test_signal_terminates_only_owned_container(host, scenario, sig, status):
             process.wait()
 
 
+@linux_only
 def test_second_operation_rejected_before_docker(host):
     root, env = host
     process = subprocess.Popen(["bash", str(root / "reindex.sh")], env={**env, "SCENARIO": "inference"},
@@ -206,6 +236,48 @@ def test_second_operation_rejected_before_docker(host):
         process.communicate(timeout=20)
 
 
+@linux_only
 def test_bash_syntax():
     result = subprocess.run(["bash", "-n", str(ROOT / "reindex.sh")], capture_output=True)
     assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("scenario,exit_code", [
+    ("success", 0), ("build-failure", 7), ("probe-delay", 0), ("changed-id", 0),
+])
+def test_fake_app_survives_one_shot_removal(tmp_path, scenario, exit_code):
+    executable = tmp_path / "fake_docker.py"
+    executable.write_text(FAKE_DOCKER)
+    env = {**os.environ, "FAKE_ROOT": str(tmp_path), "SCENARIO": scenario}
+
+    def docker(*args, expected=0):
+        result = subprocess.run([sys.executable, str(executable), *args], env=env,
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode == expected, result.stderr
+        return result.stdout.strip()
+
+    def compose(*args):
+        return docker("compose", "--project-directory", str(tmp_path), "-f", "compose.yaml", *args)
+
+    one_shot = compose("run", "--detach", "--name", "test-indexer", "--label", "chago.reindex-run=test-run", "app")
+    assert docker("inspect", "--format", "{{.State.Status}}|{{.State.ExitCode}}", one_shot) == f"exited|{exit_code}"
+    compose("up", "-d", "--no-deps", "app")
+    app_before = (tmp_path / "app.json").read_bytes()
+    docker("rm", one_shot)
+    assert not (tmp_path / "container.json").exists()
+    assert (tmp_path / "app.json").read_bytes() == app_before
+    docker("inspect", one_shot, expected=1)
+    docker("inspect", "test-indexer", expected=1)
+    docker("inspect", "unknown-container", expected=1)
+    app_id = compose("ps", "-q", "app")
+    assert app_id == "app-a"
+    assert docker("inspect", "--format", "{{.State.Status}}|{{.RestartCount}}", app_id) == "running|0"
+    docker("exec", app_id, "python", "-c", "probe", expected=1 if scenario == "probe-delay" else 0)
+    if scenario == "probe-delay":
+        docker("exec", app_id, "python", "-c", "probe")
+    current_id = compose("ps", "-q", "app")
+    assert current_id == ("app-b" if scenario == "changed-id" else "app-a")
+    assert docker("inspect", "--format", "{{.State.Status}}|{{.RestartCount}}", current_id) == "running|0"
+    if scenario == "changed-id":
+        docker("inspect", app_id, expected=1)
+        docker("exec", app_id, "python", "-c", "probe", expected=1)
