@@ -290,7 +290,8 @@ def _write_database(path: Path, snapshot: StorageSnapshot) -> None:
     connection = sqlite3.connect(path)
     try:
         connection.execute("PRAGMA foreign_keys=ON")
-        connection.execute("PRAGMA journal_mode=DELETE")
+        if connection.execute("PRAGMA journal_mode=DELETE").fetchone() != ("delete",):
+            raise StorageError("storage_journal_mode")
         _write_base_snapshot(connection, snapshot)
     finally:
         connection.close()

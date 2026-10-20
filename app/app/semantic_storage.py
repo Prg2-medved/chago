@@ -155,7 +155,8 @@ def write_semantic(output: Path, snapshot: StorageSnapshot, matrix: "NDArray[np.
         connection = sqlite3.connect(temporary)
         try:
             connection.execute("PRAGMA foreign_keys=ON")
-            connection.execute("PRAGMA journal_mode=DELETE")
+            if connection.execute("PRAGMA journal_mode=DELETE").fetchone() != ("delete",):
+                raise SemanticStorageError("semantic_journal_mode")
             _write_base_snapshot(connection, snapshot)
             connection.executescript(_SCHEMA)
             with connection:

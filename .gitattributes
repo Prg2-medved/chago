@@ -1,3 +1,4 @@
 # Preserve original LF/CRLF evidence bytes and recognize CR as a line ending.
+/reindex.sh text eol=lf
 /openspec/changes/archive/2026-10-20-retrieval-quality-improvement/** -text whitespace=cr-at-eol
 /docs/experiments/retrieval-quality-improvement/retrieval-quality* -text whitespace=cr-at-eol

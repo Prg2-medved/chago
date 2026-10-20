@@ -8,6 +8,19 @@ import pytest
 from app.config import load_settings
 
 
+def test_index_path(monkeypatch, tmp_path):
+    monkeypatch.setenv("INDEX_PATH", str(tmp_path / "active.db"))
+    monkeypatch.setenv("WIKI_DB_PORT", "invalid")
+    assert load_settings().index_path == tmp_path / "active.db"
+
+
+@pytest.mark.parametrize("value", ["", "  ", "bad\npath", "."])
+def test_invalid_index_path(monkeypatch, value):
+    monkeypatch.setenv("INDEX_PATH", value)
+    with pytest.raises(ValueError, match="INDEX_PATH"):
+        load_settings()
+
+
 def test_defaults(monkeypatch):
     monkeypatch.delenv("APP_HOST", raising=False)
     monkeypatch.delenv("APP_PORT", raising=False)

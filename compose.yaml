@@ -4,6 +4,7 @@ services:
     environment:
       APP_HOST: "0.0.0.0"
       APP_PORT: "8000"
+      INDEX_PATH: "${INDEX_PATH:-/data/index.sqlite3}"
       LLM_BASE_URL: "${LLM_BASE_URL:-http://llm:8080}"
       LLM_MODEL_NAME: "${LLM_MODEL_NAME:-Qwen3-4B-Instruct-2507}"
       LLM_MAX_TOKENS: "${LLM_MAX_TOKENS:-768}"

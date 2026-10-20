@@ -139,6 +139,8 @@ class LexicalReader(StorageReader):
 def _write_extension(path: Path, snapshot: StorageSnapshot, metadata: dict[str, Any]) -> None:
     connection = sqlite3.connect(path)
     try:
+        if connection.execute("PRAGMA journal_mode=DELETE").fetchone() != ("delete",):
+            raise LexicalStorageError("lexical_journal_mode")
         connection.execute("DROP TABLE IF EXISTS chunk_fts")
         connection.execute("DROP TABLE IF EXISTS lexical_metadata")
         connection.execute(_METADATA_SCHEMA)

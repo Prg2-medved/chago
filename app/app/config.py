@@ -7,6 +7,16 @@ from urllib.parse import urlsplit
 from app.chunk_tokenizer import MODEL_ID, REVISION
 
 
+def load_index_path() -> Path:
+    raw = os.environ.get("INDEX_PATH", "/data/index.sqlite3")
+    if not raw.strip() or any(ord(char) < 32 for char in raw):
+        raise ValueError("configuration: INDEX_PATH")
+    path = Path(raw)
+    if not path.name or path.is_dir():
+        raise ValueError("configuration: INDEX_PATH")
+    return path
+
+
 @dataclass(frozen=True)
 class RetrievalSettings:
     semantic_candidates: int = 10
@@ -83,6 +93,7 @@ class Settings:
     llm_base_url: str = "http://llm:8080"
     llm_model_name: str = "Qwen3-4B-Instruct-2507"
     llm_max_tokens: int = 768
+    index_path: Path = Path("/data/index.sqlite3")
 
 
 def load_settings() -> Settings:
@@ -104,6 +115,7 @@ def load_settings() -> Settings:
         llm_base_url=os.environ.get("LLM_BASE_URL", "http://llm:8080").rstrip("/"),
         llm_model_name=os.environ.get("LLM_MODEL_NAME", "Qwen3-4B-Instruct-2507"),
         llm_max_tokens=max_tokens,
+        index_path=load_index_path(),
     )
 
 
