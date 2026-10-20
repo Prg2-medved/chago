@@ -38,12 +38,20 @@ def resolve(target):
         if state and target in (state['id'], state['name'], '/'+state['name']):
             return state
     return None
+def gate(stage):
+    (root/stage).touch()
+    deadline=time.monotonic()+10
+    while not (root/(stage+'-release')).exists():
+        if time.monotonic()>deadline:
+            raise RuntimeError('test gate timed out: '+stage)
+        time.sleep(.01)
 if args[0]=='compose':
     args=args[5:]
     if args[:2]==['config','--format']:
         print(json.dumps({'name':'test-project'}))
     elif args[0]=='stop':
         if scenario=='stop-failure': sys.exit(1)
+        if scenario=='before-creation': gate('before-creation')
         state=load_app()
         if state:
             state['status']='exited'
@@ -56,10 +64,17 @@ if args[0]=='compose':
         state={'id':'a'*64,'name':args[args.index('--name')+1],
                'label':args[args.index('--label')+1].split('=',1)[1],
                'project':'test-project','status':'exited','code':7 if scenario in ('build-failure','both-failure') else 0}
-        if scenario in ('inference','creation-delay','lost-id','kill-required','docker-unavailable','foreign'):
+        if scenario in ('inference','creation-delay','lost-id','lost-id-signal','kill-required',
+                        'kill-delayed','docker-unavailable','foreign','foreign-signal',
+                        'foreign-project','foreign-similar'):
             state['status']='running'
-        if scenario=='foreign': state['label']='foreign-run'
+        if scenario in ('foreign','foreign-signal'): state['label']='foreign-run'
+        if scenario=='foreign-project': state['project']='other-project'
+        if scenario=='foreign-similar': state['name']+='-other'
         save(state)
+        if scenario in ('lost-id-signal','foreign-signal','foreign-project','foreign-similar'):
+            gate('launch-result')
+        if scenario in ('lost-id-signal','foreign-similar'): sys.exit(1)
         if scenario=='lost-id': sys.exit(1)
         print(state['id'])
     elif args[0]=='up':
@@ -89,11 +104,14 @@ elif args[0]=='inspect':
     elif '.RestartCount' in fmt:
         print(state['status']+'|'+str(state.get('restart_count',0)))
     else:
+        if scenario=='after-exit' and not (root/'after-exit').exists(): gate('after-exit')
+        if scenario=='kill-delayed' and (root/'kill-returned').exists():
+            (root/'post-kill-inspect').touch()
         print(state['status']+'|'+str(state['code']))
 elif args[:2]==['container','ls']:
     state=load()
     if scenario=='docker-unavailable': sys.exit(1)
-    if state: print(state['name'])
+    if state and args[args.index('--filter')+1]=='name=^/'+state['name']+'$': print(state['name'])
 elif args[0]=='exec':
     state=load_app()
     if not state or args[1]!=state['id'] or state['status']!='running': sys.exit(1)
@@ -105,11 +123,15 @@ elif args[0]=='exec':
 elif args[0]=='stop':
     state=load()
     if not state or args[-1] not in (state['id'],state['name']): sys.exit(1)
-    if scenario!='kill-required': state['status']='exited'; state['code']=143; save(state)
+    if scenario not in ('kill-required','kill-delayed'):
+        state['status']='exited'; state['code']=143; save(state)
 elif args[0]=='kill':
     state=load()
     if not state or args[-1] not in (state['id'],state['name']): sys.exit(1)
-    state['status']='exited'; state['code']=137; save(state)
+    if scenario=='kill-delayed':
+        (root/'kill-returned').touch()
+    else:
+        state['status']='exited'; state['code']=137; save(state)
 elif args[0]=='rm':
     state=load()
     if not state or args[-1] not in (state['id'],state['name']): sys.exit(1)
@@ -217,6 +239,108 @@ def test_signal_terminates_only_owned_container(host, scenario, sig, status):
         if process.poll() is None:
             process.kill()
             process.wait()
+
+
+@linux_only
+@pytest.mark.parametrize("scenario", [
+    "before-creation", "lost-id-signal", "after-exit", "foreign-signal",
+    "foreign-project", "foreign-similar",
+])
+@pytest.mark.parametrize("sig,status", [(signal.SIGINT, 130), (signal.SIGTERM, 143)])
+def test_signal_at_identity_boundaries(host, scenario, sig, status):
+    root, env = host
+    process = subprocess.Popen(["bash", str(root / "reindex.sh")], env={**env, "SCENARIO": scenario},
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stage = scenario if scenario in ("before-creation", "after-exit") else "launch-result"
+    try:
+        wait_for(root, (root / stage).exists, process)
+        if scenario == "before-creation":
+            assert not (root / "container.json").exists()
+        else:
+            before = (root / "container.json").read_bytes()
+            state = json.loads(before)
+            assert state["status"] == ("exited" if scenario == "after-exit" else "running")
+            launch = next(row for row in calls(root) if row[0] == "compose" and row[5] == "run")
+            assert "--detach" in launch and "--no-deps" in launch and "--rm" not in launch
+            name = launch[launch.index("--name") + 1]
+            label = launch[launch.index("--label") + 1]
+            assert label == "chago.reindex-run=" + name.removeprefix("chago-reindex-")
+        process.send_signal(sig)
+        (root / (stage + "-release")).touch()
+        stdout, stderr = process.communicate(timeout=20)
+        assert process.returncode == status, stdout + stderr
+        history = calls(root)
+        assert not any(row[0] == "compose" and row[5] == "up" for row in history)
+        mutations = [row for row in history if row[0] in ("stop", "kill", "rm")]
+        if scenario == "before-creation":
+            assert not any(row[0] == "compose" and row[5] == "run" for row in history)
+            assert not mutations
+        elif scenario.startswith("foreign"):
+            assert (root / "container.json").read_bytes() == before
+            assert not mutations
+            assert not (root / "removed").exists()
+            if scenario != "foreign-similar":
+                assert "termination unconfirmed" in stderr
+            else:
+                # Exact-name lookup/listing must not select the similar name.
+                assert any(row[:2] == ["container", "ls"] for row in history)
+        else:
+            removed = json.loads((root / "removed").read_text())
+            assert removed["id"] == "a" * 64 and removed["status"] == "exited"
+            assert all(row[-1] == removed["id"] for row in mutations)
+            if scenario == "after-exit":
+                assert [row[0] for row in mutations] == ["rm"]
+                assert removed["code"] == 0
+            else:
+                assert [row[0] for row in mutations] == ["stop", "rm"]
+                assert mutations[0][1:3] == ["--time", "10"]
+        # Lock can be acquired after the interrupted script finishes.
+        lock = root / "data" / ".reindex-operation.lock"
+        assert subprocess.run(["flock", "-n", str(lock), "true"], timeout=5).returncode == 0
+    finally:
+        (root / (stage + "-release")).touch()
+        if process.poll() is None:
+            process.kill()
+            process.communicate(timeout=20)
+
+
+@linux_only
+@pytest.mark.parametrize("sig,status", [(signal.SIGINT, 130), (signal.SIGTERM, 143)])
+def test_signal_holds_lock_until_container_terminal(host, sig, status):
+    root, env = host
+    process = subprocess.Popen(["bash", str(root / "reindex.sh")], env={**env, "SCENARIO": "kill-delayed"},
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        wait_for(root, (root / "container.json").exists, process)
+        process.send_signal(sig)
+        wait_for(root, (root / "post-kill-inspect").exists, process)
+        # Both stop and kill CLI have returned 0, but the container is still running.
+        result = run(host, "success")
+        assert result.returncode == 1 and "operation busy" in result.stderr
+        assert process.poll() is None
+        assert not (root / "removed").exists()
+        history = calls(root)
+        assert not any(row[0] == "compose" and row[5] == "up" for row in history)
+        state = json.loads((root / "container.json").read_text())
+        assert state["status"] == "running"
+        state.update(status="exited", code=137)
+        replacement = root / "terminal.json"
+        replacement.write_text(json.dumps(state))
+        replacement.replace(root / "container.json")
+        stdout, stderr = process.communicate(timeout=20)
+        assert process.returncode == status, stdout + stderr
+        assert json.loads((root / "removed").read_text())["code"] == 137
+        mutations = [row for row in calls(root) if row[0] in ("stop", "kill", "rm")]
+        assert [row[0] for row in mutations] == ["stop", "kill", "rm"]
+        assert all(row[-1] == "a" * 64 for row in mutations)
+        assert mutations[0][1:3] == ["--time", "10"]
+        assert not any(row[0] == "compose" and row[5] == "up" for row in calls(root))
+        lock = root / "data" / ".reindex-operation.lock"
+        assert subprocess.run(["flock", "-n", str(lock), "true"], timeout=5).returncode == 0
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.communicate(timeout=20)
 
 
 @linux_only
