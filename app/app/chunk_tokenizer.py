@@ -27,7 +27,7 @@ class LocalE5:
             raise ValueError("tokenizer_identity")
         try:
             # Lazy import: HTTP startup never imports the tokenizer library.
-            from tokenizers import Tokenizer
+            from tokenizers import Tokenizer  # type: ignore[import-untyped]
 
             actual_version = version("tokenizers")
             if actual_version != PACKAGE_VERSION:
