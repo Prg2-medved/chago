@@ -43,7 +43,7 @@ Planning revision 2026-10-16: выполненные development tasks 1.1, 2–
 - [x] 5.5 В отдельном будущем apply подготовить offline bundle только заранее выбранного `cross-encoder/mmarco-mMiniLMv2-L12-H384-v1@1427fd652930e4ba29e8149678df786c240d8825`, FP32 safetensors и fast tokenizer/config той же revision. До inference проверить published weights/tokenizer SHA-256, полный file manifest, Apache-2.0/model-card provenance, existing pinned runtime и local-only/no-remote-code загрузку без сети; добавить bundle/runtime identities в отдельный v2 receipt. При missing/incompatible/corrupt asset остановиться без fallback/другой модели; никаких новых dependencies/export/quantization. Скачивание не входит в текущую planning revision.
 - [x] 5.6 Реализовать только opt-in CPU reranking полного legacy S120/L1 union (≤121), без изменения RRF/defaults/pure semantic/HTTP health и без rebuild. Целевые tests проверяют dedup по chunk ID, сохранение нескольких chunks страницы, отсутствие pre-RRF cutoff, question + полный search_text, реальные tokenizer pair budgets ≤512/question≤128 при batch=1, padding=False и truncation=False (полная пара фактической длины без padding до 512), детерминированный finite raw logit/tie order, model errors/no fallback и отдельные output score identities/provenance. Документировать app/Compose query/evaluate/rollback. До quality inference выполнить общий token preflight всех разрешённых tuning pairs (follow-up отдельно); overflow любого candidate останавливает весь experiment, без dropping/windows/смены budgets. Structural tests не доказывают live quality.
 - [ ] 5.7 После 5.4–5.6 выполнить ровно три tuning arms: legacy RRF 10/1/60/6, RRF control 120/1/60/6 и единственный reranker на том же полном union. Два fresh sequential повтора каждого arm с first/warm passes; сохранить все union IDs/input hashes/token maxima/finite scores/ranks/counts, q02 full-three/q07 one-chunk coverage и все индивидуальные legacy/control hit→miss, partial/rank/follow-up transitions. Провести tuning-only resource screening под target 4 CPU/5 GiB, E5+reranker resident вместе: целиком end-to-end warm mean ≤2× legacy arm 1 в обоих повторах, no errors/OOM/cap violation, whole-worker/container peak memory, swap, model bundle disk increment, model loading/init/first/warm/rerank timings. Chunking/embedding/FTS rebuild не выполнять; build durations, build-only RSS и build disk increments отметить N/A (read-only snapshot), сохранив исторические build records v1 отдельно. Проверить protected hashes, exact same-environment repeat ranks/scores/counts и split isolation; reports/measurements только в новых v2 paths. Это development screening, не task 6.2 и не разрешение читать historical holdout.
-- [ ] 5.8 Выпустить отдельный v2 decision report без изменения v1 negative result: допускается только sole candidate с ≥8/9 полных tuning single-question hits и всеми mandatory input/integrity/reproducibility/resource gates. q03 minimum=6 остаётся denominator miss; все остальные восемь cases должны стать hits. Индивидуальные регрессии фиксировать против обоих controls даже при росте totals, без отдельного case-level exclusion gate. При <8/9, любом mandatory failure или неполных gate evidence сохранить отрицательный/incomplete report и stop до 5.3/6, не запускать другой model/limits/policy/tuning cycle и не расходовать validation. При успехе разрешить лишь 5.3 lock; подтвердить прежний порядок frozen ≥11/12 → server → independent ≥90% и отсутствие claim о пройденной quality acceptance.
+- [x] 5.8 Выпустить отдельный v2 decision report без изменения v1 negative result: допускается только sole candidate с ≥8/9 полных tuning single-question hits и всеми mandatory input/integrity/reproducibility/resource gates. q03 minimum=6 остаётся denominator miss; все остальные восемь cases должны стать hits. Индивидуальные регрессии фиксировать против обоих controls даже при росте totals, без отдельного case-level exclusion gate. При <8/9, любом mandatory failure или неполных gate evidence сохранить отрицательный/incomplete report и stop до 5.3/6, не запускать другой model/limits/policy/tuning cycle и не расходовать validation. При успехе разрешить лишь 5.3 lock; подтвердить прежний порядок frozen ≥11/12 → server → independent ≥90% и отсутствие claim о пройденной quality acceptance.
 
 ## 6. Финальная оценка и серверная приёмка
 
@@ -86,3 +86,54 @@ Review расширил planning scope ровно одним CPU cross-encoder e
 - 5.6 completed: explicit app.reranking CLI, full legacy S120/L1 union scoring, source/branch/RRF/reranker identities, no padding/truncation/fallback; documented application/Compose-image query/evaluate/rollback. Global live-answerable preflight: 1,201 pairs, max question 25 and max pair 469; all-tuning CLI preflight: 14 cases, 1,682 pairs, max 469, no overflow. Targeted tests and typing passed; no cross-encoder live quality inference performed.
 - 5.7 pending: target Linux/Docker 4 CPU/5 GiB execution is unavailable from the current Windows environment (Docker missing); server connection details requested. Operator-provided free disk/RAM/swap observations do not replace actual screening measurements. Three arms/two fresh repeats have not run.
 - 5.8 and lock/final/independent acceptance remain open. Incomplete v2 status report: docs/retrieval-quality-result-v2.md. No holdout/closed validation use or substitute quality/resource claim.
+
+
+## Evidence review and negative decision, 2026-10-20
+
+This status supersedes earlier pending-server status; entries above describe
+their respective dates. Archive rq57-20261019-01-results.tar SHA-256
+`e98c230fbec36f0071e36649cb76b8390844d006358942e1b4bb112c81cd1d7b`
+verified; 60 files safely extracted separately. Actual execution: 2026-10-20.
+See `docs/retrieval-quality-result-v2.md` and `docs/retrieval-quality-evidence-audit-v2.json`.
+
+- 5.8 completed as the protocol-required negative/incomplete decision report:
+  legacy/control/reranker 6/9, 6/9, 4/9; warm means 0.009478/0.009546/2.446002 s;
+  ratio 258.071122x. Quality >=8/9 and latency <=2x both fail. STOP applies;
+  completing the negative report does not authorize its success branch.
+- 5.7 remains `[ ]`: only repeat 1 of all three arms exists, with matching
+  first/warm passes. Two fresh runs and across-worker reproducibility are not
+  established. First-run failure is sufficient for rejection, not full task
+  completion. Runbook blocks repeat 2 after failure; no repeat was run.
+- 5.4-5.6 remain completed. Audit verified 141 transport files before reporting
+  edits, 76 commitments, seven server integrity receipts, inputs, unions,
+  finite scores, provenance and all 84 saved row hits/cover diagnostics.
+  Docker exit=0/no OOM, 4 CPU/5 GiB and zero container swap are evidenced for
+  first runs; these are not final server acceptance.
+- 5.3 blocked: failed development quality/resource gates prohibit lock.
+- 6.1 blocked: no admissible locked candidate; frozen >=11/12 untested.
+- 6.2 blocked: no successful 6.1; screening is not final server acceptance.
+  Two accepted repeats and Wiki.js baseline/load evidence are absent.
+- 6.3 blocked: 6.1/6.2 prerequisites unmet; evaluator/package/validation receipt
+  from 1.2-1.3 absent. Closed validation remains unused.
+- 6.4 blocked: frozen/server/independent acceptance unmet; publishing a negative
+  report does not close quality acceptance.
+- 1.2-1.3 remain `[ ]`: evaluator appointment/reviewed closed package/commitments
+  and actual evaluator offline validation receipt are not supplied.
+
+Only 5.8 newly checked: **17/25 complete, eight open**. No inference, historical
+holdout, independent validation or next experiment launched in this review.
+Model/policy/thresholds/protocol v2 remain unchanged. Requested result.md addendum
+is a post-experiment reporting change: original v1 bytes are preserved at
+`docs/retrieval-quality-result-v1-frozen.md` with original committed hash.
+Receipts still refer to the pre-addendum state and are not rewritten.
+Owner decision, 2026-10-20: **experiment v2 ended negatively; cross-encoder
+reranker rejected**. The eight unfinished tasks retain their reasons above;
+they will not be executed to complete this rejected branch. No checkbox changes.
+Proposed next administrative step, only on later archive authorization: standard
+archive with acknowledgment of eight incomplete tasks, Archive without syncing,
+validation enabled and the negative outcome retained. Do not remove tasks,
+fabricate completion, sync experimental deltas or manually move the directory
+to evade warnings. See the v2 report for the full closure plan and task map.
+New retrieval design requires separate authorization and a distinct future
+change/protocol; nothing new is created or executed now.
+Change remains unarchived; retrieval quality MVP acceptance is open.

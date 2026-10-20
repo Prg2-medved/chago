@@ -1,5 +1,12 @@
 # Cross-encoder offline bundle v2
 
+> Owner decision, 2026-10-20: v2 ended negatively; cross-encoder reranker
+> rejected. No additional runs. The preparation/execution instructions below
+> are historical and do not authorize execution. First screening ran and failed;
+> repeat 2 did not run. See [final v2 report](retrieval-quality-result-v2.md).
+> Archived transport hashes describe the pre-reporting copies of these docs.
+
+
 Task 5.5 continues the existing [v2 commitment](retrieval-quality-protocol-receipt-v2.json);
 task 5.4 is not repeated. The committed [experiment protocol](retrieval-quality-experiment-protocol-v2.md)
 and all v1 records remain unchanged.

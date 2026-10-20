@@ -63,3 +63,37 @@ validation passed. [Verification receipt](retrieval-quality-verification.json)
 records implementation hashes, all 36 report hash checks, repeat selection,
 full original source coverage and serialized real-token counts. This receipt
 is a development record, not an acceptance lock.
+
+
+## V2 server screening decision, 2026-10-20
+
+**Negative result: STOP before lock or acceptance.** Archived first-run metrics:
+legacy 6/9 (warm mean 0.009478 s), control 6/9 (0.009546 s), reranker 4/9
+(2.446002 s): **258.071122x** legacy, against mandatory <=2x and >=8/9.
+Reranker gains q07 but loses q01/q12/q19 against both controls; q02 remains a
+partial-coverage miss. Docker exit=0, no OOM/cap violation. First/warm results
+match; second fresh repeats are absent, so full 5.7 reproducibility is incomplete.
+
+[Separate v2 decision and evidence analysis](retrieval-quality-result-v2.md)
+and [machine-readable audit](retrieval-quality-evidence-audit-v2.json) record
+archive SHA-256, integrity, per-case transitions, resource measurements and
+limitations. Task 5.8 is closed as a negative report. Task 5.7 remains open;
+5.3 and 6.1-6.4 are blocked by failed development gates. Tasks 1.2-1.3 still
+lack evaluator/package/actual validation evidence. Progress: 17/25.
+No repeat inference, historical holdout, independent validation or next
+experiment was executed during this review. Quality acceptance remains open.
+Owner decision, 2026-10-20: experiment v2 ends negatively; cross-encoder
+reranker rejected. No further v2 runs. Standard archive completed on 2026-10-20
+at `openspec/changes/archive/2026-10-20-retrieval-quality-improvement/`, preserving
+17/25 task states and eight unfinished tasks, without delta-spec synchronization.
+The [v2 report](retrieval-quality-result-v2.md) records the archive checks. A new approach
+requires separately authorized design and a new protocol.
+
+The v1 report above is unchanged byte-for-byte as a prefix. Complete original
+bytes are also preserved in [the frozen v1 report](retrieval-quality-result-v1-frozen.md),
+SHA-256 `49008ac640564014fc4e2e5d4fabaaa766a472102ae671f35f11a9c607f58a42`.
+This explicitly requested addendum changes the historical result.md path hash;
+existing receipts retain the original commitment and were not rewritten.
+Protocol v2, model, retrieval policy, thresholds and frozen inputs are unchanged.
+Audit documentation hashes record the earlier evidence-review snapshot, before
+this owner-decision clarification; raw evidence and receipts remain unchanged.

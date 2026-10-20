@@ -1,7 +1,15 @@
 # Ручной запуск task 5.7: Windows → Linux/Docker
 
-Подготовлено по текущему worktree, protocol v2 и фактическому API. Это **только
-инструкция**, серверные команды не выполнялись. 5.7 остаётся `[ ]`.
+> Owner decision, 2026-10-20: v2 ended negatively; cross-encoder reranker
+> rejected. No additional runs. The preparation/execution instructions below
+> are historical and do not authorize execution. First screening ran and failed;
+> repeat 2 did not run. See [final v2 report](retrieval-quality-result-v2.md).
+> Archived transport hashes describe the pre-reporting copies of these docs.
+
+
+Историческая инструкция, подготовленная до серверного запуска по тогдашнему
+worktree, protocol v2 и фактическому API. Первый запуск выполнен и дал
+отрицательный результат; второй не выполнялся. 5.7 остаётся `[ ]`.
 Три arms: legacy `10/1/60/6`, control `120/1/60/6`, reranker на полном union
 control. Никаких rebuild, historical holdout retrieval, independent validation,
 lock, commit/push или перезапусков сервисов.

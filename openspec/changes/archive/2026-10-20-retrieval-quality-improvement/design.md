@@ -2,6 +2,12 @@
 
 ## Context
 
+Current owner disposition, 2026-10-20: **v2 ended negatively; reranker rejected;
+no additional runs**. Protocol v2 and acceptance criteria remain unchanged.
+The design below preserves the historical experiment, not accepted reranker
+behavior. Proposed administrative completion: standard archive without spec
+sync, retaining eight unfinished tasks. No archive is performed now.
+
 Мотивация — в [proposal.md](proposal.md). Первоначальный propose не запускал inference; последующий development v1 завершил все 36 preregistered комбинаций с максимумом 6/9 и stop condition 5.2 (`docs/retrieval-quality-result.md`). Planning revision 2026-10-16 расширяет только следующий final-ranking experiment; reranker ещё не реализован, модель не скачана, новые эксперименты и приёмка не выполнены. Разделы 3–4 описывают закрытую фазу v1, раздел 4a — единственное разрешённое продолжение, без переписывания истории.
 
 Исходная реализация до development v1 (историческое основание packing/literal экспериментов):
@@ -115,3 +121,31 @@ CPU FP32/eager/eval/inference mode, seed=0, deterministic algorithms, intra-op=4
 6. Для использования выбранного решения явно указать новый snapshot/settings. Rollback — прежние paths/policies/settings; defaults и HTTP startup остаются прежними. Промышленная atomic-full-reindex остаётся отдельным этапом.
 
 После зафиксированного stop v1 steps 2–4/grid не повторяются: task 5.4 receipt v2 → 5.5 offline bundle verification → 5.6 opt-in implementation/tests/input preflight → 5.7 single tuning experiment/resource screening → 5.8 decision. Только успех 5.8 открывает 5.3 lock и прежние 6.1–6.4. V2 outputs идут в новые paths, rollback отключает opt-in reranker и возвращает legacy settings без изменения snapshots. Доступ к историческому holdout остаётся только после lock для финального отчёта; закрытый package не используется при провале любого gate.
+
+
+## Actual v2 outcome, 2026-10-20
+
+Downloaded first-run evidence supersedes pending implementation/server status
+in historical planning sections. Sole candidate fails both mandatory gates:
+4/9 tuning against >=8/9; warm 2.446002 s against legacy 0.009478 s
+(258.071122x against <=2x). It gains q07 but loses q01/q12/q19; q02 full union
+coverage does not become full top-5 coverage. Docker exit=0, no OOM/cap
+violation; full-union CPU reranking dominates latency. This rejects this
+candidate without claiming all rerankers fail.
+
+Task 5.8 is complete as a negative decision. Task 5.7 remains incomplete because
+second fresh repeats are absent; first/warm equality is not fresh-repeat proof.
+Failed first summary blocks repeat 2 in the runbook. Stop before 5.3/6;
+no holdout/independent validation/new experiment. Missing evaluator/package
+also keeps 1.2-1.3 open. Final order and acceptance requirements remain unchanged.
+See `docs/retrieval-quality-result-v2.md` and its linked audit.
+
+At the owner's explicit request, result.md gains a v2 addendum; original v1
+bytes remain in `docs/retrieval-quality-result-v1-frozen.md` with original SHA-256.
+Existing receipts preserve the pre-addendum commitment, not a new execution
+lock. Protocol v2, model, retrieval policy, thresholds and protected inputs
+remain unchanged. Owner review has ended this candidate branch. The v2 report
+proposes standard archive: retain unchecked tasks, acknowledge incomplete-task
+warnings, skip delta-spec sync, retain validation and the negative outcome.
+No manual move or validation bypass. A future approach needs separately
+authorized exploration and a distinct change/protocol; none is created here.
