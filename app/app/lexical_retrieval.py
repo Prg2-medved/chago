@@ -144,6 +144,7 @@ def validate_query(question: str, k: int) -> None:
 
 class LexicalIndex:
     def __init__(self, path: Path) -> None:
+        self._owns_reader = True
         self._reader = LexicalReader(path)
         try:
             self._initialize(self._reader)
@@ -155,8 +156,9 @@ class LexicalIndex:
             raise
 
     @classmethod
-    def _from_reader(cls, reader: LexicalReader) -> "LexicalIndex":
+    def _from_reader(cls, reader: LexicalReader, *, owns_reader: bool = True) -> "LexicalIndex":
         index = cls.__new__(cls)
+        index._owns_reader = owns_reader
         index._reader = reader
         try:
             index._initialize(reader)
@@ -224,7 +226,8 @@ class LexicalIndex:
         if probe is not None:
             probe.close()
             self._probe = None
-        self._reader.close()
+        if self._owns_reader:
+            self._reader.close()
 
     def __enter__(self) -> "LexicalIndex":
         return self

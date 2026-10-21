@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import sqlite3
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.config import RetrievalSettings, load_embedding_settings, load_retrieval_settings
 from app.embeddings import EmbeddingError, LocalEncoder
@@ -16,6 +16,9 @@ from app.lexical_retrieval import LexicalIndex, LexicalResult, LexicalRetrievalE
 from app.lexical_storage import LexicalReader, LexicalStorageError
 from app.retrieval import RetrievalError, SearchResult, SemanticIndex, _ArgumentParser
 from app.semantic_storage import SemanticReader, SemanticStorageError
+
+if TYPE_CHECKING:
+    from app.index_state import ActiveIndex
 
 
 class HybridRetrievalError(ValueError):
@@ -62,6 +65,7 @@ def fuse(semantic: tuple[SearchResult, ...], lexical: tuple[LexicalResult, ...],
 
 class HybridIndex:
     def __init__(self, path: Path, encoder: LocalEncoder, settings: RetrievalSettings | None = None) -> None:
+        self._owns_reader = True
         self.settings = settings if settings is not None else RetrievalSettings()
         if not isinstance(self.settings, RetrievalSettings):
             raise HybridRetrievalError("hybrid_configuration")
@@ -70,15 +74,35 @@ class HybridIndex:
         self._lexical: LexicalIndex | None = None
         try:
             reader = SemanticReader._from_base(self._reader)
-            self._semantic = SemanticIndex._from_reader(reader, encoder)
-            self._lexical = LexicalIndex._from_reader(self._reader)
-            self.encoder = encoder
-            self.snapshot = reader.snapshot
-            self.chunks = reader.chunks
-            self.metadata = {"semantic": reader.metadata, "lexical": self._reader.metadata}
+            self._initialize(reader, encoder)
         except BaseException:
             self.close()
             raise
+
+    @classmethod
+    def _from_active(cls, active: "ActiveIndex", encoder: LocalEncoder,
+                     settings: RetrievalSettings) -> "HybridIndex":
+        """Borrow the validated generation; ActiveIndex retains ownership."""
+        settings.__post_init__()
+        index = cls.__new__(cls)
+        index.settings = settings
+        index._owns_reader = False
+        index._reader = active._reader
+        index._lexical = None
+        try:
+            index._initialize(active._semantic_reader, encoder)
+        except BaseException:
+            index.close()
+            raise
+        return index
+
+    def _initialize(self, reader: SemanticReader, encoder: LocalEncoder) -> None:
+        self._semantic = SemanticIndex._from_reader(reader, encoder)
+        self._lexical = LexicalIndex._from_reader(self._reader, owns_reader=False)
+        self.encoder = encoder
+        self.snapshot = reader.snapshot
+        self.chunks = reader.chunks
+        self.metadata = {"semantic": reader.metadata, "lexical": self._reader.metadata}
 
     def search(self, question: str, k: int | None = None) -> tuple[HybridResult, ...]:
         final_k = self.settings.top_k if k is None else k
@@ -103,7 +127,8 @@ class HybridIndex:
         if self._lexical is not None:
             self._lexical.close()
             self._lexical = None
-        self._reader.close()
+        if self._owns_reader:
+            self._reader.close()
 
     def __enter__(self) -> "HybridIndex":
         return self
