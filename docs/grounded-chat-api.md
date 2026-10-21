@@ -1,9 +1,10 @@
 # Grounded chat API: lifecycle и retrieval
 
 На 2026-10-21 реализован слой active retrieval. `POST /api/chat`, LLM client,
-prompt и validators ещё не реализованы. Выполнение остановлено на проверке
-фактической замены открытого файла (задача 1.3); ранний live-gate 2.1 также
-остаётся обязательным до зависимой реализации.
+prompt и validators ещё не реализованы. Linux-проверка фактической замены
+открытого файла (задача 1.3) принята по выводу оператора: 30 passed,
+`PATHNAME_REPLACEMENT_OK`. Выполнение остановлено на раннем live-gate 2.1,
+обязательном до зависимой реализации.
 
 ## Удерживаемое поколение
 
@@ -59,8 +60,8 @@ Temporary SQLite tests сравнивают borrowed view со standalone hybrid
 В Windows `os.replace` открытого SQLite может завершаться `PermissionError`.
 В этом случае тест проверяет сохранность старого snapshot, отсутствие повторного
 открытия и загрузку нового поколения после close, но **не подтверждает подмену
-pathname при открытом reader**. Задача 1.3 остаётся открытой до фактического
-Linux-прогона. Команда из каталога `app/` в подготовленном Linux окружении:
+pathname при открытом reader**. Фактический Linux-прогон 1.3 выполнен оператором
+и подтверждён в журнале. Команда из каталога `app/` в подготовленном Linux окружении:
 
 ```bash
 python -m pytest -q -rs tests/test_active_retrieval.py tests/test_index_state.py tests/test_hybrid_retrieval.py tests/test_hybrid_retrieval_cli.py tests/test_health.py

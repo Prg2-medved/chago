@@ -4,7 +4,7 @@
 
 - [x] 1.1 Добавить минимальный hybrid view поверх удерживаемого ActiveIndex с единым владельцем reader/matrix и lazy LocalEncoder; проверить на temporary SQLite, что результаты и provenance совпадают с прежним HybridIndex, model identity mismatch отклоняется, CLI defaults 10/10/60/6 сохранены.
 - [x] 1.2 Организовать single-thread executor lifecycle для создания/search/закрытия SQLite state и encoder; проверить concurrent searches, shutdown после ошибки/отмены и отсутствие SQLite thread violations, повторного открытия активного пути и двойного close.
-- [ ] 1.3 Проверить одинаковое поколение retrieval/context/source metadata после подмены pathname и app-only запуск без индекса/assets; запустить сначала профильные index_state/hybrid/health tests и подтвердить прежний `/health` JSON и отсутствие автоматического создания индекса.
+- [x] 1.3 Проверить одинаковое поколение retrieval/context/source metadata после подмены pathname и app-only запуск без индекса/assets; запустить сначала профильные index_state/hybrid/health tests и подтвердить прежний `/health` JSON и отсутствие автоматического создания индекса.
 - [x] 1.4 Создать раздел lifecycle/retrieval в `docs/grounded-chat-api.md`: snapshot до restart, read-only queries, lazy assets, граница session-follow-up; сверить описанное поведение с проверками 1.1–1.3 без изменения README/ROADMAP.
 
 ## 2. Локальный LLM client и бюджет

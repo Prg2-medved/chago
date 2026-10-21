@@ -1,7 +1,8 @@
 # Grounded chat API: журнал проверки
 
 Дата: 2026-10-21. Среда реализации: локальный Windows workspace.
-Серверная приёмка не выполнялась, `POST /api/chat` ещё не реализован.
+Linux-проверка 1.3 подтверждена выводом оператора; live-gate 2.1 ещё не выполнен.
+`POST /api/chat` ещё не реализован.
 
 ## Локальные проверки
 
@@ -53,17 +54,27 @@ requirements). `git diff --check` успешен. README, ROADMAP, Compose/runti
 flags, frozen evaluation inputs и исторические отчёты не изменялись.
 Сгенерированные тестами изменения двух tracked `.pyc` удалены из diff.
 
-В tasks отмечены **1.1, 1.2, 1.4**: **3/29**. Проверки 6.3 и 7.4 не отмечены
+В tasks отмечены **1.1–1.4**: **4/29**. Проверки 6.3 и 7.4 не отмечены
 выполненными: chat ещё не реализован и полный объём этих задач не проверен.
 
-## Открытая задача 1.3
+## Завершённая задача 1.3
 
-Windows запрещает замену открытого SQLite-файла. Проверены прежний snapshot,
-отсутствие reopen и новое поколение после close. Фактическая подмена pathname
-при удерживаемом reader не подтверждена. Docker CLI отсутствует; список
-локальных WSL distributions пуст. Нужен Linux-прогон команды из
-[lifecycle/retrieval документации](grounded-chat-api.md), с подтверждённым
-успешным `os.replace` при открытом reader. До этого 1.3 не отмечается выполненной.
+Первоначальный Windows-прогон не подтверждал подмену pathname при открытом
+reader; Docker CLI локально отсутствует, список WSL distributions пуст.
+Оператор выполнил подготовленную ниже команду на Linux и передал полный вывод.
+
+- Linux, Python **3.12.15**, pytest **9.1.1**, anyio **4.15.1**.
+- Результат: **30 passed, 1 warning in 1.07s**, без skips/failures.
+- `test_snapshot_search_after_path_replacement` напечатал
+  `PATHNAME_REPLACEMENT_OK: old snapshot retained; restart loaded new generation`.
+- Проверены фактическая замена открытого временного SQLite, прежнее поколение
+  retrieval/Markdown/ranges/title/URL до close и новое поколение после restart;
+  app-only и прежний `/health` также прошли.
+- Единственный pytest warning — прежний TestClient/httpx deprecation.
+- Команда монтировала только read-only `app/`; production-индекс не монтировался.
+
+Источник результата — приложенный оператором вывод команды (2026-10-21),
+а не самостоятельный серверный запуск агента. На этом основании **1.3 выполнена**.
 
 ### Подготовленный Linux-прогон 1.3
 
@@ -108,9 +119,9 @@ PATHNAME_REPLACEMENT_OK: old snapshot retained; restart loaded new generation
 
 Она печатается только после успешной подмены при открытом reader, сохранения
 прежнего retrieval/provenance и загрузки нового поколения после close.
-В Linux отказ `os.replace` приводит к failure. Пришлите полный вывод команды
-с summary и маркером; до его получения 1.3 остаётся открытой (**3/29**).
-После подтверждения 1.3 следующий шаг — live-gate 2.1 на неизменном
+В Linux отказ `os.replace` приводит к failure. Вывод с summary и маркером
+получен и принят выше; **1.3 закрыта, прогресс 4/29**.
+Следующий шаг — live-gate 2.1 на неизменном
 закреплённом llama.cpp image, без его запуска в этой команде.
 
 ## Следующий обязательный gate: 2.1
@@ -118,6 +129,53 @@ PATHNAME_REPLACEMENT_OK: old snapshot retained; restart loaded new generation
 Live-доступ к целевому llama.cpp в этой сессии не настроен. Image digest,
 model identity и пары calculated/actual token counts здесь не измерены.
 Исторические отчёты других этапов не считаются результатом этого gate.
+
+Подготовлен административный скрипт
+[`grounded-chat-api-token-smoke.sh`](grounded-chat-api-token-smoke.sh).
+После переноса скрипта на сервер запустить из корня проекта:
+
+```bash
+bash docs/grounded-chat-api-token-smoke.sh
+```
+
+Он использует **уже работающие** app/llm (`docker compose ps`, `docker exec`),
+не делает build/pull/restart и не меняет flags/template. Читает SHA256 GGUF
+через фактический bind mount source на хосте; нужны права чтения файла.
+Digest image и SHA256 сверяются с закреплённой исторической identity из
+`local-cpu-runtime-benchmark.md`:
+
+- image `ghcr.io/ggml-org/llama.cpp@sha256:f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283`;
+- GGUF `2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e`.
+
+Исторические identity служат ожидаемыми значениями, а фактические будут заново
+прочитаны скриптом. При несовпадении он остановится до HTTP-запросов, не меняя
+runtime. В stdout сохраняются actual identity, разрешённые runtime flags,
+chat-template fingerprint, context size, оба синтетических messages и options,
+calculated/actual counts, prompt suffix с generation prefix и timings.
+Production SQLite и Wiki.js скрипт не использует.
+
+Путь диагностики: `/apply-template` с `add_generation_prompt=true`, затем
+`/tokenize` с `add_special=true`, `parse_special=true`, `with_pieces=false`;
+completion получает те же messages, sampling 0.2/0.8/20 и **диагностический**
+`max_tokens=16`. Это не изменение app default reserve=768. Два разных prompts
+с уникальным nonce и request-only `cache_prompt=false` исключают использование
+старого prompt cache в диагностике; сравнивается именно `usage.prompt_tokens`.
+Options сверены с [официальной документацией закреплённого commit](https://github.com/ggml-org/llama.cpp/blob/fc07d781e/tools/server/README.md),
+но совместимость остаётся предметом live-gate.
+
+Запросы последовательны, tools отсутствуют, proxies и redirects отключены.
+При mismatch/missing usage/endpoint error/timeout нет retries и следующего
+completion. После timeout нельзя повторять smoke до подтверждения прекращения
+предыдущей серверной генерации. Требуется полный вывод скрипта для проверки
+фактической identity, options, generation prefix и двух точных равенств;
+exit 0 сам по себе не подменяет этот review.
+
+Локально выполнены `bash -n`, Python compilation встроенного кода и четыре
+mock-прогона diagnostic control flow: равенство, mismatch, missing usage,
+ошибка tokenize endpoint. Проверено отсутствие повторного/следующего completion
+после ошибки и утечки sentinel secrets. Это проверки скрипта, **не выполнение
+2.1**. Bash syntax check потребовал запуск вне sandbox из-за CreateFileMapping
+permission error; runtime-код приложения не менялся.
 
 На подготовленном сервере необходимо, сохранив закреплённый image/model,
 runtime flags и template:
