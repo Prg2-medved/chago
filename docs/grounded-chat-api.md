@@ -3,8 +3,29 @@
 На 2026-10-21 реализован слой active retrieval. `POST /api/chat`, LLM client,
 prompt и validators ещё не реализованы. Linux-проверка фактической замены
 открытого файла (задача 1.3) принята по выводу оператора: 30 passed,
-`PATHNAME_REPLACEMENT_OK`. Выполнение остановлено на раннем live-gate 2.1,
-обязательном до зависимой реализации.
+`PATHNAME_REPLACEMENT_OK`. Live-gate 2.1 также принят: calculated/actual
+65/65 и 202/202, cached_tokens=0 на закреплённом image/model. Локальная часть
+2.2 реализована; осталось проверить Compose config на сервере.
+
+## Настройки chat
+
+`load_chat_settings()` отдельно загружает immutable `ChatSettings` при
+необходимости chat. Startup и `/health` не валидируют новые chat budgets.
+Python не загружает `.env` автоматически; при локальном запуске переменные
+нужно экспортировать. Compose читает свои значения из environment/`.env`.
+
+| Переменная | Default | Назначение |
+|---|---:|---|
+| `LLM_CONTEXT_SIZE` | 8192 | Полное окно prompt + reserve; одно значение для app и llm `--ctx-size` |
+| `LLM_MAX_TOKENS` | 768 | Резерв ответа и будущий completion request max_tokens |
+| `LLM_TIMEOUT_SECONDS` | 300 | Конечный timeout отдельного HTTP-вызова LLM; ожидание слота сюда не входит |
+
+Все три значения — положительные целые; reserve должен быть строго меньше
+окна. Ошибки settings содержат категорию, без исходного значения.
+`LLM_MODEL_NAME` default `Qwen3-4B-Instruct-2507`, sampling defaults
+temperature=0.2, top_p=0.8, top_k=20 сохранены. Изменение context size при
+эксплуатации требует согласованного значения у app/runtime; текущий этап
+не меняет закреплённые LLM image, flags или template.
 
 ## Удерживаемое поколение
 

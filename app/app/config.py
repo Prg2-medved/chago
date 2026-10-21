@@ -120,6 +120,46 @@ def load_settings() -> Settings:
 
 
 @dataclass(frozen=True)
+class ChatSettings:
+    base_url: str = "http://llm:8080"
+    model_name: str = "Qwen3-4B-Instruct-2507"
+    max_tokens: int = 768
+    context_size: int = 8192
+    timeout_seconds: int = 300
+    temperature: float = 0.2
+    top_p: float = 0.8
+    top_k: int = 20
+
+    def __post_init__(self) -> None:
+        for name in ("max_tokens", "context_size", "timeout_seconds"):
+            value = getattr(self, name)
+            if type(value) is not int or value < 1:
+                raise ValueError(f"configuration: chat_{name}")
+        if self.max_tokens >= self.context_size:
+            raise ValueError("configuration: chat_token_reserve")
+
+
+def load_chat_settings() -> ChatSettings:
+    """Lazy request settings; invalid chat budgets must not break app-only startup."""
+    def positive(name: str, default: int) -> int:
+        raw = os.environ.get(name, str(default))
+        try:
+            if not re.fullmatch(r"[0-9]+", raw) or int(raw) < 1:
+                raise ValueError
+            return int(raw)
+        except ValueError:
+            raise ValueError(f"configuration: {name}") from None
+
+    return ChatSettings(
+        base_url=os.environ.get("LLM_BASE_URL", "http://llm:8080").rstrip("/"),
+        model_name=os.environ.get("LLM_MODEL_NAME", "Qwen3-4B-Instruct-2507"),
+        max_tokens=positive("LLM_MAX_TOKENS", 768),
+        context_size=positive("LLM_CONTEXT_SIZE", 8192),
+        timeout_seconds=positive("LLM_TIMEOUT_SECONDS", 300),
+    )
+
+
+@dataclass(frozen=True)
 class IngestionSettings:
     host: str
     name: str

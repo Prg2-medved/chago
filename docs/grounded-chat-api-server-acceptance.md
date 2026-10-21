@@ -1,7 +1,7 @@
 # Grounded chat API: журнал проверки
 
 Дата: 2026-10-21. Среда реализации: локальный Windows workspace.
-Linux-проверка 1.3 подтверждена выводом оператора; live-gate 2.1 ещё не выполнен.
+Linux-проверка 1.3 и live-gate 2.1 подтверждены выводом оператора.
 `POST /api/chat` ещё не реализован.
 
 ## Локальные проверки
@@ -54,7 +54,7 @@ requirements). `git diff --check` успешен. README, ROADMAP, Compose/runti
 flags, frozen evaluation inputs и исторические отчёты не изменялись.
 Сгенерированные тестами изменения двух tracked `.pyc` удалены из diff.
 
-В tasks отмечены **1.1–1.4**: **4/29**. Проверки 6.3 и 7.4 не отмечены
+В tasks отмечены **1.1–1.4, 2.1**: **5/29**. Проверки 6.3 и 7.4 не отмечены
 выполненными: chat ещё не реализован и полный объём этих задач не проверен.
 
 ## Завершённая задача 1.3
@@ -124,11 +124,46 @@ PATHNAME_REPLACEMENT_OK: old snapshot retained; restart loaded new generation
 Следующий шаг — live-gate 2.1 на неизменном
 закреплённом llama.cpp image, без его запуска в этой команде.
 
-## Следующий обязательный gate: 2.1
+## Завершённый live-gate 2.1
 
-Live-доступ к целевому llama.cpp в этой сессии не настроен. Image digest,
-model identity и пары calculated/actual token counts здесь не измерены.
-Исторические отчёты других этапов не считаются результатом этого gate.
+Оператор передал полный JSONL-вывод `bash docs/grounded-chat-api-token-smoke.sh`.
+Ниже зафиксированы фактические результаты этого запуска, а не результаты
+исторических отчётов или mock tests. **2.1 принята**.
+
+| Поле | Фактическое значение |
+|---|---|
+| Image ID | `sha256:3646ddb3a55bdbec3eacba16f8cb435dc1dc47dee57549437b8a361982a37454` |
+| Image reference / RepoDigest | `ghcr.io/ggml-org/llama.cpp@sha256:f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283` |
+| GGUF SHA256 | `2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e` |
+| Model alias | `Qwen3-4B-Instruct-2507`, совпал в обоих completion responses |
+| Chat template fingerprint | `05991410a4bad1a587959aa5c8901f699afc639540f931afd8ba2b359e4368a9` (SHA256 JSON serialization поля `chat_template` из `/props`) |
+| Context / threads / threads-batch / parallel | `8192 / 8 / 8 / 1` |
+| CPU flags | `--gpu-layers 0 --device none --no-webui` |
+| Model / bind / port | `/models/model.gguf`, `0.0.0.0:8080` внутри сети |
+| Diagnostic nonce | `df113424ee9d49c8beded6bc4d8be683` |
+
+| Case | Calculated | `usage.prompt_tokens` | Cached | Completion tokens | Total tokens | HTTP chain, s |
+|---|---:|---:|---:|---:|---:|---:|
+| `short_ru` | 65 | 65 | 0 | 16 | 81 | 3.547 |
+| `context_code_unicode` | 202 | 202 | 0 | 16 | 218 | 3.244 |
+
+Поле времени скрипта включает template/tokenize/completion и называется
+`elapsed_seconds`; это не отдельный замер generation duration.
+
+SHA256 полных template prompts:
+
+- `short_ru`: `2f45c4f9c5aecaf328c41d0ed7e181e05d792a1c0594fa5eb6989643cd6e72b9`;
+- `context_code_unicode`: `3889d29525257ac4ac01e0cf7a1b96aeff64a30366e2d0bc5f7d1486ab968760`.
+
+В обоих сохранённых prompt suffix присутствует generation prefix
+`<|im_end|>\n<|im_start|>assistant\n`. Сравнивались одинаковые messages
+из двух cases скрипта с nonce выше. JSON CONTEXT содержал два fragments,
+shell code, Unicode и псевдо-delimiters. Request options — ровно описанные
+ниже: template generation prompt, tokenizer special-token handling и completion
+с `cache_prompt=false`, `max_tokens=16`, sampling 0.2/0.8/20. В обоих usage
+`prompt_tokens_details.cached_tokens=0`, точное целочисленное равенство выполнено.
+Это разрешает зависимую реализацию; проверка 7.1 на окончательных messages и
+границах бюджета всё ещё обязательна.
 
 Подготовлен административный скрипт
 [`grounded-chat-api-token-smoke.sh`](grounded-chat-api-token-smoke.sh).
@@ -161,7 +196,7 @@ completion получает те же messages, sampling 0.2/0.8/20 и **диа�
 с уникальным nonce и request-only `cache_prompt=false` исключают использование
 старого prompt cache в диагностике; сравнивается именно `usage.prompt_tokens`.
 Options сверены с [официальной документацией закреплённого commit](https://github.com/ggml-org/llama.cpp/blob/fc07d781e/tools/server/README.md),
-но совместимость остаётся предметом live-gate.
+совместимость на этих двух случаях подтверждена результатом выше.
 
 Запросы последовательны, tools отсутствуют, proxies и redirects отключены.
 При mismatch/missing usage/endpoint error/timeout нет retries и следующего
@@ -193,5 +228,58 @@ runtime flags и template:
    о точном пути, сохранив задачу открытой.
 
 Fake-server tests, approximate counts, поправочные коэффициенты и последующая
-задача 7.1 не заменяют gate 2.1. Зависимые LLM client/token counter/settings
-не реализованы. Финальные live-проверки 7.1–7.3 также остаются открытыми.
+задача 7.1 не заменяют gate 2.1. LLM client/token counter ещё не реализованы.
+Финальные live-проверки 7.1–7.3 остаются открытыми.
+
+## Задача 2.2: локальная реализация, ожидается Compose config
+
+Добавлены `ChatSettings` / `load_chat_settings()` в `app/app/config.py`:
+context=8192, reserve=768, конечный HTTP timeout=300 секунд; поля — positive
+integers, reserve строго меньше window. Alias и sampling defaults сохранены.
+Новые chat settings загружаются отдельно от process startup settings;
+невалидный chat context/timeout не ломает app-only health.
+
+Compose передаёт app `LLM_CONTEXT_SIZE` из того же `${LLM_CONTEXT_SIZE:-8192}`,
+которое используется llm `--ctx-size`, и `LLM_TIMEOUT_SECONDS` default 300.
+LLM image/runtime flags/template не менялись. `.env.example` и lifecycle docs
+описывают значения и отсутствие timeout на ожидание очереди.
+
+Локально из `app/` выполнены:
+
+```powershell
+$env:PYTHONDONTWRITEBYTECODE='1'
+../.venv/Scripts/python.exe -m pytest -q -rs -p no:cacheprovider --basetemp=../.tmp/grounded-22 tests/test_chat_config.py tests/test_config.py tests/test_llm_check.py tests/test_health.py
+$env:MYPYPATH='typings'
+../.venv/Scripts/python.exe -m mypy app/config.py --follow-imports=silent --cache-dir ../.tmp/mypy-grounded-chat
+```
+
+Результаты: **117 passed, 1 warning in 0.84s**, без skips; mypy — success,
+1 source file. Проверены defaults/overrides, invalid integers, reserve>=window,
+типизированные non-integer/NaN/infinity, безопасные ошибки и app-only health.
+Первый pytest в sandbox не получил доступ к temp, повторный вне sandbox прошёл.
+Полный regression не повторялся: изменения ограничены новым loader и Compose;
+startup loader/LLM smoke регрессия включена в профильный прогон.
+
+Docker CLI локально отсутствует. **2.2 не отмечена выполненной** до проверки
+развёрнутой Compose configuration. На сервере с актуальным `compose.yaml`
+из корня проекта выполнить одну команду (без up/build/restart):
+
+```bash
+docker compose config --format json | python3 -c '
+import json, sys
+services = json.load(sys.stdin)["services"]
+env = services["app"]["environment"]
+args = services["llm"]["command"]
+window = int(env["LLM_CONTEXT_SIZE"])
+reserve = int(env["LLM_MAX_TOKENS"])
+timeout = int(env["LLM_TIMEOUT_SECONDS"])
+assert window == int(args[args.index("--ctx-size") + 1]), "context mismatch"
+assert 0 < reserve < window and timeout > 0, "invalid budgets"
+print(json.dumps({"compose_chat_config": "ok", "context_size": window, "max_tokens": reserve, "timeout_seconds": timeout}))
+'
+```
+
+Весь JSON Compose проходит только через pipe, не выводится и не сохраняется;
+stdout содержит только три публичных числовых settings и verdict. Production
+индекс не читается и не меняется. Требуется полный вывод этой команды; пока
+прогресс **5/29**, остановка на оставшейся проверке 2.2.
