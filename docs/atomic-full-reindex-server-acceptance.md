@@ -1,8 +1,10 @@
 # Atomic full reindex: журнал проверки
 
-Дата приёмки: **2026-10-20**. Серверная приёмка выполнена частично: production
-maintenance cycle и часть изолированных live-сценариев подтверждены. Полная
-приёмка пока не завершена, в частности **peak RAM полного reindex не измерен**.
+Дата исходной приёмки: **2026-10-20**; актуализация по данным оператора —
+**2026-10-21**. Задачи **4.3, 5.2 и 5.3 выполнены**, итого **21/21**.
+Production maintenance cycle,
+изолированная полная индексация с измерением peak RSS и контролируемые
+source/failure проверки подтверждены раздельно.
 
 Серверные результаты приведены по подтверждённым данным оператора. При обновлении
 отчёта испытания повторно не запускались: выполнена сверка с
@@ -19,6 +21,9 @@ maintenance cycle и часть изолированных live-сценарие
 
 - Полный Linux pytest: **829 passed, 4 skipped**.
 - Целевые Linux indexer/script tests: **70 passed in 23.92s**.
+- После добавления 14 signal/identity cases весь `tests/test_reindex_script.py`
+  выполнен на Linux: **42 passed, 0 skipped**. Это отдельный целевой прогон,
+  а не новый полный regression; результаты не суммируются с 829/70.
 - mypy: **success, 24 source files**.
 - `docker compose config --quiet`: успешно.
 
@@ -48,16 +53,17 @@ fixture-теста на сервере не превращает его в live-
 
 ### Production: публикация и восстановление app
 
-- `./reindex.sh`: **exit 0**, app восстановлен, подтверждены **running и HTTP health**.
+- `./reindex.sh`: **exit 0**, app восстановлен, подтверждены **running и HTTP 200**.
 - Production SQLite: **integrity ok**, **24 документа**, **910 chunks**,
   `indexed_at=2026-10-20T10:18:41.693304+00:00`.
-- Semantic, lexical и hybrid retrieval успешно проверены с настоящим индексом.
+- Semantic, lexical и hybrid retrieval успешно проверены **новым процессом**
+  с настоящим индексом, независимо от процесса сборки.
 
 Это подтверждает успешный административный цикл и реальные retrieval-проверки.
-Health сам по себе не доказывает согласованность содержимого индекса. Отдельный
-протокол проверки SQLite/embeddings/FTS/provenance и запуска retrieval именно
-новым процессом в переданных результатах не детализирован; эти части 5.2 нельзя
-объявлять отдельно завершёнными лишь по integrity/health.
+Health сам по себе не доказывает согласованность содержимого индекса. По
+дополнительно переданным результатам embeddings и FTS5 согласованы с chunks,
+размерность embeddings — **384**. Проверены **1210 provenance-сегментов**
+рабочего индекса и **1223** изолированного, **ошибок 0**; SQLite integrity — `ok`.
 
 ### Изолированный data path: отказы и повторная индексация
 
@@ -74,23 +80,103 @@ builder lock, SIGTERM во время сборки, сохранение SHA-256
 | `embedding_seconds` | 17.8763 |
 
 Добавлена страница Wiki.js **`page_id=48`**; остальные 24 документа по
-`content_sha256` не изменились. Это подтверждает добавление документа, но не
-live-проверку изменения Markdown существующей страницы или её исчезновения
-из view. **Production SQLite остался на прежнем поколении** — 24 документа,
+`content_sha256` не изменились. Это подтверждает добавление документа; отдельные
+update/delete/empty результаты на контролируемом source приведены ниже.
+**Production SQLite остался на прежнем поколении** — 24 документа,
 910 chunks, timestamp `2026-10-20T10:18:41.693304+00:00`.
 Изолированное поколение 25/919 не опубликовано в production SQLite.
 
-Прежнее утверждение отчёта «Production Wiki.js не изменялся» больше не
-используется: зафиксировано добавление `page_id=48`. Для оставшихся
-update/delete/empty сценариев требуется контролируемый read-only test source,
-без дополнительных изменений production Wiki.js ради испытаний.
+Добавление `page_id=48` зафиксировано отдельно от контролируемых испытаний ниже.
+Контролируемые update/delete/empty испытания выполнены без изменения production Wiki.js.
 
-Длительности относятся к повторной изолированной индексации, а не к production
-downtime или полному времени `./reindex.sh`. Peak RAM не измерен.
-Сохранение SHA-256 не заменяет отдельного подтверждения прежних timestamp,
-сохранности sidecars и retrieval после restart. SIGTERM во время сборки не
-подтверждает весь протокол завершения собственного one-shot/manual recovery
-или прерывание после commit point.
+Длительности 19.2775/17.8763 относятся к прежней повторной изолированной
+индексации. Отдельное измерение полного reindex с реальным Wiki.js source:
+
+| Показатель отдельного измерения | Значение |
+| --- | --- |
+| Документы / chunks | 25 / 919 |
+| Wall time | 20,92 с |
+| `indexing_seconds` | 20,75335 с |
+| `embedding_seconds` | 19,20777 с |
+| Peak RSS процесса через `resource.getrusage` | 1390,16 MiB |
+
+Это peak RSS процесса полной индексации, не суммарная память Docker/host и не
+измерение production `./reindex.sh`. Production duration/downtime не предоставлены.
+Буквальный критерий 5.2 требует фактических длительности и peak RAM полного reindex,
+но не требует измерять их в том же production maintenance cycle; поэтому
+раздельных подтверждений достаточно для закрытия 5.2. SIGTERM индексатора до
+публикации не подтверждает host-script termination/manual recovery либо
+прерывание после commit point.
+
+### Контролируемый source: update/delete/empty и failed build
+
+Изолированный SQLite и тестовый PostgreSQL `chago-rag-acceptance-pg`;
+production Wiki.js не изменялся в рамках этих испытаний.
+
+| Live-проверка | Подтверждённый результат |
+| --- | --- |
+| Пустой source | Успешная публикация: 0 документов, 0 chunks. |
+| Добавление двух страниц | 0 → 2 документа. |
+| Обновление Markdown `900001` | Новые данные проиндексированы, прежнее содержимое заменено. |
+| Удаление `900002` | 2 → 1 документ; integrity `ok`, documents/chunks/embeddings/FTS5 согласованы и относятся к одному оставшемуся поколению. |
+| Ошибка PostgreSQL ingestion | `reindex: build_failed`, exit 1; SHA-256, mtime и metadata старого active неизменны. |
+| Чтение после failed build | Новый Python-процесс открыл прежнее поколение, lexical retrieval нашёл только `900001`, удалённая страница отсутствует. |
+
+Последний подтверждённый вывод оператора:
+
+```text
+PREVIOUS_GENERATION_LOADED: True
+RETRIEVAL_EXIT: 0
+RESULT_COUNT: 1
+PAGE_IDS: [900001]
+RETRIEVAL_AFTER_FAILURE: PASSED
+RETRIEVAL_CHECK_EXIT=0
+```
+
+Ранее также подтверждены first-run failure без active, WAL/SHM refusal **без
+изменения файлов**, конкурентный builder lock, прерывание индексатора до
+публикации и последующий успешный reindex. Эти испытания повторять не нужно.
+Новый Python reader сам по себе не подтверждает restart FastAPI. Дополнительные
+live Docker и диагностические подтверждения приведены отдельно ниже.
+
+### Дополнительные live Docker испытания 5.3, 2026-10-21
+
+По данным оператора испытания выполнены на изолированной тестовой среде,
+с отдельными data path и контролируемым read-only source. Production Wiki.js
+не изменялся. Ранее подтверждённые update/delete/empty, WAL/SHM, failure
+preservation и retrieval не повторялись при этой актуализации.
+
+| Live Docker сценарий | Фактический результат |
+| --- | --- |
+| First-run failure | `reindex.sh` вернул exit 1, активный SQLite отсутствует. Тестовый FastAPI автоматически восстановился; HTTP 200, health `{"status":"ok"}`. |
+| Failed build с поколением A | Exit 1; SHA-256 и MTIME A не изменились, SQLite integrity `ok`. FastAPI восстановился; работающий процесс удерживает SQLite handle. Проверки загрузки A и retrieval диагностическим lifespan описаны ниже. |
+| Host lifecycle lock | Второй `reindex.sh` вернул exit 1 и `reindex: operation busy`; первый завершился с exit 0 и восстановил FastAPI. Это дополняет ранее проверенный отдельный builder lock. |
+| SIGTERM до commit | Hook непосредственно перед `os.replace`: `PRE_COMMIT_REACHED=1`. Exit 143; собственный one-shot завершён и удалён, автоматического восстановления не было. SHA-256 и MTIME старого поколения неизменны, integrity `ok`; manual recovery успешен. |
+| SIGTERM после commit | Hook подтвердил выполнение `os.replace` до сигнала: `POST_COMMIT_REACHED=1`. Exit 143; собственный one-shot завершён и удалён. Опубликовано целостное B: SHA-256, MTIME и indexed_at изменились, integrity `ok`, 1 документ / 1 chunk. Manual recovery успешен, HTTP 200; работающий FastAPI удерживает SQLite handle нового поколения. |
+| Негативный recovery | Тестовый Compose принял запуск (`up=0`), но приложение сразу завершилось с exit 0. Скрипт сообщил `app recovery failed` и вернул exit 1; собственных one-shot контейнеров не осталось. |
+| Cleanup | Временная инструментализация удалена, штатный Compose восстановлен, FastAPI работает, HTTP health успешен: `TEST_CLEANUP_PASSED`. |
+
+### Диагностические проверки и границы live-наблюдения
+
+После failed build отдельный диагностический lifespan загрузил поколение A,
+lexical retrieval вернул **1 результат**. Это проверка загрузки через lifespan
+и retrieval отдельно от работающего FastAPI. У работающего процесса подтверждён
+удерживаемый SQLite handle; выполнение retrieval внутри этого процесса не заявляется.
+
+После first-run failure непосредственно наблюдались отсутствие активного файла,
+автоматический restart FastAPI и успешный HTTP health. Значение
+`app.state.index.available` в работающем процессе **не считывалось**.
+Health не доказывает unavailable state. Вывод об `index_missing` опирается на
+`load_index_state()` в `app/app/index_state.py`, вызов loader в lifespan
+`app/app/main.py` и ранее выполненный `test_unavailable[missing]` из
+`app/tests/test_index_state.py`: отсутствующая БД не создаётся, state unavailable,
+health успешен. Это подтверждение исходниками и автоматическими lifecycle tests,
+а не прямое live-наблюдение внутреннего state.
+
+Таким образом, first-run failure из буквального текста 5.3 проверен live;
+требование delta spec/design об unavailable state подтверждено совокупностью
+live-фактов, исходников и ранее выполненных tests. Прямое считывание внутреннего
+state работающего процесса отдельным обязательным live-критерием 5.3 не задано.
 
 ## Покрытие на fixtures
 
@@ -135,32 +221,39 @@ reader/query checks — 62 passed, 24 skipped; полный pytest — 797 passe
 Windows skips не засчитывались как Linux-проверки. Эти исторические результаты
 не заменяют и не суммируются с серверным прогоном.
 
-## Оставшиеся критерии OpenSpec
+## Итоговая сверка критериев OpenSpec
 
 Таблица согласована с актуализированным `tasks.md`. Неуказанные детали
 считаются неподтверждёнными, а не неуспешными. Для 1.1–4.4 учитываются
 предусмотренные задачами автоматические tests/smoke; отдельные live-критерии
-остаются в 5.2–5.3.
+5.2–5.3 сверены с серверными результатами.
 
-| Задача | Что ещё требуется |
+| Задача | Подтверждение |
 | --- | --- |
 | 1.1 — выполнена | Config tests, типизированный общий `INDEX_PATH`, Compose/`.env.example` и успешный Compose config подтверждены. |
 | 2.1 — выполнена | Linux subprocess lock/TERM/KILL, protected paths, staging и сохранность active до replace подтверждены кодом и tests; live builder lock/failure preservation дополняют их. Отдельной live-конкуренции полного pipeline задача не требует. |
-| 4.1 — выполнена | Executable bit, prerequisites/пути, Linux fake-Docker порядок/другой cwd/второй host запуск подтверждены. Второй live host запуск остаётся в 5.3. |
-| 4.2 — выполнена | Recovery deadline/probe/ID/RestartCount сверены с кодом, Linux fake-Docker матрица статусов выполнена; production running+HTTP подтверждены. Live failed recovery при `up=0` и running+HTTP после failed build остаются в 5.3. |
-| 4.3 — открыта | Недостающие signal/identity tests добавлены: 14 cases для INT/TERM, включая до создания, потерю stdout ID, уже завершившийся контейнер, чужие identity и ожидание terminal state под lock. Их Linux-прогон ещё не выполнен: Windows skips не подтверждают критерии. Подробности и одна команда сервера приведены ниже. Детали live identity/terminal state/manual recovery и прерывания вокруг commit остаются в 5.3. |
-| 4.4 — выполнена | Runbook содержит все требуемые инструкции и ограничения, script smoke выполнен. Отдельный live restore drill не является критерием этой задачи; live manual recovery остаётся в 5.3. |
+| 4.1 — выполнена | Executable bit, prerequisites/пути, Linux fake-Docker порядок/другой cwd/второй host запуск подтверждены. Второй live host запуск подтверждён дополнением 5.3. |
+| 4.2 — выполнена | Recovery deadline/probe/ID/RestartCount сверены с кодом, Linux fake-Docker матрица статусов выполнена; production running+HTTP подтверждены. Live failed recovery при `up=0` и восстановление после failed build подтверждены дополнением 5.3. |
+| 4.3 — выполнена | Весь Linux script suite: 42 passed, 0 skipped, включая 14 новых signal/identity cases. Исходники tests и script согласованы с критериями; `bash -n` успешен. Live завершение собственного one-shot/manual recovery и прерывания вокруг commit подтверждены дополнением 5.3. |
+| 4.4 — выполнена | Runbook содержит все требуемые инструкции и ограничения, script smoke выполнен. Отдельный live restore drill не является критерием этой задачи; live manual recovery подтверждён дополнением 5.3. |
 | 5.1 — выполнена | Целевые/связанные и полный локальный regression, Linux indexer/script 70 passed, полный Linux 829 passed и mypy подтверждены. Все 4 skips идентифицированы: reranker; Linux lock/signal tests не пропущены. |
-| 5.2 | Измерить peak RAM полного reindex; отдельно подтвердить согласованность SQLite/embeddings/FTS/provenance и retrieval новым процессом. Длительности изолированного повторного reindex записаны; production duration/downtime не предоставлены. |
-| 5.3 | Live на контролируемом source: изменение существующей страницы, исчезновение страницы и пустой корпус; прежние timestamp и retrieval после failed rebuild/restart; неизменность main+sidecars при WAL/SHM отказе; unavailable и health после first-run failure; второй host запуск до действий с app; прерывания до/после commit с подтверждённым завершением one-shot и manual recovery; failed recovery при `up=0`. Частичные подтверждения SHA-256, first-run failure, WAL/SHM, builder lock и SIGTERM уже получены: где достаточно уточнить протокол, повторять испытания не нужно. |
+| 5.2 — выполнена | Production cycle exit 0, running+HTTP 200, UTC/counts, согласованность SQLite/embeddings/FTS/provenance и retrieval новым процессом подтверждены. Отдельное изолированное измерение полной индексации: wall 20,92 с, peak RSS 1390,16 MiB. |
+| 5.3 — выполнена | Ранее подтверждены update/delete/empty, hash/mtime/metadata A и retrieval новым reader, WAL/SHM refusal без изменения файлов, builder lock. Дополнение подтверждает live first-run failure/restart/health, failed build/restart/handle A и диагностический lifespan/retrieval, второй host запуск, SIGTERM до/после реального replace с завершением собственного one-shot и manual recovery, HTTP после восстановления и отрицательный recovery при `up=0`. Граница наблюдения first-run state указана выше. |
 
-Обязательные live-сценарии 5.2–5.3 остаются незавершёнными в указанном объёме.
-Fixtures update/delete/empty и fake-Docker recovery/signals их не закрывают.
+Буквальные критерии 5.3 покрыты совокупностью ранее сохранённых и новых
+подтверждений; задача отмечена `[x]`, итого **21/21**. Неподтверждённых
+обязательных критериев 5.3 не осталось. Автоматические tests отдельно проверяют
+identity/terminal-state/удержание lock и матрицу recovery failures; новые live
+результаты не приписывают им выполнение настоящего Docker reindex.
+Повторные серверные проверки не требуются. Change готов к архивированию
+со стандартной синхронизацией delta specs после успешной строгой валидации;
+в рамках этой актуализации архивирование, commit и push не выполняются.
+
 Hit@5 ≥90% не является gate этого этапа; строгая durability при power loss
 не входит в заявленную гарантию. Change не архивирован; реализация, `SPEC.md`,
 `ROADMAP.md` и `README.md` при сверке не изменялись.
 
-## Дополнение 4.3: недостающее signal/identity покрытие, 2026-10-20
+## История дополнения 4.3: signal/identity покрытие, 2026-10-20
 
 Сначала сверены утверждённые artifacts и существующие tests. Уже имеющиеся
 creation-delay/inference, lost-id без сигнала, foreign label без сигнала,
@@ -181,9 +274,10 @@ Docker unavailable и kill fallback сохранены. В `app/tests/test_reind
 точный ID для mutations и доступность lifecycle lock после завершения скрипта.
 Fake `container ls` учитывает точный name filter, чтобы похожее имя не считалось
 совпавшим. Production `reindex.sh` не изменён: подтверждённого тестами дефекта
-пока не выявлено; новые signal cases ещё требуют выполнения на Linux.
+пока не выявлено. На момент дополнения Linux-прогон ещё ожидался;
+теперь он подтверждён: **42 passed, 0 skipped**, включая все 14 новых cases.
 
-Фактически выполнено в этой сессии:
+Исторические результаты локальной сессии 2026-10-20:
 
 - Целевой Windows pytest всего `app/tests/test_reindex_script.py`:
   **4 passed, 38 skipped**. Новые tests: **14 skipped** (12 identity + 2 terminal/lock),
@@ -200,8 +294,8 @@ Fake `container ls` учитывает точный name filter, чтобы по
 - Docker локально отсутствует; `wsl --list --quiet` вне sandbox вернул пустой
   список. Доступного локального Linux runtime для обязательных tests нет.
 
-Для подтверждения 4.3 выполнить **одну команду из корня обновлённого checkout
-на Linux-сервере**, используя уже применявшийся acceptance container:
+Команда, ранее подготовленная для подтверждения 4.3 из корня Linux checkout
+с уже применявшимся acceptance container (повторять прогон не требуется):
 
 ```bash
 docker compose run --rm --no-deps -v "$PWD:/workspace:ro" -v "$PWD/data:/data:ro" -w /workspace/app app sh -c 'bash -n /workspace/reindex.sh && python -m pip install --no-cache-dir pytest==9.1.1 && python -m pytest -q -rs -p no:cacheprovider tests/test_reindex_script.py'
@@ -209,6 +303,17 @@ docker compose run --rm --no-deps -v "$PWD:/workspace:ro" -v "$PWD/data:/data:ro
 
 Команда выполняет script tests с fake Docker в PATH и временными fixtures;
 реальный `reindex.sh` против production Docker не запускается. Требуется
-успешный прогон всех script cases без Linux skips. Его вывод следует сохранить
-в этом отчёте; только после подтверждения всех критериев можно закрыть 4.3.
-**4.3, 5.2 и 5.3 остаются открытыми**, change не архивирован.
+успешный прогон всех script cases без Linux skips. По данным оператора он
+выполнен: **42 passed, 0 skipped**, включая 14 новых cases. Это Linux fake-Docker
+подтверждение 4.3, а не live one-shot испытания. На момент этого дополнения **4.3 и 5.2 были закрыты, 5.3 оставалась открытой**;
+change не архивирован.
+
+## Проверки этой актуализации, 2026-10-21
+
+`git diff --check` — exit 0; `openspec.cmd validate --all --strict` —
+**10 passed, 0 failed**. Diff проверен на scope и secrets: изменены только этот
+отчёт и `tasks.md`, значений credentials/DSN/tokens в добавлениях нет.
+`openspec.cmd instructions apply --change atomic-full-reindex --json` —
+`state: all_done`, **21 complete / 21 total, 0 remaining**.
+Pytest/mypy и серверные испытания повторно не запускались: менялась только
+документация, результаты Linux-прогонов выше получены от оператора.
