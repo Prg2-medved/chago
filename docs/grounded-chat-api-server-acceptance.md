@@ -959,3 +959,149 @@ bash docs/grounded-chat-api-evaluate.sh --case q01 --case q11 --case q19
 При uncertain timeout остановиться без retry до подтверждения завершения.
 Диагностический серверный запуск агентом не выполнялся; прогресс **26/29**,
 7.2–7.4 открыты. Проверки JSON и `git diff --check` успешны.
+
+### Фактический выборочный diagnostic run, 2026-10-22
+
+Оператор передал завершённые end-to-end и generation-only q01/q11/q19 из
+`/home/prg2/chago-llm/chago/data/grounded-chat-api-eval.zYqrQO1J`.
+Все 6 cases — tuning. Все calculated/actual prompt counts точно совпали;
+оба summaries (settings/fingerprints) совпали с предыдущим corpus run.
+Это частичная диагностика, не новая полная приёмка 7.2. Отдельные stderr
+и identity sidecars этого запуска не переданы; timeout в stdout не заявлен.
+
+[Diagnostic review JSON](grounded-chat-api-tuning-diagnostic-review-2026-10-22.json)
+сохраняет 6 verdicts, пояснения, retrieved/supplied/packed IDs, timings,
+validation_error, token counts и summaries. SHA256 приложения оператора:
+`b38287530efb40ef46c4b70af368b1453042d1a87919f951d89ec68a1d1f1171`.
+
+| Case | End-to-end | Generation-only |
+|---|---|---|
+| q01 | Без fallback; при полном evidence опущена конкурентность разных маршрутов, необоснованные пробелы и insufficient_context=true | Все required facts есть, но insufficient_context=true без gap/conflict |
+| q11 | Без fallback; producer/br-front цитируется по warehouse JSON, device facts — по заголовку, необоснованная недостаточность | Fallback, **validation_error=citation_missing** при полном evidence |
+| q19 | Retrieval miss, нет python main.py; pytest inline, gap заявлен в тексте при insufficient_context=false | Обе команды дословны, но даны обычным текстом, без fences; exact-block validator не задействован |
+
+Подтверждённая причина текущего q11 fallback — отсутствие citation у
+kind=answer/partial. Из порядка проверок validator следует, что JSON был
+распарсен, а структурная проверка дошла до citation_missing. Raw output
+не сохранён; его факты и точный kind неизвестны. Это корректный безопасный
+отказ публиковать неподтверждённую генерацию, а не доказанная ошибка validator.
+Причины fallback предыдущего запуска этот повтор не восстанавливает.
+
+В q01/q19 fallback не воспроизвёлся. Изменение ответа между прогонами нельзя
+приписывать исправлению качества: prompt/model/sampling не менялись, добавлена
+только диагностика. Нельзя отключать citation/code validation, автоматически
+приписывать sources либо менять insufficient_context по наличию marker:
+это скрыло бы наблюдаемые нарушения, а не обеспечило grounded acceptance.
+
+Диагностика достигла цели: установлена категория одного воспроизведённого
+отклонения. Дальнейшие повторы без исправлений не нужны. Остаётся работа
+над генерацией: соблюдение citations, обоснованность kind, полнота ответа,
+поддержка утверждений и fenced-команды. Это не устраняется корректировкой
+token budget или ranking. Новых prompt/runtime изменений по этим данным
+не внесено; изменение image/model/flags по-прежнему требует решения владельца.
+Данный отчёт не объявляет такое расширение необходимым и не принимает
+непройденные требования как ограничения.
+
+**Прогресс остаётся 26/29; 7.2–7.4 открыты.** В этой сессии дополнены только
+журнал и новый diagnostic review, код/tasks не менялись. Проверены 6 уникальных
+mode/case pairs, tuning-only scope, exact counts, единственный citation_missing
+и совпадение summaries. Runtime tests не перезапускались; `git diff --check`
+успешен.
+
+### Вторая правка prompt: примеры формата и согласованность kind, 2026-10-22
+
+После решения владельца продолжить локальную правку изменена только строка
+`SYSTEM_RULES` в `app/app/grounding.py`. Основание — tuning failures и diagnostic
+q01/q11/q19, общие требования SPEC §§13–15; holdout не использован для настройки.
+Это новая проверяемая гипотеза, а не подтверждённое улучшение ответов Qwen.
+
+Вместо длинной последовательности действий правила кратко описывают выбор
+kind по полноте готового ответа. Если назван пробел в запрошенных сведениях,
+kind должен быть partial; если всё запрошенное подтверждено, нельзя добавлять
+общую оговорку о нехватке незапрошенных деталей. Широкий вопрос, соответствующий
+предмету инструкции, не требует уточнения дополнительных параметров, которых
+эта инструкция не требует. Неизвестный объект по-прежнему требует clarify,
+а найденный похожий документ не разрешает угадать его.
+
+Добавлены четыре вымышленных примера на одной учебной записи о сервисе
+архивирования: полный answer, partial с конкретным пробелом, fenced-команда
+с citation снаружи блока и короткий clarify. Это образцы сериализации JSON,
+связи kind/answer и расположения citation; их факты и нулевой chunk ID
+явно запрещено использовать как evidence текущего запроса. Примеры не берутся
+из frozen corpus и не подставляют ответы контрольных cases.
+Правила требуют citations у claims, точных команд в fences, различения
+содержимого fragment и заголовков/примеров, согласованности готового JSON.
+
+SHA256 UTF-8 `SYSTEM_RULES`:
+`91b5078617b4ad7204f9d3f48b9bf3f208d3d627f7d9676d79992d3fa2c8057b`.
+Длина — 4001 Unicode code points, только идентификация ревизии: это не token
+count и не основание для budget. Точный budget использует прежний serving
+tokenizer по полному массиву двух messages. Packing может измениться при
+росте system rules; новые packed IDs/counts проверяются live, старые не переносятся.
+Validator, parser, public API, transport, sampling, model/image/flags,
+retrieval/ranking и frozen inputs не менялись. Retry/новых model calls нет.
+
+### Локальные проверки второй правки
+
+Из `app/`:
+
+```powershell
+$env:PYTHONDONTWRITEBYTECODE='1'
+../.venv/Scripts/python.exe -m pytest -q -rs -p no:cacheprovider --basetemp=../.tmp/grounded-prompt-examples-approved tests/test_grounding.py tests/test_chat_api.py tests/test_chat_evaluation.py tests/test_chat_token_check.py
+$env:MYPYPATH='typings'
+../.venv/Scripts/python.exe -m mypy app/grounding.py --follow-imports=silent --cache-dir ../.tmp/mypy-grounded-prompt-examples
+```
+
+**99 passed, 1 warning in 1.92s**, без skips. Warning — прежний TestClient/httpx.
+Первый sandbox-прогон завершился temp WinError 5; результат выше — повтор вне
+sandbox с отдельным basetemp. Mypy: **Success: no issues found in 1 source file**.
+Новый тест разбирает учебный CONTEXT и все четыре фактических JSON-примера
+из system string, пропускает их через действующие validators, проверяет
+insufficiency/sources, точный fenced body и отклонение учебного ID на другом
+manifest. Это проверка пригодности примеров, не поведения Qwen.
+Полный regression не повторялся: изменена строка prompt и её тест.
+
+`openspec.cmd validate grounded-chat-api --strict` — change valid;
+`openspec.cmd validate --all --strict` — **11 passed, 0 failed**, прежние INFO
+о длине requirements. `git diff --check` успешен. Diff проверен: новая правка
+ограничена system string, тестом примеров, документацией и переоткрытием 7.1.
+Начальные изменения diagnostic review/журнала сохранены; README/ROADMAP,
+frozen inputs/splits, ranking, зависимости и исторические baseline не менялись.
+
+### Серверная проверка второй правки
+
+**7.1 снова открыта**, поскольку окончательные messages изменились;
+предыдущий успешный 7.1 сохраняется как исторический результат прошлой ревизии.
+Актуальный прогресс **25/29; открыты 7.1–7.4**. Ранний gate 2.1 принят.
+
+Перенести обновлённый `app/app/grounding.py` в серверный checkout.
+Runner монтирует текущий код read-only: для этих административных проверок
+build/restart app не требуется. Не запускать другой chat/harness traffic.
+При отсутствии outstanding uncertain generation выполнить из корня проекта:
+
+```bash
+bash docs/grounded-chat-api-final-token-smoke.sh
+```
+
+Передать полный вывод и принять exact counts/window/overflow/index checks.
+При timeout остановиться без retry до подтверждения прекращения генерации;
+не увеличивать timeout и не менять runtime автоматически.
+
+После успешного review 7.1 выполнить tuning-only проверку новой гипотезы:
+
+```bash
+FROZEN_LIVE_INDEX=/data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/hybrid-live.db \
+FROZEN_SYNTHETIC_INDEX=/data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/hybrid-synthetic.db \
+bash docs/grounded-chat-api-evaluate.sh \
+  --case q01 --case q02 --case q03 --case q05 --case q06 --case q07 \
+  --case q11 --case q12 --case q13 --case q14 --case q15 --case q17 --case q19
+```
+
+Ожидается 13 rows каждого режима, generation-only q13/q14/q15/q17 без completion.
+Требуется review всех запрошенных фактов, citations, kind, exact fenced commands,
+clarify/refusal и возможной регрессии, включая validation_error. Передать оба
+JSONL, оба stderr и identity sidecars нового каталога. Содержимое учебных
+примеров и их ID не должны появляться в фактическом ответе/sources.
+Только после tuning review переходить к полной 7.2, включая holdout исключительно
+для acceptance; выборочный успех не закрывает change и не заменяет 7.3–7.4.
+Локального Docker/целевой Qwen нет, live-команды этой ревизии агентом не выполнялись.

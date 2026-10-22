@@ -162,6 +162,13 @@ Generated table headers/fences и `search_text` не входят в evidence. U
 claim, тематической близости недостаточно. Эти prompt rules требуют live review;
 backend не проверяет их семантическое исполнение.
 
+System rules также содержат вымышленные учебные примеры JSON: полный ответ,
+partial с конкретным пробелом, дословная fenced-команда и уточнение неизвестного
+объекта. Они показывают расположение citations и соответствие kind ответу;
+данные примеров и их ID не разрешены как evidence текущего запроса. Примеры
+проверяются действующими parser/citation/code validators, но их наличие
+не доказывает соблюдение правил Qwen: эффект оценивается только live.
+
 Полный messages array проходит `/apply-template` с `add_generation_prompt=true`,
 затем `/tokenize` с `add_special=true`, `parse_special=true`, `with_pieces=false`.
 Этот точный путь подтверждён ранним live-gate 2.1; в 7.1 он повторяется с текущими

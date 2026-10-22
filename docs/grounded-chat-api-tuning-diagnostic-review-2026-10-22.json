@@ -1,0 +1,314 @@
+{
+  "protocol": "grounded-chat-api-manual-review-v1",
+  "scope": "Selected tuning diagnostic only; not full corpus acceptance.",
+  "review_basis": "Operator pasted stdout including validation_error. No raw completion; stderr/identity sidecars for this diagnostic run not separately provided.",
+  "source_sha256": "b38287530efb40ef46c4b70af368b1453042d1a87919f951d89ec68a1d1f1171",
+  "server_reports": "/home/prg2/chago-llm/chago/data/grounded-chat-api-eval.zYqrQO1J",
+  "gate_7_2": "not_accepted",
+  "cases": [
+    {
+      "id": "q01",
+      "source_set": "live",
+      "split": "tuning",
+      "answerable": true,
+      "expected_behavior": "answer",
+      "retrieved_ids": [
+        "45d55467ee65d4684bf160ad725aae9bc6efa48f6208ae8006860eda808e8132",
+        "fba8058ab5f3fb60a77ef52684241f32e535c0434c0df763e68eb8558b4bfcce",
+        "038d1a279825ee78784f1e7464ee2e4c824c340a049fb31faa3712a698ecebac",
+        "5e13d3960bd6484b1c387d0ffa605b8faee1864e389c2d8e3f01315ec7a03dc7",
+        "0d500e60d97179b58c06832cbe4a206d4fdea6064073ac44f9ed156203fd0149",
+        "930d4ed2b3d524c71a584750dbd211adfbbbeef56dc06712532e712708298fce"
+      ],
+      "supplied_ids": [
+        "45d55467ee65d4684bf160ad725aae9bc6efa48f6208ae8006860eda808e8132",
+        "fba8058ab5f3fb60a77ef52684241f32e535c0434c0df763e68eb8558b4bfcce",
+        "038d1a279825ee78784f1e7464ee2e4c824c340a049fb31faa3712a698ecebac",
+        "5e13d3960bd6484b1c387d0ffa605b8faee1864e389c2d8e3f01315ec7a03dc7",
+        "0d500e60d97179b58c06832cbe4a206d4fdea6064073ac44f9ed156203fd0149",
+        "930d4ed2b3d524c71a584750dbd211adfbbbeef56dc06712532e712708298fce"
+      ],
+      "packed_ids": [
+        "45d55467ee65d4684bf160ad725aae9bc6efa48f6208ae8006860eda808e8132",
+        "fba8058ab5f3fb60a77ef52684241f32e535c0434c0df763e68eb8558b4bfcce",
+        "038d1a279825ee78784f1e7464ee2e4c824c340a049fb31faa3712a698ecebac",
+        "5e13d3960bd6484b1c387d0ffa605b8faee1864e389c2d8e3f01315ec7a03dc7",
+        "0d500e60d97179b58c06832cbe4a206d4fdea6064073ac44f9ed156203fd0149",
+        "930d4ed2b3d524c71a584750dbd211adfbbbeef56dc06712532e712708298fce"
+      ],
+      "supplied_evidence_complete": true,
+      "packed_evidence_complete": true,
+      "diagnostic": "review_generation",
+      "prompt_tokens": 2206,
+      "actual_prompt_tokens": 2206,
+      "token_count_matches": true,
+      "validation_fallback": false,
+      "validation_error": null,
+      "timings_ms": {
+        "retrieval": 4028.8440510630608,
+        "budget": 28.30732613801956,
+        "generation": 61144.46046203375,
+        "total": 65201.90912485123
+      },
+      "manual_verdict": "fail",
+      "mode": "end-to-end",
+      "review_note": "Required cross-route concurrency omitted despite complete evidence; unjustified insufficiency and absence claims about interactions after describing them. No structural rejection this time.",
+      "insufficient_context": true,
+      "source_count": 2
+    },
+    {
+      "id": "q11",
+      "source_set": "live",
+      "split": "tuning",
+      "answerable": true,
+      "expected_behavior": "answer",
+      "retrieved_ids": [
+        "b9093a903c99066479432af1b8eaac0f61a285eeb3734a81459c55afce4b1b93",
+        "cbf0aa31e33ba91cb21a4a0c96822bd63d4ddd77407fe50c82f4c332354e76d9",
+        "a87c5ac3244830729cc5e4c3f59e3ef9ea31f632521deab5fc041333e64d27d5",
+        "04517d852e908abc2d9e776a778b0e83a1faa0cdd952cdaa12fa8b6bc6a742b8",
+        "41889ddd6789b335e01d65c07d3adca825e57a07c9f43503acd93223be0bb84d",
+        "86439ac8f2ff766ba517c3b5fec218fbcfaae52ec412be22dd65cef3a5e28a77"
+      ],
+      "supplied_ids": [
+        "b9093a903c99066479432af1b8eaac0f61a285eeb3734a81459c55afce4b1b93",
+        "cbf0aa31e33ba91cb21a4a0c96822bd63d4ddd77407fe50c82f4c332354e76d9",
+        "a87c5ac3244830729cc5e4c3f59e3ef9ea31f632521deab5fc041333e64d27d5",
+        "04517d852e908abc2d9e776a778b0e83a1faa0cdd952cdaa12fa8b6bc6a742b8",
+        "41889ddd6789b335e01d65c07d3adca825e57a07c9f43503acd93223be0bb84d",
+        "86439ac8f2ff766ba517c3b5fec218fbcfaae52ec412be22dd65cef3a5e28a77"
+      ],
+      "packed_ids": [
+        "b9093a903c99066479432af1b8eaac0f61a285eeb3734a81459c55afce4b1b93",
+        "cbf0aa31e33ba91cb21a4a0c96822bd63d4ddd77407fe50c82f4c332354e76d9",
+        "a87c5ac3244830729cc5e4c3f59e3ef9ea31f632521deab5fc041333e64d27d5",
+        "04517d852e908abc2d9e776a778b0e83a1faa0cdd952cdaa12fa8b6bc6a742b8",
+        "41889ddd6789b335e01d65c07d3adca825e57a07c9f43503acd93223be0bb84d",
+        "86439ac8f2ff766ba517c3b5fec218fbcfaae52ec412be22dd65cef3a5e28a77"
+      ],
+      "supplied_evidence_complete": true,
+      "packed_evidence_complete": true,
+      "diagnostic": "review_generation",
+      "prompt_tokens": 2399,
+      "actual_prompt_tokens": 2399,
+      "token_count_matches": true,
+      "validation_fallback": false,
+      "validation_error": null,
+      "timings_ms": {
+        "retrieval": 38.15978020429611,
+        "budget": 21.417781710624695,
+        "generation": 59135.3740170598,
+        "total": 59195.435002446175
+      },
+      "manual_verdict": "fail",
+      "mode": "end-to-end",
+      "review_note": "Warehouse producer/br-front claim cited to warehouse JSON; device detail cited to heading-only fragment. Unjustified insufficiency despite complete evidence; citation entailment fails.",
+      "insufficient_context": true,
+      "source_count": 2
+    },
+    {
+      "id": "q19",
+      "source_set": "live",
+      "split": "tuning",
+      "answerable": true,
+      "expected_behavior": "answer",
+      "retrieved_ids": [
+        "acebd17e5ce3e1b22e3af03d821c15017ce85f4f5afd6a4ca356edfab4ba2ac2",
+        "ee09ca2c0f15a729638839172043cb61a6ed3449322f6306da81c67885fc3dae",
+        "17b9a7af832ee05223c6bcc871723bf3bda4c75b2567896dcdf4016578cc04dd",
+        "c9a9b90c711788f597ec4c9bb5d6ccbc78c5420f75af0b8154f6b8a9c8c34a75",
+        "0698daf82547722a859a3eb2230bd0c5a9008d0655c635b2564ab8130fef36c5",
+        "930d4ed2b3d524c71a584750dbd211adfbbbeef56dc06712532e712708298fce"
+      ],
+      "supplied_ids": [
+        "acebd17e5ce3e1b22e3af03d821c15017ce85f4f5afd6a4ca356edfab4ba2ac2",
+        "ee09ca2c0f15a729638839172043cb61a6ed3449322f6306da81c67885fc3dae",
+        "17b9a7af832ee05223c6bcc871723bf3bda4c75b2567896dcdf4016578cc04dd",
+        "c9a9b90c711788f597ec4c9bb5d6ccbc78c5420f75af0b8154f6b8a9c8c34a75",
+        "0698daf82547722a859a3eb2230bd0c5a9008d0655c635b2564ab8130fef36c5",
+        "930d4ed2b3d524c71a584750dbd211adfbbbeef56dc06712532e712708298fce"
+      ],
+      "packed_ids": [
+        "acebd17e5ce3e1b22e3af03d821c15017ce85f4f5afd6a4ca356edfab4ba2ac2",
+        "ee09ca2c0f15a729638839172043cb61a6ed3449322f6306da81c67885fc3dae",
+        "17b9a7af832ee05223c6bcc871723bf3bda4c75b2567896dcdf4016578cc04dd",
+        "c9a9b90c711788f597ec4c9bb5d6ccbc78c5420f75af0b8154f6b8a9c8c34a75",
+        "0698daf82547722a859a3eb2230bd0c5a9008d0655c635b2564ab8130fef36c5",
+        "930d4ed2b3d524c71a584750dbd211adfbbbeef56dc06712532e712708298fce"
+      ],
+      "supplied_evidence_complete": false,
+      "packed_evidence_complete": false,
+      "diagnostic": "retrieval_miss",
+      "prompt_tokens": 2432,
+      "actual_prompt_tokens": 2432,
+      "token_count_matches": true,
+      "validation_fallback": false,
+      "validation_error": null,
+      "timings_ms": {
+        "retrieval": 120.68726867437363,
+        "budget": 19.987061619758606,
+        "generation": 54841.44861996174,
+        "total": 54982.27013647556
+      },
+      "manual_verdict": "fail",
+      "mode": "end-to-end",
+      "review_note": "Retrieval miss: python main.py absent. Inline pytest tests/ violates fenced-command contract; missing startup details acknowledged in prose but insufficient_context=false.",
+      "insufficient_context": false,
+      "source_count": 2
+    },
+    {
+      "id": "q01",
+      "source_set": "live",
+      "split": "tuning",
+      "answerable": true,
+      "expected_behavior": "answer",
+      "retrieved_ids": [],
+      "supplied_ids": [
+        "f89ae4301edc766201e9055860746fd1dcb7566a07f0aeea706be190b2a3a8d6",
+        "edd7f16c838ba53ce771b72e2a601f4d76d84786dac64cbd79d58953225c53e5",
+        "a4656eb62b91ceef667ecad29d1c514346e021e3159124c6b21792cd6c721c2e"
+      ],
+      "packed_ids": [
+        "f89ae4301edc766201e9055860746fd1dcb7566a07f0aeea706be190b2a3a8d6",
+        "edd7f16c838ba53ce771b72e2a601f4d76d84786dac64cbd79d58953225c53e5",
+        "a4656eb62b91ceef667ecad29d1c514346e021e3159124c6b21792cd6c721c2e"
+      ],
+      "supplied_evidence_complete": true,
+      "packed_evidence_complete": true,
+      "diagnostic": "review_generation",
+      "prompt_tokens": 1233,
+      "actual_prompt_tokens": 1233,
+      "token_count_matches": true,
+      "validation_fallback": false,
+      "validation_error": null,
+      "timings_ms": {
+        "retrieval": 0.06968528032302856,
+        "budget": 16.56896620988846,
+        "generation": 33085.35957336426,
+        "total": 33102.32250392437
+      },
+      "manual_verdict": "fail",
+      "mode": "generation-only",
+      "review_note": "All required facts source-backed, but insufficient_context=true without gap/conflict. No structural rejection; full-answer contract fails.",
+      "insufficient_context": true,
+      "source_count": 3
+    },
+    {
+      "id": "q11",
+      "source_set": "live",
+      "split": "tuning",
+      "answerable": true,
+      "expected_behavior": "answer",
+      "retrieved_ids": [],
+      "supplied_ids": [
+        "c2efae7385693ed26a1ff8a891b1f2aef73c9ec8c29e671a52cb312cec88c2be",
+        "b18231e23e4d5484cfb2f11a44fe4f2f76a148b48f28844f612e50fdb5581e64"
+      ],
+      "packed_ids": [
+        "c2efae7385693ed26a1ff8a891b1f2aef73c9ec8c29e671a52cb312cec88c2be",
+        "b18231e23e4d5484cfb2f11a44fe4f2f76a148b48f28844f612e50fdb5581e64"
+      ],
+      "supplied_evidence_complete": true,
+      "packed_evidence_complete": true,
+      "diagnostic": "review_generation",
+      "prompt_tokens": 1160,
+      "actual_prompt_tokens": 1160,
+      "token_count_matches": true,
+      "validation_fallback": true,
+      "validation_error": "citation_missing",
+      "timings_ms": {
+        "retrieval": 0.05634874105453491,
+        "budget": 15.474289655685425,
+        "generation": 31154.53415364027,
+        "total": 31170.229874551296
+      },
+      "manual_verdict": "fail",
+      "mode": "generation-only",
+      "review_note": "Complete evidence but citation_missing: generated kind answer/partial had no citation. Safe fallback appropriate; no published facts. Does not prove cause of earlier fallback.",
+      "insufficient_context": true,
+      "source_count": 2
+    },
+    {
+      "id": "q19",
+      "source_set": "live",
+      "split": "tuning",
+      "answerable": true,
+      "expected_behavior": "answer",
+      "retrieved_ids": [],
+      "supplied_ids": [
+        "bf3cd5bbe2b069d82f361908b82b8c496e161e5806fce4bb2efb278f37a1588b"
+      ],
+      "packed_ids": [
+        "bf3cd5bbe2b069d82f361908b82b8c496e161e5806fce4bb2efb278f37a1588b"
+      ],
+      "supplied_evidence_complete": true,
+      "packed_evidence_complete": true,
+      "diagnostic": "review_generation",
+      "prompt_tokens": 963,
+      "actual_prompt_tokens": 963,
+      "token_count_matches": true,
+      "validation_fallback": false,
+      "validation_error": null,
+      "timings_ms": {
+        "retrieval": 0.0575333833694458,
+        "budget": 15.04460722208023,
+        "generation": 20722.970858216286,
+        "total": 20738.208331167698
+      },
+      "manual_verdict": "fail",
+      "mode": "generation-only",
+      "review_note": "Both required command literals present and source-backed, but neither in fenced code block; exact-block validation not exercised. Previous fallback not reproduced.",
+      "insufficient_context": false,
+      "source_count": 2
+    }
+  ],
+  "summaries": {
+    "end-to-end": {
+      "protocol": "grounded-single-question-v1",
+      "mode": "end-to-end",
+      "corpus_version": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "c792e5dd0d5b93f6496b50715f17e29d6617817475ff790104fd81582141ea8d",
+        "synthetic_index": "60e5369be9e965a480b13fdd7fdf25ae4966384e4d1648c533931111982e2e68"
+      },
+      "follow_up_acceptance": false,
+      "manual_review_required": true,
+      "settings": {
+        "model_name": "Qwen3-4B-Instruct-2507",
+        "max_tokens": 768,
+        "context_size": 8192,
+        "timeout_seconds": 300,
+        "temperature": 0.2,
+        "top_p": 0.8,
+        "top_k": 20
+      }
+    },
+    "generation-only": {
+      "protocol": "grounded-single-question-v1",
+      "mode": "generation-only",
+      "corpus_version": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a"
+      },
+      "follow_up_acceptance": false,
+      "manual_review_required": true,
+      "settings": {
+        "model_name": "Qwen3-4B-Instruct-2507",
+        "max_tokens": 768,
+        "context_size": 8192,
+        "timeout_seconds": 300,
+        "temperature": 0.2,
+        "top_p": 0.8,
+        "top_k": 20
+      }
+    }
+  },
+  "conclusion": "No demonstrated validator defect. Current q11 generation-only correctly rejected for missing citations. Prior fallback causes cannot be reconstructed from a new generation. Semantic insufficiency/entailment and unfenced commands remain unresolved."
+}

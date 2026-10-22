@@ -62,6 +62,26 @@ def test_untrusted_json_has_only_two_messages_and_no_source_urls():
         assert rule in SYSTEM_RULES
 
 
+def test_prompt_examples_are_valid_json_citations_and_exact_source_code():
+    # Exercise the examples through the actual parser/code/citation validators;
+    # malformed JSON escapes or an unsourced example command would teach invalid output.
+    lines = SYSTEM_RULES.splitlines()
+    data = json.loads(next(line.removeprefix("Учебный CONTEXT: ") for line in lines
+                           if line.startswith("Учебный CONTEXT: ")))
+    manifest = build_manifest([chunk(data["fragments"][0], char="0")])
+    assert manifest[0].chunk_id == data["id"]
+    examples = [line for line in lines if line.startswith('{"kind":')]
+    assert len(examples) == 4
+    results = [validate_answer(raw, manifest) for raw in examples]
+    assert all(result.answer != FALLBACK for result in results)
+    assert [result.insufficient_context for result in results] == [False, True, False, True]
+    assert all(result.sources for result in results[:3]) and not results[3].sources
+    assert "```sh\narchivectl verify\n```" in results[2].answer
+    # Example IDs are never authority for a real request with different evidence.
+    actual_manifest = build_manifest([chunk(data["fragments"][0])])
+    assert all(validate_answer(raw, actual_manifest).answer == FALLBACK for raw in examples[:3])
+
+
 @pytest.mark.parametrize("kind", ["answer", "partial", "refuse", "clarify"])
 def test_parse_allowed_kinds(kind):
     assert parse_generated(generated("content", kind)).kind == kind
