@@ -2,7 +2,7 @@
 
 Дата: 2026-10-21. Среда реализации: локальный Windows workspace.
 Linux-проверка 1.3 и live-gate 2.1 подтверждены выводом оператора.
-`POST /api/chat` ещё не реализован.
+`POST /api/chat` реализован локально; финальные live-проверки 7.1–7.3 ещё не выполнены.
 
 ## Локальные проверки
 
@@ -54,8 +54,9 @@ requirements). `git diff --check` успешен. README, ROADMAP, Compose/runti
 flags, frozen evaluation inputs и исторические отчёты не изменялись.
 Сгенерированные тестами изменения двух tracked `.pyc` удалены из diff.
 
-В tasks отмечены **1.1–1.4, 2.1**: **5/29**. Проверки 6.3 и 7.4 не отмечены
-выполненными: chat ещё не реализован и полный объём этих задач не проверен.
+Ранние этапы 1.1–1.4, 2.1–2.2 приняты по автоматическим проверкам и выводу
+оператора. Актуальные результаты последующей локальной реализации приведены
+в конце отчёта. Серверные gates не считаются выполненными по unit/API tests.
 
 ## Завершённая задача 1.3
 
@@ -228,10 +229,10 @@ runtime flags и template:
    о точном пути, сохранив задачу открытой.
 
 Fake-server tests, approximate counts, поправочные коэффициенты и последующая
-задача 7.1 не заменяют gate 2.1. LLM client/token counter ещё не реализованы.
+задача 7.1 не заменяют gate 2.1. LLM client/token counter используют проверенный точный путь.
 Финальные live-проверки 7.1–7.3 остаются открытыми.
 
-## Задача 2.2: локальная реализация, ожидается Compose config
+## Завершённая задача 2.2
 
 Добавлены `ChatSettings` / `load_chat_settings()` в `app/app/config.py`:
 context=8192, reserve=768, конечный HTTP timeout=300 секунд; поля — positive
@@ -260,9 +261,9 @@ $env:MYPYPATH='typings'
 Полный regression не повторялся: изменения ограничены новым loader и Compose;
 startup loader/LLM smoke регрессия включена в профильный прогон.
 
-Docker CLI локально отсутствует. **2.2 не отмечена выполненной** до проверки
-развёрнутой Compose configuration. На сервере с актуальным `compose.yaml`
-из корня проекта выполнить одну команду (без up/build/restart):
+Docker CLI локально отсутствует. Оператор выполнил следующую проверку
+развёрнутой Compose configuration с актуальным `compose.yaml` из корня
+проекта (без up/build/restart):
 
 ```bash
 docker compose config --format json | python3 -c '
@@ -281,5 +282,116 @@ print(json.dumps({"compose_chat_config": "ok", "context_size": window, "max_toke
 
 Весь JSON Compose проходит только через pipe, не выводится и не сохраняется;
 stdout содержит только три публичных числовых settings и verdict. Production
-индекс не читается и не меняется. Требуется полный вывод этой команды; пока
-прогресс **5/29**, остановка на оставшейся проверке 2.2.
+индекс не читается и не меняется. Получен и принят результат:
+
+```json
+{"compose_chat_config":"ok","context_size":8192,"max_tokens":768,"timeout_seconds":300}
+```
+
+**2.2 выполнена** на основании этого вывода и локальных tests, без повторного
+самостоятельного запуска Compose агентом.
+
+## Локальная реализация chat: 2.3–6.2
+
+Добавлены `llm_client.py`, `grounding.py`, `chat.py`, `chat_api.py`,
+`chat_evaluation.py`; route и lifecycle подключены в `main.py`. Отдельный
+admin diagnostic `chat_token_check.py` и shell wrapper подготовлены для 7.1.
+Новые runtime dependencies, публичные reindex/context overrides, history,
+новые LLM flags/template, README/ROADMAP и frozen eval inputs не добавлялись.
+
+Подтверждённые промежуточные результаты (прогоны не суммируются):
+
+| Проверка | Результат |
+|---|---|
+| Fake HTTP server для LLM client, paths/options/proxy/redirect/timeout/protocol/retry | 36 passed |
+| Первичный manifest/parser/packing/citation/code validator | 46 passed |
+| API + grounding до дополнительных edge cases | 80 passed, 1 warning |
+| Управляемые concurrency/cancellation/continued-generation barriers | 7 passed |
+| Frozen evaluation harness | 6 passed |
+| Расширенные grounding + final token diagnostic offline logic | 51 passed |
+| Health/config/index_state/hybrid/reindex regression | 164 passed, 39 skipped, 1 warning in 11.91s |
+| Mypy всех app modules | Success, 30 source files |
+
+В regression 39 skips: 1 actual Linux flock и 38 Linux Bash/flock/signals;
+это ограничения Windows, не подтверждение пропущенных проверок. Warning —
+прежний TestClient/httpx deprecation. Pytest с temporary files запускался
+вне sandbox после отказа sandbox в доступе к temp. Локальные fake HTTP серверы
+используют только loopback; LLM/Wiki/production assets для tests не нужны.
+
+Во время реализации исправлены: тестовый search adapter harness, false positive
+Markdown reference link для соседних citations, mapping фактического E5
+`embedding_budget` в 422; добавлена повторная code validation после numbering,
+чтобы замена marker внутри кода не меняла подтверждённую команду. Исходные
+падающие прогоны не считаются успешными; результаты выше получены после
+соответствующих исправлений. Полный финальный regression фиксируется отдельно.
+
+## Следующий серверный gate 7.1: окончательный prompt и context boundary
+
+Подготовлен [`grounded-chat-api-final-token-smoke.sh`](grounded-chat-api-final-token-smoke.sh).
+После переноса актуальных `app/` и этого скрипта на сервер, из корня проекта:
+
+```bash
+bash docs/grounded-chat-api-final-token-smoke.sh
+```
+
+Нужны уже работающий закреплённый llm, существующий app image и подготовленные
+индекс/E5 assets в `data/` с путями из `.env`. Сам файл `.env` не выводится.
+Wrapper заново читает digest действующего image и SHA256 GGUF, затем запускает
+одноразовый app client с read-only `app/` и `/data`; production SQLite только
+читается, его SHA256 до/после должен совпасть. Нет build/pull/restart llm или app
+service, нет портов нового контейнера, downloads и Wiki.js access/writes.
+LLM runtime flags/template остаются прежними. На время диагностики оператор
+исключает параллельный chat/harness traffic; application semaphore не разделяется
+между отдельными административными процессами.
+
+Проверяются:
+
+1. Реальный E5/hybrid retrieval для «Как работает роутплан?» и окончательные
+   system rules/JSON manifest/packing. Полный completion с текущим reserve.
+2. Синтетический admin boundary fixture с тем же final prompt format: точный
+   поиск через token endpoints messages, для которых calculated+reserve=8192,
+   и сравнение calculated с `usage.prompt_tokens` полного completion.
+3. Fixture ровно на один prompt token больше: удаление целого единственного
+   chunk и отсутствие overflow completion. Каждый кандидат считается реальным
+   tokenizer, нет character estimates или поправочного коэффициента.
+
+Вывод включает actual image/model/template identity, settings, index fingerprint,
+retrieved/packed IDs и пары calculated/actual. Если точная граница недостижима,
+assets/index не готовы, counts/identity не совпадают или endpoint несовместим,
+gate остаётся открытым. При ошибке/timeout completion нет retry или следующего
+completion; требуется подтверждённое прекращение прежней генерации до повтора.
+
+Локально проверены Bash syntax и offline logic equality/overflow/mismatch;
+это **не live acceptance 7.1**. Нужен полный вывод оператора. После успешного
+7.1 остаются 7.2 (реальные case verdicts, включая sufficient evidence) и 7.3
+(Compose concurrency, timeout/cancellation/recovery, offline/app-only и isolation).
+Только затем может завершаться 7.4. Change не архивирован.
+
+## Итог локальной реализации: 6.3
+
+После исправлений выполнен полный `pytest` из `app/`:
+
+```powershell
+$env:PYTHONDONTWRITEBYTECODE='1'
+../.venv/Scripts/python.exe -m pytest -q -rs -p no:cacheprovider --basetemp=../.tmp/grounded-full
+$env:MYPYPATH='typings'
+../.venv/Scripts/python.exe -m mypy app --follow-imports=silent --cache-dir ../.tmp/mypy-grounded-chat
+```
+
+- **1011 passed, 46 skipped, 1 warning in 75.35s**.
+- 46 skips: 3 symlink privilege cases, 4 POSIX permission cases, 1 actual Linux
+  flock case и 38 actual Linux Bash/flock/signals cases. Они не засчитываются
+  как пройденные Linux checks; нужны предусмотренные серверные проверки.
+- Единственный pytest warning — существующий TestClient/httpx deprecation.
+- Mypy: **Success: no issues found in 30 source files**.
+- `bash -n docs/grounded-chat-api-final-token-smoke.sh`: успешно; скрипт
+  в этой среде не выполнялся, Docker CLI по-прежнему отсутствует.
+- `openspec validate grounded-chat-api --strict` и `openspec validate --all --strict`
+  (через Windows `.cmd` shim): change valid, **11 passed / 0 failed**.
+- `git diff --check`: exit 0. Diff проверен: отсутствуют изменения README,
+  ROADMAP, frozen inputs/expectations/baselines, архивных changes и зависимостей.
+
+**Выполнено 25/29 задач: 1.1–6.3.** Задачи **7.1–7.4 открыты**; 7.4 не считается
+завершённой по одной валидации specs, поскольку итоговое соответствие зависит
+от live acceptance. Новых результатов Qwen, corpus verdicts, Compose recovery
+и offline restart в этом разделе не заявлено.
