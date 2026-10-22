@@ -5,8 +5,9 @@ prompt, budget packing и validators. Linux-проверка фактическ�
 открытого файла (задача 1.3) принята по выводу оператора: 30 passed,
 `PATHNAME_REPLACEMENT_OK`. Live-gate 2.1 также принят: calculated/actual
 65/65 и 202/202, cached_tokens=0 на закреплённом image/model. Compose config
-также подтверждён оператором: 8192/768/300. Финальная серверная приёмка 7.1–7.3
-остаётся открытой; автоматические fixtures не подтверждают качество Qwen.
+также подтверждён оператором: 8192/768/300. Финальная token compatibility 7.1
+принята по live-выводу 2026-10-22: 1850/1850, 7424/7424 и overflow без completion.
+Приёмка 7.2–7.3 остаётся открытой; автоматические fixtures не подтверждают качество Qwen.
 
 ## Настройки chat
 
@@ -305,6 +306,8 @@ code block; frozen eval inputs для них не редактировались
   проверена отдельно от end-to-end retrieval.
 
 Численный Hit@5 ≥90% относится к post-MVP и не блокирует этот change. Реальные
-case verdicts и ограничения обязательны. Финальная token compatibility 7.1,
-Qwen generation review 7.2 и Compose concurrency/offline/recovery 7.3 остаются
-серверными задачами; локальные unit/API tests их не заменяют.
+case verdicts и ограничения обязательны. Qwen generation review 7.2 и Compose
+concurrency/offline/recovery 7.3 остаются серверными задачами; локальные unit/API
+tests их не заменяют. Token compatibility 7.1 принята по live-выводу оператора
+2026-10-22; готовый запуск обоих режимов
+7.2 описан в [журнале проверки](grounded-chat-api-server-acceptance.md).

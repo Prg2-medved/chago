@@ -1,8 +1,8 @@
 # Grounded chat API: журнал проверки
 
 Дата: 2026-10-21. Среда реализации: локальный Windows workspace.
-Linux-проверка 1.3 и live-gate 2.1 подтверждены выводом оператора.
-`POST /api/chat` реализован локально; финальные live-проверки 7.1–7.3 ещё не выполнены.
+Linux-проверка 1.3 и live-gates 2.1, 7.1 подтверждены выводом оператора.
+`POST /api/chat` реализован локально; серверные проверки 7.2–7.3 ещё не выполнены.
 
 ## Локальные проверки
 
@@ -325,7 +325,7 @@ Markdown reference link для соседних citations, mapping фактич�
 падающие прогоны не считаются успешными; результаты выше получены после
 соответствующих исправлений. Полный финальный regression фиксируется отдельно.
 
-## Следующий серверный gate 7.1: окончательный prompt и context boundary
+## Завершённый серверный gate 7.1: окончательный prompt и context boundary
 
 Подготовлен [`grounded-chat-api-final-token-smoke.sh`](grounded-chat-api-final-token-smoke.sh).
 После переноса актуальных `app/` и этого скрипта на сервер, из корня проекта:
@@ -361,7 +361,8 @@ settings используют прежние defaults Python loader. Pending и�
 сохранение пробелов в settings, отсутствие sentinel DB secret). Подмена Docker
 не выполняла контейнеры/HTTP. Первая попытка mock имела ошибку индекса аргумента
 в самой подмене; после её исправления проверка успешна. Полный pytest не
-повторялся: Python/runtime-код не менялся. **7.1 остаётся открытой** до live вывода.
+повторялся: Python/runtime-код не менялся. Это само по себе не закрывало 7.1;
+live-результат принят ниже.
 
 Проверяются:
 
@@ -381,10 +382,118 @@ gate остаётся открытым. При ошибке/timeout completion �
 completion; требуется подтверждённое прекращение прежней генерации до повтора.
 
 Локально проверены Bash syntax и offline logic equality/overflow/mismatch;
-это **не live acceptance 7.1**. Нужен полный вывод оператора. После успешного
-7.1 остаются 7.2 (реальные case verdicts, включая sufficient evidence) и 7.3
+это **не live acceptance 7.1**. Оператор затем передал полный live-вывод
+(2026-10-22), на основании которого **7.1 принята**. Остаются 7.2
+(реальные case verdicts, включая sufficient evidence) и 7.3
 (Compose concurrency, timeout/cancellation/recovery, offline/app-only и isolation).
 Только затем может завершаться 7.4. Change не архивирован.
+
+### Фактический результат 7.1 от оператора
+
+Image digest, GGUF SHA256, model alias и chat template fingerprint совпали
+с принятыми в 2.1 значениями:
+
+- image `ghcr.io/ggml-org/llama.cpp@sha256:f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283`;
+- GGUF `2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e`;
+- alias `Qwen3-4B-Instruct-2507`;
+- template fingerprint `05991410a4bad1a587959aa5c8901f699afc639540f931afd8ba2b359e4368a9`;
+- context/reserve/HTTP timeout: **8192 / 768 / 300**.
+
+| Case | Calculated | Actual prompt tokens | Prompt + reserve | Completion HTTP, s |
+|---|---:|---:|---:|---:|
+| `final_retrieved_prompt` | 1850 | 1850 | 2618 ≤ 8192 | 82.063 |
+| `prompt_plus_reserve_equals_window` | 7424 | 7424 | 8192 = 8192 | 126.87 |
+
+Overflow: **7425 + 768 = 8193**; `overflow_completion_sent=false`,
+`overflow_context_removed_whole=true`. Финальный `gate_7_1=passed`.
+
+Индекс: SHA256 `96159df1c9c8cfacf88727b645d87850712bf1b45507641b8aa1f412953e3c74`,
+`index_unchanged=true`. Metadata: format 1, indexed_at
+`2026-10-20T10:18:41.693304+00:00`, **24 documents / 910 chunks**.
+Для реального запроса сохранены и переданы все шесть retrieved IDs:
+
+```json
+["45d55467ee65d4684bf160ad725aae9bc6efa48f6208ae8006860eda808e8132","fba8058ab5f3fb60a77ef52684241f32e535c0434c0df763e68eb8558b4bfcce","038d1a279825ee78784f1e7464ee2e4c824c340a049fb31faa3712a698ecebac","5e13d3960bd6484b1c387d0ffa605b8faee1864e389c2d8e3f01315ec7a03dc7","0d500e60d97179b58c06832cbe4a206d4fdea6064073ac44f9ed156203fd0149","930d4ed2b3d524c71a584750dbd211adfbbbeef56dc06712532e712708298fce"]
+```
+
+Источник — фактический JSONL-вывод оператора, не повторный live-запуск агента.
+Результат подтверждает token accounting и границы бюджета, но не заменяет
+case review качества Qwen из 7.2 или concurrency/recovery из 7.3.
+
+## Следующая задача 7.2: frozen corpus и ручная оценка
+
+Локальная подготовка 2026-10-22: `validate_package` подтвердил текущий frozen
+package; `StorageReader` подтвердил полное совпадение source/document inventory
+обоих подготовленных evaluation-индексов с reference. Fixed-evidence manifest
+построен для каждого single-question case без изменения inputs.
+
+| Локальный input | SHA256 / inventory |
+|---|---|
+| Frozen live reference | `63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f` |
+| Frozen synthetic reference | `9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a` |
+| `data/hybrid-live.db` | `87fa5e9b2af30044a509d19c16440db2545d5941f0eab3d3795a9e6af7d2fa44`, 24 documents / 910 chunks |
+| `data/hybrid-synthetic.db` | `e4b1d1f10d218c92fae848e7ec88c94ccf24d7c2eacf49cd85e265be5052ab89`, 1 document / 1 chunk |
+
+Это identity локальных evaluation-индексов, а не требование совпадения бинарного
+SQLite hash сервера с Windows. На сервере runner проверяет document inventory
+и frozen reference identity и сохраняет фактические index fingerprints.
+Production-индекс из 7.1 не используется вместо отдельного frozen набора.
+
+Всего **18 single-question cases**. Все `answerable=false`: **q13–q17**;
+partial=q12, clarify=q13, conflict=q18, injection=q20, similar identifiers=q07,
+long code=q08. Follow-up q09/q10 исключены из обоих прогонов.
+
+Подготовлен [`grounded-chat-api-evaluate.sh`](grounded-chat-api-evaluate.sh).
+Перенести актуальные `app/`, `eval/` и скрипт на сервер; из корня проекта:
+
+```bash
+bash docs/grounded-chat-api-evaluate.sh
+```
+
+Нужны работающие app/llm и заранее подготовленные frozen файлы:
+`data/eval/1/wiki-documents.json`, `data/hybrid-live.db`,
+`data/hybrid-synthetic.db`. Если evaluation SQLite хранятся в другом месте,
+переменные `FROZEN_SNAPSHOT`, `FROZEN_LIVE_INDEX`, `FROZEN_SYNTHETIC_INDEX`
+задают их container paths под `/data/`; отсутствующие файлы дают остановку
+до генерации. Скрипт не строит индексы и не подменяет frozen inputs.
+
+Последовательно запускаются все end-to-end cases, затем все generation-only
+cases на заданных исходных evidence ranges. Каждый вызов использует текущий
+резерв/HTTP timeout; требуется исключить другой chat/harness traffic. Прогон
+может занять десятки минут. При ошибке, timeout или обрыве второго запуска
+после неуспешного первого не будет. Retry отсутствует; после uncertain timeout
+нужно подтвердить прекращение прежней генерации до нового запуска.
+
+Используется Image ID уже работающего app, pinned LLM identity проверяется
+повторно. Код, `eval/` и `/data` смонтированы read-only, namespace llm общий,
+портов нет. Только публичные settings копируются из app; DB credentials не
+передаются. Нет build/pull/restart, Wiki access/writes, model downloads или
+записи в исходные corpus/SQLite. Уникальный host report directory
+`data/grounded-chat-api-eval.XXXXXXXX` создаётся с umask 077, старые reports
+не перезаписываются. В нём:
+
+- `end-to-end.jsonl` и `generation-only.jsonl`: case строки и успешный summary;
+- `.stderr` для каждого режима;
+- `image-digests.json` и `model.sha256` для фактической LLM identity.
+
+Отчёты содержат source quotes; хранить с теми же правами, что frozen corpus.
+Нужно передать оба `.jsonl` и `.stderr` для review. Поля `manual_verdict=pending`
+не являются pass. Требуется проверить required facts, поддержку каждого claim
+packed citations, точность commands, refusal/clarify/partial и обе стороны
+conflict. Case verdicts и различение retrieval/context misses от generation
+failures сохраняются после фактического вывода и review. Generation-only кейсы
+без evidence отказывают без completion и не считаются испытанием Qwen на nearby
+контексте — для них необходим end-to-end результат. Порог Hit@5 ≥90% не вводится.
+
+Локально проверены `bash -n` и mock execution wrapper: последовательный запуск
+двух режимов, разные JSONL/stderr files, public-only environment с сохранением
+пробелов, read-only mounts и existing Image ID. При искусственной ошибке первого
+прогона второй `docker run` отсутствовал. Реальные Docker/LLM не вызывались;
+Bash проверки выполнялись вне sandbox из-за его CreateFileMapping restrictions.
+Полный pytest/mypy повторно не запускались: Python/runtime-код не менялся.
+
+**7.2 остаётся открытой.** Реальный corpus на Qwen в этой локальной среде не
+запускался; validation inputs и wrapper checks не заменяют серверную приёмку.
 
 ## Итог локальной реализации: 6.3
 
@@ -410,7 +519,8 @@ $env:MYPYPATH='typings'
 - `git diff --check`: exit 0. Diff проверен: отсутствуют изменения README,
   ROADMAP, frozen inputs/expectations/baselines, архивных changes и зависимостей.
 
-**Выполнено 25/29 задач: 1.1–6.3.** Задачи **7.1–7.4 открыты**; 7.4 не считается
+После принятия live-вывода **выполнено 26/29 задач: 1.1–7.1**.
+Задачи **7.2–7.4 открыты**; 7.4 не считается
 завершённой по одной валидации specs, поскольку итоговое соответствие зависит
 от live acceptance. Новых результатов Qwen, corpus verdicts, Compose recovery
 и offline restart в этом разделе не заявлено.
