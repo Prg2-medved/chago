@@ -334,15 +334,34 @@ Markdown reference link для соседних citations, mapping фактич�
 bash docs/grounded-chat-api-final-token-smoke.sh
 ```
 
-Нужны уже работающий закреплённый llm, существующий app image и подготовленные
+Нужны уже работающие app и закреплённый llm, существующий app image и подготовленные
 индекс/E5 assets в `data/` с путями из `.env`. Сам файл `.env` не выводится.
 Wrapper заново читает digest действующего image и SHA256 GGUF, затем запускает
-одноразовый app client с read-only `app/` и `/data`; production SQLite только
+одноразовый app client через `docker run` по Image ID действующего app,
+с read-only `app/` и `/data`; production SQLite только
 читается, его SHA256 до/после должен совпасть. Нет build/pull/restart llm или app
 service, нет портов нового контейнера, downloads и Wiki.js access/writes.
 LLM runtime flags/template остаются прежними. На время диагностики оператор
 исключает параллельный chat/harness traffic; application semaphore не разделяется
 между отдельными административными процессами.
+
+Wrapper исправлен после ошибки оператора `unknown flag: --no-build`:
+этот флаг отсутствует у `docker compose run`. Теперь Compose используется
+только для поиска работающих контейнеров. `docker run --pull=never` запускает
+уже существующий Image ID, разделяет network namespace llm и обращается к
+нему через `127.0.0.1:8080`. Порты не публикуются. Через allowlist копируются
+только INDEX/EMBEDDING/RETRIEVAL и публичные LLM settings действующего app;
+DB credentials и прочие environment secrets не передаются. Отсутствующие
+settings используют прежние defaults Python loader. Pending изменения `.env`
+этим способом не применяются — проверяется действующая конфигурация.
+Ошибка `--no-build` произошла до запуска diagnostic client, поэтому не дала
+результата 7.1 и не отправляла completion.
+Исправление проверено локально: `bash -n` и mock Docker execution с проверкой
+фактических argv (existing Image ID, network namespace, read-only mounts,
+сохранение пробелов в settings, отсутствие sentinel DB secret). Подмена Docker
+не выполняла контейнеры/HTTP. Первая попытка mock имела ошибку индекса аргумента
+в самой подмене; после её исправления проверка успешна. Полный pytest не
+повторялся: Python/runtime-код не менялся. **7.1 остаётся открытой** до live вывода.
 
 Проверяются:
 
