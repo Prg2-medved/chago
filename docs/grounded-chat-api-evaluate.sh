@@ -2,6 +2,15 @@
 # Gate 7.2: sequential frozen end-to-end and fixed-evidence generation runs.
 set -euo pipefail
 umask 077
+case_args=()
+while (( $# )); do
+  if [[ "$1" != --case || $# -lt 2 || -z "$2" ]]; then
+    echo 'Usage: grounded-chat-api-evaluate.sh [--case CASE_ID] ...' >&2
+    exit 1
+  fi
+  case_args+=(--case "$2")
+  shift 2
+done
 llm_id=$(docker compose ps -q llm)
 app_id=$(docker compose ps -q app)
 if test -z "$llm_id" || test -z "$app_id"; then
@@ -62,7 +71,7 @@ for mode in end-to-end generation-only; do
     "$app_image_id" python -m app.chat_evaluation --mode "$mode" \
     --questions /workspace/eval/questions.yaml --manifest /workspace/eval/manifest.json \
     --snapshot "$snapshot" --fixtures /workspace/eval/fixtures/wiki-documents.json \
-    --index "$live_index" --synthetic-index "$synthetic_index" \
+    --index "$live_index" --synthetic-index "$synthetic_index" "${case_args[@]}" \
     2> "$report_dir/$mode.stderr" | tee "$report_dir/$mode.jsonl"
 done
 printf 'Generation runs finished; manual review pending. Reports: %s\n' "$report_dir"

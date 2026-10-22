@@ -1,6 +1,6 @@
 """Original-source evidence, exact prompt packing, and conservative output validation."""
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 import json
 import re
@@ -211,7 +211,8 @@ def _validate_code(answer: str, manifest: tuple[Evidence, ...]) -> str:
     return remaining
 
 
-def validate_answer(raw: str, manifest: tuple[Evidence, ...]) -> GroundedAnswer:
+def validate_answer(raw: str, manifest: tuple[Evidence, ...], *,
+                    on_error: Callable[[str], None] | None = None) -> GroundedAnswer:
     try:
         generated = parse_generated(raw)
         text = generated.answer
@@ -244,5 +245,7 @@ def validate_answer(raw: str, manifest: tuple[Evidence, ...]) -> GroundedAnswer:
         answer = _CITATION.sub(replace, text)
         _validate_code(answer, manifest)  # Replacing markers must never mutate a verified command.
         return GroundedAnswer(answer, generated.kind != "answer", tuple(sources))
-    except GroundingError:
+    except GroundingError as error:
+        if on_error is not None:
+            on_error(str(error))
         return validation_fallback(manifest)

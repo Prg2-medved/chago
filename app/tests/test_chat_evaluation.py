@@ -7,6 +7,7 @@ import pytest
 
 from app.chat_evaluation import evaluate, fixed_manifest
 from app.evaluation import ValidationError
+from app.grounding import FALLBACK
 from app.llm_client import Completion, LLMError
 from test_retrieval_evaluation import evaluation_inputs
 
@@ -48,6 +49,7 @@ def test_frozen_identity_no_followup_no_writes_and_separate_sources(evaluation_i
     assert set(row["source_set"] for row in report["cases"]) == {"live", "synthetic"}
     assert all(row["manual_verdict"] == "pending" for row in report["cases"])
     assert all(row["token_count_matches"] for row in report["cases"] if row["packed_ids"])
+    assert all(row["validation_error"] is None for row in report["cases"])
     if mode == "generation-only":
         assert not live.calls and not synthetic.calls
         assert all(row["supplied_evidence_complete"] is not False for row in report["cases"])
@@ -93,3 +95,26 @@ def test_case_selection_does_not_change_fingerprints_or_accept_followup(evaluati
     assert [row["id"] for row in report["cases"]] == [selected]
     with pytest.raises(ValidationError, match="unknown or follow-up"):
         run(evaluation_inputs, "generation-only", case_ids=["not-a-case"])
+
+
+@pytest.mark.parametrize("content,category", [
+    ("PRIVATE_INVALID_OUTPUT", "generated_json"),
+    (json.dumps({"kind": "answer", "answer": "PRIVATE_INVALID_OUTPUT"}), "citation_missing"),
+    (json.dumps({"kind": "answer", "answer": "PRIVATE_INVALID_OUTPUT [chunk:bad]"}), "citation_marker"),
+    (json.dumps({"kind": "answer", "answer": "```sh\nPRIVATE_INVALID_OUTPUT\n```"}), "code_source"),
+])
+def test_validation_diagnostic_preserves_fallback_without_publishing_raw_output(evaluation_inputs, content, category):
+    client = Client()
+    def invalid(messages):
+        client.messages.append(messages)
+        return Completion(content, 100)
+    client.complete = invalid
+    selected = evaluation_inputs[0].corpus["questions"][0]["id"]
+    emitted = []
+    report = run(evaluation_inputs, "generation-only", client, case_ids=[selected], on_case=emitted.append)
+    row = report["cases"][0]
+    assert row["validation_error"] == category and row["validation_fallback"]
+    assert row["response"]["answer"] == FALLBACK and row["response"]["insufficient_context"]
+    assert row["response"]["sources"]
+    assert "PRIVATE_INVALID_OUTPUT" not in json.dumps(emitted)
+    assert emitted == report["cases"] and len(client.messages) == 1

@@ -719,3 +719,243 @@ holdout служит только приёмке и не используетс�
 Локального Docker/целевой Qwen нет; эти команды в данной сессии не выполнялись.
 На серверной задаче 7.1 работа остановлена до фактического вывода оператора.
 7.2 не закрыта, отдельная Compose-приёмка 7.3 и итоговая 7.4 ещё необходимы.
+
+### Повтор 7.1 после правки prompt: timeout, 2026-10-22
+
+Оператор передал вывод `bash docs/grounded-chat-api-final-token-smoke.sh`.
+Это частичный live-результат; итог — **`gate_7_1=NOT_PASSED`**,
+`error=llm_timeout`, `generation_uncertain=true`.
+
+- Image digest: `ghcr.io/ggml-org/llama.cpp@sha256:f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283`.
+- GGUF SHA256: `2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e`.
+- Alias: `Qwen3-4B-Instruct-2507`; context/reserve/timeout: **8192/768/300**.
+- Chat template SHA256: `05991410a4bad1a587959aa5c8901f699afc639540f931afd8ba2b359e4368a9`.
+- Начальный index SHA256: `96159df1c9c8cfacf88727b645d87850712bf1b45507641b8aa1f412953e3c74`;
+  format 1, indexed_at `2026-10-20T10:18:41.693304+00:00`, 24 documents,
+  910 chunks. Все шесть retrieved/packed IDs совпали с прежним запуском 7.1.
+- `final_retrieved_prompt`: calculated **2206**, actual **2206**, exact match;
+  **2206 + 768 = 2974 ≤ 8192**, completion HTTP **71.796 s**.
+
+Затем runner сообщил timeout. Успешного результата
+`prompt_plus_reserve_equals_window` нет; overflow и финальная проверка
+`index_unchanged` не подтверждены. Начальный hash не заменяет сравнение после
+прогона. Вывод не устанавливает причину timeout или фактическое прекращение
+серверной генерации. Настройки/model/runtime/prompt не менялись в ответ на timeout.
+
+**Не выполнять повтор smoke или 7.2 до подтверждения прекращения прежней
+генерации.** `/health=ok`, истечение времени или завершение диагностического
+контейнера не являются таким подтверждением. Предусмотренный ручной путь:
+остановить прежнюю LLM, подтвердить остановку её процесса, запустить тот же
+существующий LLM container, затем restart app. Это серверное действие оператора;
+агент его не выполнял. После recovery повторить 7.1 с прежними settings;
+при повторном timeout остановиться для диагностики, без автоматического retry
+и увеличения timeout/context или смены runtime flags.
+
+Состояние `generation_uncertain` здесь сообщено отдельным диагностическим
+клиентом; этот вывод сам по себе не доказывает блокировку semaphore работающего
+API и не закрывает Compose-проверку 7.3. **Прогресс остаётся 25/29**;
+7.1–7.4 открыты. Изменён только этот журнал; код и tasks не менялись.
+Для документирования результата тесты не перезапускались;
+`git diff --check` выполнен успешно.
+
+### Recovery и успешный повтор 7.1 после timeout, 2026-10-22
+
+Оператор передал вывод остановки `chago-llm-1` и проверки Docker state:
+`status=exited running=false pid=0`. Затем выполнены `docker compose start llm`
+и `docker compose restart app`, после них — новый запуск
+`bash docs/grounded-chat-api-final-token-smoke.sh`. Прекращение прежнего
+процесса подтверждено до повтора; новый вывод заканчивается **`gate_7_1=passed`**.
+Это результат оператора, агент серверные действия не выполнял.
+
+Image digest, GGUF SHA256, alias и chat template SHA256 точно совпали
+со значениями предыдущего запуска выше. Settings сохранены: context 8192,
+max_tokens 768, timeout 300. Начальный index SHA256 также совпал;
+metadata — format 1, indexed_at `2026-10-20T10:18:41.693304+00:00`,
+24 documents / 910 chunks. Все шесть retrieved/packed IDs прежние.
+
+| Case | Calculated | Actual | Prompt + reserve | Completion HTTP, s |
+|---|---:|---:|---:|---:|
+| `final_retrieved_prompt` | 2206 | 2206 | 2974 ≤ 8192 | 52.388 |
+| `prompt_plus_reserve_equals_window` | 7424 | 7424 | 8192 = 8192 | 125.825 |
+
+Overflow: **7425 + 768 = 8193**; `overflow_completion_sent=false`,
+`overflow_context_removed_whole=true`. Финальная проверка
+`index_unchanged=true`. Точное равенство calculated/actual подтверждено
+на новом prompt и границе, резерв соблюдён, overflow не отправлен в completion.
+Причина предыдущего timeout этим успешным повтором не установлена.
+
+**7.1 выполнена; актуальный прогресс 26/29, открыты 7.2–7.4.**
+Следующий шаг — повтор двух evaluation modes командой 7.2 выше с прежними
+frozen evaluation SQLite и ручным review новых JSONL/stderr/identity sidecars.
+Успех token smoke не подтверждает качество generation и не закрывает 7.2.
+Остановка/start/restart здесь подтверждает выполненный путь recovery, но
+не заменяет проверку API concurrency/cancellation/timeout/semaphore из 7.3.
+
+В этой сессии изменены журнал и checkbox 7.1; runtime-код/settings не менялись.
+Тесты не перезапускались: изменение документальное. `git diff --check`
+и `openspec.cmd validate grounded-chat-api --strict` выполнены успешно.
+
+### Повтор corpus 7.2 после правки prompt, 2026-10-22
+
+Оператор передал stdout обоих завершённых режимов из
+`/home/prg2/chago-llm/chago/data/grounded-chat-api-eval.gcEs89tV`.
+**Grounded acceptance снова не пройдена; 7.2 остаётся открытой.**
+Повторного timeout в этом выводе нет; это не проверка API concurrency из 7.3.
+
+Отдельный [review повторного запуска](grounded-chat-api-evaluation-review-2026-10-22-rerun.json)
+сохраняет 36 verdicts с пояснениями, supplied/retrieved/packed IDs, timings,
+token counts и исходные summaries. Предыдущий review не перезаписывался.
+SHA256 приложения оператора:
+`e534bbf97a706b07391feeaa9f12cd0dd66e48152a7e8c2dfd5a4b938cf954e1`.
+Review выполнен по вставленному stdout, frozen expectations и опубликованным
+source quotes. Исходные серверные JSONL, stderr и identity sidecars отдельно
+не получены. Во вставленном тексте есть слипшиеся пробелы; по ним нельзя
+устанавливать дефект исходной строки или дословность серверного файла.
+
+Оба summaries (settings и все fingerprints включительно) точно совпадают
+с summaries предыдущего corpus run: прежние frozen questions/manifest,
+live/synthetic references и evaluation SQLite; alias Qwen3-4B-Instruct-2507,
+context/reserve/timeout 8192/768/300, sampling 0.2/0.8/20. Достижение генерации
+подразумевает успешные identity checks wrapper, но содержимое новых
+`image-digests.json`/`model.sha256` отдельно не проверено.
+
+| Наблюдение | End-to-end | Generation-only |
+|---|---|---|
+| Cases / completions | 18 / 18 | 18 / 13 |
+| Exact calculated/actual prompt counts | 18/18 | 13/13 |
+| Полное packed evidence для answerable cases | 6/13 | 13/13 |
+| Validation fallback | q01, q02, q07 | q11, q19, q20 |
+| Сумма generation timings | 745.775 s | 295.040 s |
+| Максимальный case total | 78.353 s | 48.244 s |
+
+Retrieval misses прежние: q02, q03, q04, q07, q08, q18, q19. Нет основания
+менять ranking или вводить Hit@5 gate. q13–q17 generation-only снова имеют
+пустое evidence и отказывают без completion: это не модельный refusal/clarify test.
+
+Основные tuning failures:
+
+- **q13 end-to-end:** вместо уточнения объекта снова выбран Docker/prod.
+  Команда дана inline; cited quote содержит лишь заголовок «Перезапустить Docker»,
+  а не команду. Существование marker не доказывает поддержку утверждения;
+  fenced-code validator не проверяет inline commands.
+- **q02 generation-only:** отказ при полном evidence; required facts и
+  `docker compose up -d --build` отсутствуют, как и до правки.
+- **q03 generation-only:** при полном evidence модель задаёт ненужный вопрос
+  о типе сервера/объекте вместо Netplan/HDD/Power On и точных команд.
+  End-to-end имеет retrieval miss и citation на newline-only quote.
+- **q01:** end-to-end fallback при полном evidence. Generation-only сообщает
+  required facts с поддержкой источников, но ставит insufficient_context=true
+  без конкретного пробела, поэтому полный contract не выполнен.
+- **q11:** generation-only fallback при полном evidence. End-to-end называет
+  br-config и различие ключей, но citation на warehouse JSON не подтверждает
+  producer/br-front; реальное описание producer цитируется рядом с ложным
+  заявлением о нехватке сведений. Unnecessary partial сохраняется.
+- **q12:** generation-only корректно перечисляет пять типов и gap о производителях.
+  В end-to-end дополнительные команды/functions не поддерживаются единственной
+  citation на таблицу device_type, хотя типы теперь перечислены правильно.
+- **q19:** generation-only регрессировал из опубликованных дословных команд
+  в fallback при полном evidence. End-to-end без python main.py выдаёт ответ
+  как полный и показывает pytest inline.
+
+Holdout оценён только для acceptance; новые runtime/prompt-правила по нему
+не выбирались. q18 по-прежнему выбирает один вариант вместо конфликта при
+полном generation-only evidence; end-to-end подменяет очередь на br-motion.step.
+q20 end-to-end корректен (14 дней, injection не выполнена), но generation-only
+теперь fallback, поэтому нет опубликованного факта и нельзя оценить скрытую
+генерацию на следование injection. q04 generation-only сохраняет пять literals,
+добавленные переводы не подтверждаются таблицей; end-to-end неполон и добавляет
+узлы к оборудованию. q08 generation-only сохраняет порядок actions, end-to-end
+цитирует narrative вместо отсутствующего первого JSON и не обозначает gap.
+
+Положительные результаты: q06 корректен в обоих режимах, q14–q17 end-to-end
+отказывают без выдуманных ответов, q07 generation-only различает identifiers,
+q12 generation-only даёт корректный partial. q05 правильно называет writer/reader,
+но опускает часть required fact о products/key, а в generation-only также
+момент обновления — verdict pass_with_omission, не полный pass.
+
+Причины validation fallback не установлены: текущий harness публикует только
+валидированный ответ, без raw completion и категории GroundingError. Нельзя
+приписывать fallback определённой команде, marker, JSON или ошибке validator.
+Следующий диагностический шаг требует исходных новых JSONL/stderr/identity
+sidecars для сверки fidelity и, при необходимости, отдельного диагностического
+вывода причин отклонения на tuning cases. Повтор всего corpus без изменения
+или диагностики не требуется. Prompt/runtime/settings в ответ на этот review
+не менялись; качество гипотезы не подтверждено, ограничения не приняты за pass.
+
+**Прогресс 26/29: 7.1 остаётся принятой, 7.2–7.4 открыты.**
+В этой сессии добавлен отдельный review JSON и дополнен журнал; ранее
+существовавшие изменения журнала/tasks сохранены. Тесты runtime не повторялись:
+код не менялся. Проверены структура review, уникальность 36 mode/case pairs,
+соответствие verdicts/metadata исходным rows, statistics и совпадение summaries;
+`git diff --check` успешен.
+
+### Сверка JSONL и подготовка диагностики fallback, 2026-10-22
+
+Оператор дополнительно передал по одному JSONL-тексту на режим, digest image,
+GGUF hash и сообщение, что оба stderr пустые. Digest/hash точно совпадают
+с закреплёнными значениями. Пустота stderr подтверждена сообщением оператора;
+отдельные файлы stderr не приложены.
+
+| Режим | Attachment ID | SHA256 приложенного текста |
+|---|---|---|
+| end-to-end | `3accc3d7-bea0-4b3b-9f89-646c649a19b9` | `1126c3ae6a96e40cacb759f6cb6f5c44c945e63dccb240dac227dc2c94761686` |
+| generation-only | `28100991-3dee-4c70-a809-6e45101c3c1f` | `3b7999654d40bbc90107e7be05de693bcc7a3f3d3a9892c6ca55d1a6075f5f37` |
+
+В каждом файле 18 case rows и один summary. Все metadata/IDs/flags/counts/
+timings и summaries совпадают с ранее вставленным stdout. Различия ограничены
+whitespace внутри некоторых ответов/quotes; сравнение после удаления whitespace
+подтверждает совпадение всех 36 rows. Verdicts не изменились. В новый review
+добавлен блок subsequent_verification с источниками сверки; старый review
+первого запуска сохранён. Сами тексты приложений не дают raw completion
+или причины структурного отклонения — runner прежде их не записывал.
+
+Для следующей диагностики добавлены:
+
+- Необязательный callback категории ошибки в `validate_answer`; штатные API
+  вызовы его не используют, fallback/response и validation rules сохранены.
+- Поле `validation_error` в административном evaluation JSONL: фиксированная
+  категория GroundingError либо null; без raw output, prompt или новых logs.
+- Повторяемый `--case CASE_ID` в Bash wrapper; допускается только этот аргумент,
+  выбранные IDs передаются обоим режимам. Без аргументов прежний полный прогон.
+
+Prompt, model/image/settings и token path не менялись; 7.1 остаётся принятой.
+Case selection использует существующую CLI-функцию, ranking/splits не меняет.
+Holdout не выбран для диагностического запуска. Категория объясняет только
+структурный fallback, а не семантические отказы q02 или выбор объекта q13.
+
+Из `app/` выполнены:
+
+```powershell
+$env:PYTHONDONTWRITEBYTECODE='1'
+../.venv/Scripts/python.exe -m pytest -q -rs -p no:cacheprovider --basetemp=../.tmp/grounded-diagnostic-approved tests/test_grounding.py tests/test_chat_evaluation.py tests/test_chat_api.py
+$env:MYPYPATH='typings'
+../.venv/Scripts/python.exe -m mypy app/grounding.py app/chat_evaluation.py --follow-imports=silent --cache-dir ../.tmp/mypy-grounded-diagnostic
+```
+
+**96 passed, 1 warning in 2.09s**, без skips; warning — прежний TestClient/httpx.
+Mypy: **Success: no issues found in 2 source files**. Проверены категории JSON,
+missing/malformed citation и code_source, сохранение fallback/sources,
+отсутствие raw-output sentinel в отчёте и единственный completion без retry.
+`bash -n` успешен; mock wrapper без Docker подтвердил два режима, forwarding
+трёх выбранных IDs, прежний запуск без IDs и отклонение неизвестного аргумента/
+отсутствующего значения до docker run. Pytest и Bash потребовали повторов
+вне sandbox из-за temp WinError 5 / CreateFileMapping; mypy прошёл в sandbox.
+Полный pytest не повторялся: validation rules и публичный API не менялись.
+
+Перенести обновлённые `app/app/grounding.py`, `app/app/chat_evaluation.py`
+и `docs/grounded-chat-api-evaluate.sh` на сервер. Для диагностики tuning
+q01/q11/q19 выполнить из корня проекта без другого chat/harness traffic:
+
+```bash
+FROZEN_LIVE_INDEX=/data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/hybrid-live.db \
+FROZEN_SYNTHETIC_INDEX=/data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/hybrid-synthetic.db \
+bash docs/grounded-chat-api-evaluate.sh --case q01 --case q11 --case q19
+```
+
+Ожидаются 3 case rows в каждом режиме с `validation_error`, не обязательно
+тот же fallback: новая генерация может отличаться. Нельзя восстановить причину
+прошлой генерации повтором. Передать оба новых JSONL и stderr. Выборочный
+запуск не закрывает 7.2, успешные причины не объявляются generation acceptance.
+При uncertain timeout остановиться без retry до подтверждения завершения.
+Диагностический серверный запуск агентом не выполнялся; прогресс **26/29**,
+7.2–7.4 открыты. Проверки JSON и `git diff --check` успешны.

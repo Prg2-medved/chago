@@ -295,6 +295,15 @@ Report — JSONL с case ID/namespace/split, retrieved/supplied/packed IDs, evid
 coverage, timings, calculated/actual tokens, API response и `manual_verdict=pending`.
 Это административный артефакт с quotes, а не технический лог: хранить с доступом
 как к frozen corpus. Unsupported generated output при fallback не публикуется.
+Поле `validation_error` содержит безопасную категорию отказа validator
+(`generated_json`, `citation_missing`, `citation_unknown`, `citation_marker`,
+`generated_source_link`, `code_fence`, `code_source`, `clarify_format`) либо null.
+Это причина структурного отклонения, а не entailment verdict; сырой completion
+и prompt не добавляются в отчёт или логи. Публичный response не меняется.
+Wrapper `docs/grounded-chat-api-evaluate.sh` также принимает повторяемый
+`--case CASE_ID` и передаёт выбранные IDs обоим режимам; без аргументов
+по-прежнему выполняется весь single-question corpus. Выборочный прогон служит
+диагностике, не заменяет полную live-приёмку и не меняет frozen splits.
 `retrieval_miss` отделяется от `context_miss`; `review_generation` требует оценки
 модели при достаточном evidence, а не автоматического pass. При timeout/ошибке
 CLI останавливается без следующего completion или retry; прежние case строки уже

@@ -100,7 +100,9 @@ def evaluate(questions: Path, manifest_path: Path, snapshot: Path, fixtures: Pat
         generation_started = monotonic()
         completion = client.complete(packed.messages) if packed.manifest else None
         generation_ms = (monotonic() - generation_started) * 1000
-        answer = validate_answer(completion.content, packed.manifest) if completion else GroundedAnswer(REFUSAL, True, ())
+        validation_errors: list[str] = []
+        answer = (validate_answer(completion.content, packed.manifest, on_error=validation_errors.append)
+                  if completion else GroundedAnswer(REFUSAL, True, ()))
         packed_complete = evidence_complete(case, packed.manifest, pages)
         row = {"id": case["id"], "source_set": case["source_set"], "split": case["split"],
                "answerable": case["answerable"], "expected_behavior": case["expected_behavior"],
@@ -111,7 +113,9 @@ def evaluate(questions: Path, manifest_path: Path, snapshot: Path, fixtures: Pat
                              else "context_miss" if packed_complete is False else "review_generation",
                "prompt_tokens": packed.prompt_tokens, "actual_prompt_tokens": completion.prompt_tokens if completion else None,
                "token_count_matches": completion.prompt_tokens == packed.prompt_tokens if completion else None,
-               "validation_fallback": answer.answer == FALLBACK, "response": asdict(answer),
+               "validation_fallback": answer.answer == FALLBACK,
+               "validation_error": validation_errors[0] if validation_errors else None,
+               "response": asdict(answer),
                "timings_ms": {"retrieval": retrieval_ms, "budget": budget_ms, "generation": generation_ms,
                               "total": (monotonic() - started) * 1000},
                "manual_verdict": "pending"}
