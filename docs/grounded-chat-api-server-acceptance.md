@@ -457,6 +457,24 @@ bash docs/grounded-chat-api-evaluate.sh
 задают их container paths под `/data/`; отсутствующие файлы дают остановку
 до генерации. Скрипт не строит индексы и не подменяет frozen inputs.
 
+При запуске оператором получено `Missing frozen input: /data/hybrid-live.db`:
+проверка остановилась до генерации, задача 7.2 остаётся открытой.
+В [отчёте серверной hybrid-приёмки](lexical-and-hybrid-retrieval-server-acceptance.md#фактический-серверный-отчёт-2026-10-09)
+сохранён каталог `data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/`.
+Если исходные evaluation-индексы в нём сохранены, из корня серверного проекта:
+
+```bash
+FROZEN_LIVE_INDEX=/data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/hybrid-live.db \
+FROZEN_SYNTHETIC_INDEX=/data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/hybrid-synthetic.db \
+bash docs/grounded-chat-api-evaluate.sh
+```
+
+Наличие этих файлов на сервере локально не подтверждено; runner проверит его
+перед генерацией. Команда читает отдельные evaluation-индексы через read-only
+mount и не изменяет production-индекс. Если файлы отсутствуют и здесь, требуется
+найти сохранённые исходные evaluation-индексы; подменять их production SQLite
+нельзя.
+
 Последовательно запускаются все end-to-end cases, затем все generation-only
 cases на заданных исходных evidence ranges. Каждый вызов использует текущий
 резерв/HTTP timeout; требуется исключить другой chat/harness traffic. Прогон
