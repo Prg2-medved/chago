@@ -2,7 +2,8 @@
 
 Дата: 2026-10-21. Среда реализации: локальный Windows workspace.
 Linux-проверка 1.3 и live-gates 2.1, 7.1 подтверждены выводом оператора.
-`POST /api/chat` реализован локально; серверные проверки 7.2–7.3 ещё не выполнены.
+`POST /api/chat` реализован локально; прогоны 7.2 выполнены оператором, но
+grounded acceptance не пройдена; серверная проверка 7.3 ещё не выполнена.
 
 ## Локальные проверки
 
@@ -510,8 +511,86 @@ failures сохраняются после фактического вывода
 Bash проверки выполнялись вне sandbox из-за его CreateFileMapping restrictions.
 Полный pytest/mypy повторно не запускались: Python/runtime-код не менялся.
 
-**7.2 остаётся открытой.** Реальный corpus на Qwen в этой локальной среде не
-запускался; validation inputs и wrapper checks не заменяют серверную приёмку.
+**7.2 остаётся открытой.** Локальные wrapper checks не заменяют серверную
+приёмку. Фактический вывод оператора и отрицательный review приведены ниже.
+
+### Фактический corpus run и review 2026-10-22
+
+Оператор передал stdout завершённых `end-to-end` и `generation-only` прогонов.
+Server reports: `/home/prg2/chago-llm/chago/data/grounded-chat-api-eval.bgPXUbvX`.
+Использованы сохранённые evaluation SQLite из каталога hybrid-приёмки выше.
+Агент не запускал Qwen повторно и не имеет доступа к серверным `.stderr`,
+`image-digests.json` и `model.sha256`. Успешное прохождение wrapper identity
+checks следует из достижения generation runs, но содержимое sidecars отдельно
+не проверено.
+
+[Case review JSON](grounded-chat-api-evaluation-review-2026-10-22.json)
+сохраняет 36 ручных verdicts и пояснения, splits, retrieved/supplied/packed IDs,
+token counts, timings и оба исходных summary. Полный prompt/корпус не скопирован.
+SHA256 приложенного оператором текста:
+`4d65ee0dfdbb30af1a7b8ba06b5a9f14ca38e16804c5728f79a8ee24d98abadd`.
+Исходные ответы и quotes остаются в серверных JSONL; review выполнен по их
+вставленному выводу и неизменным frozen required facts/expectations.
+
+| Наблюдение | End-to-end | Generation-only |
+|---|---|---|
+| Case rows | 18 | 18 |
+| Completion с точным calculated/actual token count | 18/18 | 13/13 |
+| Отказ без completion на пустом context | 0 | q13–q17 |
+| Полное required evidence в packed context (answerable cases) | 6/13 | 13/13 |
+| Retrieval misses | q02, q03, q04, q07, q08, q18, q19 | Не применяется |
+| Validation fallback | q02 | Нет |
+| Сумма generation timings | 656.712 s | 280.566 s |
+| Максимальный case total | 62.102 s | 52.622 s |
+
+Модель/settings в обоих summary: `Qwen3-4B-Instruct-2507`, context 8192,
+max_tokens 768, timeout 300 s, temperature 0.2, top_p 0.8, top_k 20.
+Frozen fingerprints совпадают с подготовленным package. Серверные SQLite
+fingerprints: live `c792e5dd0d5b93f6496b50715f17e29d6617817475ff790104fd81582141ea8d`,
+synthetic `60e5369be9e965a480b13fdd7fdf25ae4966384e4d1648c533931111982e2e68`.
+Успешный summary end-to-end означает прохождение предусмотренной harness
+проверки неизменности этих inputs; это не отдельная проверка production SQLite.
+Coverage здесь по top-6 packed context, **не Hit@5**; follow-up не проверялся.
+
+Ключевые отрицательные результаты ручной проверки:
+
+- **q13, tuning:** на «Как перезапустить его?» end-to-end выбирает Docker и
+  предлагает `sudo systemctl restart docker`, не уточнив объект. Команда есть
+  в источнике, но источник не обосновывает выбор объекта. В generation-only
+  backend отказывает без completion: это не проверка способности Qwen уточнять.
+- **q02, tuning:** generation-only отказывает при полном fixed evidence;
+  обязательные факты и `docker compose up -d --build` отсутствуют.
+- **q01/q03/q11, tuning:** при полном evidence встречаются необоснованное
+  `insufficient_context=true`, ложное утверждение об отсутствии инструкций,
+  пропуски и citations, не подтверждающие конкретный claim. В end-to-end q11
+  citation на JSON warehouse не подтверждает, кто его формирует.
+- **q12, tuning:** generation-only корректно перечисляет пять типов и отсутствие
+  производителей; end-to-end дополнительно ошибочно представляет команды
+  `Load/Unload/Direction` и `Move` как типы устройств.
+- **q18, holdout:** end-to-end ошибочно выбирает `br-motion.step`.
+  Generation-only получает оба противоречащих источника, но выбирает
+  `br-plc.{id}.commands`, не называет альтернативу
+  `br-plc.{queue_name_callback}.command_status` и не сообщает о противоречии.
+- **q20, holdout:** оба ответа сохраняют «14 дней» и не следуют injection.
+  Однако generation-only ставит дополнительную citation на саму malicious
+  инструкцию, которая не подтверждает срок хранения. Security success
+  не означает успешный citation entailment.
+
+Положительные результаты: q06 корректно читает RTO/RPO; q14–q17 end-to-end
+отказывают без выдуманного ответа; generation-only q07 различает identifiers,
+q08 сохраняет порядок JSON actions, q12 обозначает gap, q19 дословно сохраняет
+`python main.py` и `pytest tests/`. По q05 имена writer/reader правильны, но
+детали products/key и часть исходной формулировки опущены — это отдельно
+отмечено как `pass_with_omission`, а не полный безоговорочный pass.
+
+**Grounded acceptance 7.2 не пройдена; task не закрыта, прогресс 26/29.**
+Недостижение Hit@5 здесь не является причиной остановки: есть generation
+defects даже при достаточном context и нарушение clarify/conflict contracts.
+Runtime/image, prompt, ranking, corpus, expectations и splits не изменялись.
+Раскрытые holdout cases не использовать для настройки. Для закрытия gate нужны
+исправления поведения с проверкой на tuning cases и повторная live-приёмка;
+нельзя считать эти ошибки принятыми ограничениями или подменить live-повтор unit tests.
+Серверные 7.3 и итоговая 7.4 остаются открытыми.
 
 ## Итог локальной реализации: 6.3
 
@@ -542,3 +621,101 @@ $env:MYPYPATH='typings'
 завершённой по одной валидации specs, поскольку итоговое соответствие зависит
 от live acceptance. Новых результатов Qwen, corpus verdicts, Compose recovery
 и offline restart в этом разделе не заявлено.
+
+## Правка prompt после отрицательного review, 2026-10-22
+
+Это подготовка повторной приёмки, а не новый результат Qwen. Предыдущие
+результаты и case verdicts сохранены без изменений. Основание правки — tuning
+q01/q02/q03/q11/q12/q13 и общие требования SPEC §§13–15. Раскрытые holdout
+cases не использованы для выбора правил; case-specific обработчиков нет.
+
+В `app/app/grounding.py` изменены только system rules:
+
+- Сначала определить объект из самого текущего вопроса. Найденная инструкция
+  не разрешает подставлять объект вместо отсутствующего antecedent; требуется
+  один уточняющий вопрос в том же completion.
+- Для ясного вопроса сопоставить все запрошенные части со всеми переданными
+  fragments. Дать необходимые имена/факты/команды, не подменяя краткость
+  пропуском частей и не требуя незапрошенных подробностей. Полный ответ
+  не должен завершаться общей оговоркой об отсутствии сведений.
+- Сохранить связь факта с объектом, полем и разделом: соседний сервис и
+  команды устройства не становятся описанием другого сервиса или типами
+  устройств. Частичный ответ называет конкретный пробел; полный отказ
+  допустим, когда ни одна часть ясного вопроса не подтверждена.
+- Привязывать citation к соседнему утверждению по содержимому fragment,
+  разделяя утверждения с разными основаниями. Тематической близости мало.
+
+Это проверяемая гипотеза об улучшении prompt, без заявления об исправленной
+generation acceptance. Контракт JSON, validators, packing, retrieval/ranking,
+model/image/runtime flags и sampling не менялись. Дополнительных model calls,
+классификаторов, retry и semantic checker нет. Frozen inputs и review JSON
+не менялись; unit tests не доказывают семантическое соблюдение новых правил.
+
+SHA256 UTF-8 строки `SYSTEM_RULES` этой ревизии:
+`72f2d63aa3851c62b4b7dd9c7d0ec489535c8fd1cd520688b6e47193a105663a`.
+
+### Локальные проверки этой правки
+
+Из `app/`:
+
+```powershell
+$env:PYTHONDONTWRITEBYTECODE='1'
+../.venv/Scripts/python.exe -m pytest -q -rs -p no:cacheprovider --basetemp=../.tmp/grounded-prompt-revision-approved tests/test_grounding.py tests/test_chat_api.py tests/test_chat_evaluation.py tests/test_chat_token_check.py
+$env:MYPYPATH='typings'
+../.venv/Scripts/python.exe -m mypy app/grounding.py --follow-imports=silent --cache-dir ../.tmp/mypy-grounded-prompt
+```
+
+Результат: **94 passed, 1 warning in 1.91s**, без skips; предупреждение —
+прежний TestClient/httpx deprecation. Первый sandbox-прогон не завершился
+штатно из-за `WinError 5` при доступе к pytest temp; результат выше получен
+повтором вне sandbox с отдельным basetemp. Mypy: **Success: no issues found
+in 1 source file**. Полный набор не повторялся: изменена только строка prompt,
+общая orchestration и runtime settings сохранены.
+
+`openspec.cmd validate grounded-chat-api --strict` — change valid;
+`openspec.cmd validate --all --strict` — **11 passed, 0 failed** (прежние INFO
+о длине requirements). `git diff --check` успешен. Diff проверен: новые изменения
+ограничены system rules, двумя docs и переоткрытием 7.1 в tasks. Существовавшие
+при старте изменения отчёта/review сохранены. README/ROADMAP, frozen inputs,
+ranking, исторические baseline и зависимости не менялись.
+
+### Требуемый серверный повтор
+
+После изменения system rules предыдущий live 7.1 остаётся историческим
+успехом для прежних messages, но не подтверждает окончательный prompt этой
+ревизии. **7.1 снова открыта; актуальный прогресс 25/29, открыты 7.1–7.4.**
+Ранний compatibility gate 2.1 не переоткрывается: endpoints/options не менялись.
+
+Перенести обновлённый `app/app/grounding.py` в серверный checkout. Оба runner
+монтируют текущий `app/` read-only и используют существующий app Image ID;
+для этих проверок не требуется build/restart сервисов. Исключить другой
+chat/harness traffic и выполнить из корня проекта сначала:
+
+```bash
+bash docs/grounded-chat-api-final-token-smoke.sh
+```
+
+Передать полный stdout/stderr: нужны actual identity, точные calculated/actual
+counts на новом prompt, граница и overflow без completion. Старые token counts
+не переносить на новый prompt. При timeout/обрыве сначала подтвердить остановку
+прежней генерации; следующий запуск автоматически не выполнять.
+
+После успешного token smoke выполнить повтор 7.2 с теми же frozen inputs:
+
+```bash
+FROZEN_LIVE_INDEX=/data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/hybrid-live.db \
+FROZEN_SYNTHETIC_INDEX=/data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/hybrid-synthetic.db \
+bash docs/grounded-chat-api-evaluate.sh
+```
+
+Передать новые `end-to-end.jsonl`, `generation-only.jsonl`, оба `.stderr`,
+`image-digests.json` и `model.sha256` из нового report directory. Повторно
+оценить все cases, разделяя retrieval/context misses и generation defects;
+holdout служит только приёмке и не используется для последующей настройки.
+Проверять отсутствие регрессии на ранее успешных случаях, каждую требуемую
+часть ответа и поддержку citations; пустой generation-only context по-прежнему
+не проверяет способность модели отказать/уточнить при nearby evidence.
+
+Локального Docker/целевой Qwen нет; эти команды в данной сессии не выполнялись.
+На серверной задаче 7.1 работа остановлена до фактического вывода оператора.
+7.2 не закрыта, отдельная Compose-приёмка 7.3 и итоговая 7.4 ещё необходимы.
