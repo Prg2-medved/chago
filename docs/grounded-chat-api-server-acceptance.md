@@ -1496,3 +1496,109 @@ counts/timings; `openspec validate grounded-chat-api --strict` — valid;
 `openspec validate --all --strict` — 11 passed, 0 failed;
 `git diff --check` — успешно. Runtime tests не запускались: изменены только
 этот журнал и отметка 7.5 в tasks. Эти проверки не закрывают live gates или 7.4.
+
+### Подготовка операторской memory series 7.6, 2026-10-22
+
+Новый pre-run snapshot оператора, `2026-10-22T12:54:18Z`:
+
+| Наблюдение | Значение |
+|---|---:|
+| Host MemAvailable | 7204264 KiB (около 6.87 GiB) |
+| SwapTotal / SwapFree | 4194300 / 815320 KiB |
+| Docker memory app / LLM | 71.98 MiB / 5.698 GiB |
+| app / LLM status | Up 5 hours / Up 5 hours (healthy) |
+
+App опубликован на `192.168.12.100:8091`, LLM host port отсутствует.
+LLM RepoDigest в `compose ps` совпадает с закреплённым
+`f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283`.
+Оператор отдельно подтвердил: после recovery timeout/обрывов не было,
+другой chat/evaluation traffic остановлен. Текущее MemAvailable выше порога;
+это не доказательство достаточного headroom под нагрузкой. Потребление LLM
+близко к прежнему post-run snapshot 5.697 GiB; по двум снимкам нельзя установить
+тренд или отсутствие leak. Повторные прежние OOM/recovery проверки не запрошены.
+
+Подготовлен [операторский скрипт memory series](grounded-chat-api-memory-series.py).
+Запускать на Linux Docker host из корня актуального checkout, с Python 3.10+
+и Docker CLI, после переноса нового скрипта; build/recreate app не требуется.
+Нужны доступ на чтение host `/proc`, cgroup v2 `/sys/fs/cgroup`, bind-mounted
+GGUF/SQLite и разрешение Docker CLI управлять текущим LLM container.
+Другой chat/harness traffic должен оставаться выключенным. После app startup
+индекс не должен был заменяться: pathname hash сам по себе не доказывает identity
+удерживаемого активного snapshot. При неизвестном состоянии генерации запуск
+запрещён до подтверждённого recovery; health=ok не снимает это ограничение.
+
+```bash
+python3 docs/grounded-chat-api-memory-series.py \
+  --app-url http://192.168.12.100:8091
+```
+
+Скрипт до первого chat проверяет image/model hash, прежние LLM flags и
+8192/768/300 settings, отсутствие published LLM port, deployed code против
+checkout, source/document inventory app index против frozen live manifest,
+app/LLM readiness и свежий baseline. Сохраняет code/settings/index identity;
+не меняет модель, runtime, flags, timeout/reserve/window, ranking или frozen inputs.
+Preflight не отправляет completion, не строит отдельный retrieval/encoder.
+Серия — ровно заданные design §9 20 HTTP chat requests, с повторами, только
+исходное поле question. q09 с тегом follow_up сохраняется на утверждённой позиции,
+но отправляется без предыдущих turns; follow-up acceptance из этого не следует.
+Не создаются временные harness containers; ресурс host Python записывается
+отдельно, а все работающие контейнеры Compose project включены в samples.
+Изменение container inventory прерывает серию.
+
+При memory pressure или новом host/container OOM скрипт прекращает запросы,
+выполняет `docker stop --time 10` текущего LLM container и сохраняет подтверждение
+`Running=false`, `Pid=0`. Это аварийная остановка, не recovery. Если остановка
+не подтверждена, требуется действие оператора; restart автоматически не выполняется.
+При HTTP/token budget/transport/telemetry failure следующий запрос отсутствует;
+нельзя повторять запуск до разбора состояния/recovery. Ctrl+C клиента также
+не доказывает остановку генерации. Консервативный порог 2 GiB не гарантирует
+предотвращения OOM. Если MemAvailable ниже порога до запуска, chat не отправляется.
+
+Каталог `data/grounded-chat-api-memory.*` (закрытые права umask 077) содержит:
+
+- `identity-before.json`, `index-after.json`, `containers-after.json` — identity до/после.
+- `memory.jsonl` — baseline, samples раз в секунду, request boundaries/post-response/final;
+  host available/swap/OOM count, container cgroup charge/anon/file/swap/peak/events,
+  main process PID/start/RSS/HWM/swap и host harness RSS/HWM.
+- `requests.jsonl`, `response-NN-qXX.json` — начало/конец, HTTP status, client total
+  timings и все фактические API responses, без generation-only/добавочных completions.
+- `metrics.json` — только выделенные числовые LLM log counts/timings и app
+  query/retrieval/wait/generation timings/outcome, с timestamps для ручного
+  сопоставления последовательным запросам. Исходные log lines/prompt не копируются.
+- `summary.json` — complete/incomplete и причины, всегда manual review pending.
+
+Контейнерная `memory.current` — полный cgroup charge, включая file cache;
+он не равен Docker stats working set или main process anon-rss. `memory.peak`,
+`memory.swap.peak` и VmHWM, если доступны, относятся ко времени жизни cgroup/process,
+не только к этой серии; counters не сбрасываются. Максимум samples — наблюдаемый
+пик, между samples могли быть более высокие значения. Длительность и промежутки
+samples сохраняются; задержка sample больше 1 s либо gap больше 2 s прерывает
+прогон как telemetry failure, без признания пропущенного интервала измеренным.
+Идентичность файлов проверяется после серии, но не заменяет условие отсутствия
+подмены pathname после app startup.
+
+HTTP contract не публикует `usage`. LLM numeric logs сохраняются без дополнительных
+tokenizer/completion probes: prompt eval tokens могут учитывать только uncached
+часть и не объявляются полным `usage.prompt_tokens`. Полные counts доступны только
+если сервер действительно записал соответствующие `prompt done` counters;
+отсутствие нужных counters/timings раскрывается при review и оставляет неполной
+требуемую telemetry, без смены production logging flags или выдумывания counts.
+Ни завершение 20 HTTP 200, ни наличие logs автоматически не закрывает gate:
+проверяющий оценивает всю серию, все post-response samples, transient peaks,
+headroom, swap и повторы; необъяснённый рост оставляет gate открытым.
+
+Серверная серия ещё не выполнена. **Прогресс 27/31, 7.6 открыта**; 7.3/7.2/7.4
+не запускаются до её фактического review. Новый скрипт не является новым pass
+stability/safety/semantic quality и не меняет исторические verdicts.
+
+Локальные проверки подготовки: `.venv/Scripts/python.exe -m pytest
+app/tests/test_chat_memory_series.py -q` — 16 passed, 8 subtests passed;
+`.venv/Scripts/python.exe -m mypy docs/grounded-chat-api-memory-series.py` —
+success. Проверены точный порядок/повторы и исходные вопросы, запрет holdout,
+нулевой traffic при плохом baseline, остановка на 422/502/503/504/transport failure,
+memory threshold/OOM/process/inventory checks, независимая от зависшего клиента
+остановка подачи запросов, подтверждение stop, read-only SQLite, numeric log filtering
+и отсутствие redirect/proxy/retry. Это проверки harness на mocks/temporary SQLite,
+не Linux cgroup/Compose/live pass. Полный app pytest не повторялся: production
+код не менялся. Для pytest требовался запуск вне sandbox из-за блокировки
+временных файлов; итоговый профильный запуск прошёл без skips.
