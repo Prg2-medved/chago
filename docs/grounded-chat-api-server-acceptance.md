@@ -1105,3 +1105,394 @@ JSONL, оба stderr и identity sidecars нового каталога. Сод�
 Только после tuning review переходить к полной 7.2, включая holdout исключительно
 для acceptance; выборочный успех не закрывает change и не заменяет 7.3–7.4.
 Локального Docker/целевой Qwen нет, live-команды этой ревизии агентом не выполнялись.
+
+### Успешный live 7.1 второй правки prompt, 2026-10-22
+
+Оператор передал полный вывод `bash docs/grounded-chat-api-final-token-smoke.sh`,
+завершённый **`gate_7_1=passed`**. Это серверный результат оператора;
+агент команду не запускал. Проверка относится к перенесённой второй правке
+prompt с учебными примерами, а не к прошлым counts 2206/2206.
+
+- Image digest: `ghcr.io/ggml-org/llama.cpp@sha256:f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283`.
+- GGUF SHA256: `2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e`.
+- Alias: `Qwen3-4B-Instruct-2507`; context/reserve/timeout: **8192/768/300**.
+- Chat template SHA256: `05991410a4bad1a587959aa5c8901f699afc639540f931afd8ba2b359e4368a9`.
+- Index SHA256: `96159df1c9c8cfacf88727b645d87850712bf1b45507641b8aa1f412953e3c74`;
+  format 1, indexed_at `2026-10-20T10:18:41.693304+00:00`, 24 documents / 910 chunks.
+  Все шесть retrieved/packed IDs совпали с предыдущими token smoke.
+
+| Case | Calculated | Actual | Prompt + reserve | Completion HTTP, s |
+|---|---:|---:|---:|---:|
+| `final_retrieved_prompt` | 2734 | 2734 | 3502 ≤ 8192 | 49.202 |
+| `prompt_plus_reserve_equals_window` | 7424 | 7424 | 8192 = 8192 | 126.964 |
+
+Overflow: **7425 + 768 = 8193**; `overflow_completion_sent=false`,
+`overflow_context_removed_whole=true`; финально `index_unchanged=true`.
+Равенство рассчитанных и actual tokens точное в обоих completions;
+на границе резерв соблюдён, превышение не отправлено в completion.
+
+**7.1 выполнена; прогресс 26/29, открыты 7.2–7.4.** Следующий шаг —
+tuning-only прогон 13 cases каждого режима командой выше. Качество ответов,
+citations, kind и fenced-команд этим smoke не подтверждено; 7.2 не закрыта.
+Также не закрыты Compose concurrency/recovery/offline из 7.3 и итоговая 7.4.
+В этой сессии обновлены только журнал и checkbox 7.1; tests не повторялись,
+runtime/prompt/settings не менялись. `git diff --check` и
+`openspec.cmd validate grounded-chat-api --strict` успешны.
+
+### Tuning run второй правки: uncertain transport failure, 2026-10-22
+
+Оператор запустил подготовленные 13 tuning IDs. Runner создал
+`/home/prg2/chago-llm/chago/data/grounded-chat-api-eval.cr2Xmdlg`, напечатал
+`Running end-to-end` и остановился. Передана ошибка:
+
+```json
+{"error":"llm_unavailable","generation_uncertain":true,"action":"stop; no retry; confirm remote generation ended before another run"}
+```
+
+Переданный stdout не содержит case rows или успешного summary; качество
+нового prompt этим запуском не оценено. Generation-only не запускался после
+ошибки первого режима. Оператор передал совпадающие закреплённые image digest
+`ghcr.io/ggml-org/llama.cpp@sha256:f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283`
+и GGUF SHA256 `2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e`.
+Полные JSONL/stderr, Docker state и LLM logs этого запуска отдельно не получены.
+
+По текущему `LLMClient._post` сочетание llm_unavailable/uncertain=true означает
+ошибку транспорта на completion, при которой нельзя исключить отправленный
+запрос. Это не категория llm_timeout, не явное HTTP rejection и не validation
+fallback. По одному category нельзя различить разрыв соединения, завершение
+процесса или иную транспортную причину; OOM/crash не установлены.
+Пустой переданный stdout не доказывает отсутствие уже начавшейся генерации.
+
+Не повторять evaluation/smoke и не запускать другой chat до подтверждения
+прекращения прежней генерации. До restart собрать read-only Docker state
+и LLM logs, чтобы сохранить диагностические признаки. Рекомендуемые команды
+оператора из корня проекта:
+
+```bash
+llm_id=$(docker compose ps -aq llm)
+test -n "$llm_id" && docker inspect --format 'status={{.State.Status}} running={{.State.Running}} pid={{.State.Pid}} oom={{.State.OOMKilled}} exit={{.State.ExitCode}} restarts={{.RestartCount}} error={{json .State.Error}}' "$llm_id"
+docker compose logs --no-color --timestamps --tail=160 llm
+```
+
+Эти команды не отправляют completion и не меняют runtime. Передать вывод
+для определения причины и следующего recovery. Для uncertain generation
+прежний ручной путь остаётся обязательным до нового запуска: подтвердить
+остановку старого процесса, запустить LLM, затем restart app. Один health=ok
+не подтверждает завершение. Не увеличивать timeout/context и не менять
+image/model/flags по одной категории ошибки.
+
+**7.1 остаётся принятой; прогресс 26/29, 7.2–7.4 открыты.** Транспортный сбой
+не отменяет уже подтверждённое token равенство и не является verdict по
+generation quality. В этой сессии изменён только журнал, код/tasks сохранены;
+runtime tests не повторялись. `git diff --check` успешен.
+
+### Docker подтвердил OOM после сбоя tuning run, 2026-10-22
+
+Оператор передал inspect и последние 160 строк LLM logs. Docker state:
+
+```text
+status=exited running=false pid=0 oom=true exit=137 restarts=0 error=""
+```
+
+Теперь OOM-завершение подтверждено Docker, а не предположено по транспортной
+ошибке. Старый процесс остановлен, PID=0, автоматического restart не было:
+прекращение прежней генерации подтверждено. Повторная остановка этого уже
+завершённого процесса не требуется. Причина нехватки памяти (лимит cgroup
+или память хоста/другая нагрузка) пока не установлена.
+
+Логи содержат завершённые обычный token smoke с prompt=2734 и boundary
+prompt=7424, затем последнюю строку slot selection в
+`2026-10-22T08:19:00.454756853Z`. Следующего успешного completion для
+неудачного tuning run в переданном хвосте нет. Эти timestamps не устанавливают
+точное время OOM или механизм роста памяти; kernel OOM record и memory limits
+ещё не получены. Строки предыдущих успешных запросов не являются case verdicts
+нового прогона.
+
+До нового запуска собрать read-only диагностику на сервере:
+
+```bash
+llm_id=$(docker compose ps -aq llm)
+docker inspect --format 'memory_limit_bytes={{.HostConfig.Memory}} memory_swap_bytes={{.HostConfig.MemorySwap}} finished={{.State.FinishedAt}}' "$llm_id"
+free -h
+swapon --show
+sudo journalctl -k -n 250 --no-pager
+```
+
+Значения limits и kernel record нужны для выбора следующего действия.
+Не менять image/model/context/batch/threads/timeout, не создавать swap и не
+повышать memory limits без установленной причины и решения владельца.
+После устранения причины остаётся ручной recovery: запуск прежней LLM,
+затем restart app; один startup не доказывает достаточность памяти для
+повторного evaluation. Сейчас не требуется снова гонять 7.1 или corpus.
+
+Изменён только журнал, runtime/settings/tasks не менялись. **7.1 принята,
+прогресс 26/29; 7.2–7.4 открыты.** Runtime tests не повторялись;
+`git diff --check` успешен. Серверная диагностика и исправление ресурса
+требуют вывода/действий оператора, локального доступа к серверу у агента нет.
+
+### Установлен global OOM хоста, 2026-10-22
+
+Оператор передал Docker limits, free/swap и kernel journal:
+
+- `memory_limit_bytes=0`, `memory_swap_bytes=0`: индивидуальные memory/swap
+  limits контейнера Docker не заданы. Это само по себе не исключало бы limits
+  родительского cgroup, но kernel record непосредственно указывает global OOM.
+- `finished=2026-10-22T08:19:06.484686921Z`.
+- После сбоя: RAM total 15 GiB, used 4.4 GiB, available 10 GiB;
+  swap 4.0 GiB, почти занят, free 47 MiB (`/swap.img`). Это снимок после
+  освобождения памяти завершённого процесса, не расход на момент OOM.
+- Kernel: `constraint=CONSTRAINT_NONE`, `global_oom`, victim `llama-server`,
+  PID 3709157. Запись `Out of memory: Killed process 3709157 (llama-server)`
+  содержит `total-vm:14432636kB`, `anon-rss:10472084kB`, `file-rss:0kB`.
+  Анонимная резидентная память — около **9.99 GiB**; total-vm не является RAM.
+
+Таким образом, llm_unavailable вызван подтверждённым OOM-завершением LLM
+при глобальном дефиците памяти хоста; повышение индивидуального Docker limit
+не устраняет выявленную причину. Точная причина столь большого расхода
+llama-server пока не установлена. Нельзя из одного OOM snapshot заключать,
+что это leak, KV/prompt cache, graph cache либо только память model weights.
+Нагрузка остальных процессов также не определена во времени. Простое
+увеличение timeout не исправляет OOM.
+
+Следующий шаг — измерить память свежезапущенной прежней LLM после полной
+загрузки модели и до любых completions. Старый процесс уже подтверждённо
+завершён. Оператор может восстановить те же контейнеры без build/recreate,
+изменения flags/model и запуска evaluation:
+
+```bash
+docker compose start llm
+docker compose restart app
+docker compose logs --no-color --timestamps --tail=30 llm
+```
+
+После подтверждения завершения загрузки модели получить baseline:
+
+```bash
+docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}' "$(docker compose ps -q llm)" "$(docker compose ps -q app)"
+free -h
+```
+
+Если загрузка ещё не завершена, ранний snapshot нельзя называть baseline
+загруженной модели. Если контейнер вновь завершился, собрать state/logs,
+не выполнять следующий restart автоматически. Пока не запускать smoke,
+полный corpus или выборочный completion. По baseline выбрать следующий
+диагностический шаг; повторные старты не являются исправлением причины OOM.
+Изменения модели/flags, ресурса хоста или остановка сторонних сервисов остаются
+отдельным решением владельца, по текущему выводу они не выполнялись.
+
+Добавлен только этот результат в журнал. Runtime-код/settings/tasks не менялись,
+tests не повторялись; `git diff --check` успешен. **Прогресс 26/29**,
+7.1 принята, 7.2–7.4 остаются открытыми.
+
+### Первый замер после OOM recovery, 2026-10-22
+
+Оператор выполнил start прежнего llm container и restart app. Новый старт
+в логе — `2026-10-22T08:23:37Z`; последняя показанная стадия —
+`loading model '/models/model.gguf'`. В хвост также попали строки старого
+процесса: они не подтверждают готовность нового. Успешное завершение загрузки
+в переданном логе не показано.
+
+Snapshot Docker stats: llm **5.182 GiB**, app **71.64 MiB**, показываемый
+limit хоста 15.39 GiB. `free -h`: RAM used 7.3 GiB, available **8.1 GiB**,
+swap used 3.9 GiB из 4 GiB, free 52 MiB. Это фактический первый замер,
+но его нельзя считать baseline полностью загруженной модели без readiness.
+Docker container memory и предыдущий kernel anon-rss — разные показатели;
+их разница сама по себе не доказывает leak или накопление cache.
+
+Следующий read-only шаг оператора — HTTP GET к внутреннему LLM health,
+затем повтор stats/free. Это не smoke и не completion:
+
+```bash
+docker compose exec -T app python -c "import urllib.request; print(urllib.request.build_opener(urllib.request.ProxyHandler({})).open('http://llm:8080/health', timeout=5).read().decode())"
+docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}' "$(docker compose ps -q llm)" "$(docker compose ps -q app)"
+free -h
+```
+
+HTTP success нужен здесь только для определения стадии загрузки нового
+процесса. Он не доказывает достаточность RAM при генерации или стабильность
+после серии запросов. Прекращение прежнего процесса уже отдельно подтверждено
+Docker exited/PID=0. При HTTP error не запускать evaluation; получить новый
+хвост logs/state. Повторный start после ошибки автоматически не выполнять.
+Сейчас evaluation не разрешается результатом одного промежуточного stats.
+
+Изменён только журнал; tests не повторялись, код/settings/tasks сохранены.
+`git diff --check` успешен. **Прогресс 26/29; 7.2–7.4 открыты.**
+
+### q01 после recovery и второй правки prompt: оба режима завершены, 2026-10-22
+
+Оператор передал завершённый q01-only run из
+`/home/prg2/chago-llm/chago/data/grounded-chat-api-eval.rIqyY87D` и post-run
+Docker stats/free. В каждом режиме один case и успешный summary. Оба summaries
+с settings/fingerprints совпадают с предыдущими, retrieval/packed IDs прежние.
+Полное packed evidence присутствует в обоих режимах; fallback нет,
+validation_error=null. Timeout/uncertain transport failure в этом выводе нет.
+
+[Review q01 новой ревизии](grounded-chat-api-prompt-examples-q01-review-2026-10-22.json)
+сохраняет два verdicts, IDs, counts/timings, summaries и memory observations.
+SHA256 приложения оператора:
+`7d90cba95d989aaa86164009ffa77dc457193200d8ae7ea8adf76f92a569ab8e`.
+Отдельные stderr и identity sidecars не приложены, непрерывная серия memory
+observations не передана. Вывод не подменяет полный corpus run.
+
+| Режим | Prompt calculated/actual | Generation, s | Total, s | Verdict |
+|---|---:|---:|---:|---|
+| end-to-end | 2734/2734 | 58.881 | 62.635 | fail |
+| generation-only | 1761/1761 | 41.285 | 41.305 | fail |
+
+End-to-end отвечает про очереди/расчёт маршрута, но опускает required facts
+об этапах/сегментах, конкурентности разных маршрутов и создании/контроле
+маршрута при полном evidence. Затем заявляет, что отсутствуют детали
+взаимодействия и слияния треков; citation на раздел свойств слияния не
+подтверждает такой вывод об отсутствии. Наличие формально допустимых markers
+не делает этот ответ grounded/comprehensive.
+
+Generation-only сообщает основные факты об этапах/сегментах, конкурентности
+и маршруте со шагами, но опускает явный контроль маршрута до завершения.
+По-прежнему insufficient_context=true без конкретного пробела или конфликта.
+Новая версия prompt не подтвердила устранение прежнего дефекта выбора kind.
+Учебные literals/нулевой ID в опубликованном ответе не появились.
+
+После двух completions llm memory **5.697 GiB** против baseline **5.192 GiB**:
+разница **0.505 GiB**. App **71.98 MiB**. Host available **7.4 GiB** против
+8.1 GiB до прогона; RAM used 8.0 GiB, swap used 3.9 GiB, free 66 MiB.
+Это сравнение post-run snapshots, не измерение пика и не доказательство leak,
+стабильного plateau или причины прежнего global OOM. Контейнерные показатели
+не приравниваются к kernel anon-rss. Транспорт малого прогона прошёл, но
+устойчивость длинной серии не установлена.
+
+**7.2 остаётся открытой; прогресс 26/29.** Не запускать автоматически
+оставшиеся 13 cases или повтор q01 без нового конкретного изменения:
+два способа записи prompt ещё не обеспечили acceptance на выбранном tuning
+вопросе. Нельзя менять insufficiency на false в backend по наличию markers,
+ослаблять validators или считать дефекты принятыми ограничениями.
+Дальнейшая работа требует пересмотра генерации в пределах change либо
+согласованного изменения design/runtime; эта запись не разрешает смену
+модели/flags и не выбирает такую смену без решения владельца.
+
+В этой сессии добавлены только review JSON и запись журнала, runtime-код,
+prompt и tasks не менялись. Проверены два уникальных mode/case pairs,
+полнота evidence, exact counts, отсутствие fallback и совпадение summaries.
+Runtime tests не повторялись; `git diff --check` успешен.
+
+### Readiness и baseline свежей LLM подтверждены, 2026-10-22
+
+Оператор выполнил внутренний GET `/health` и повторный snapshot без completion:
+`{"status":"ok"}`; Docker memory llm **5.192 GiB / 15.39 GiB** (33.73%),
+app **71.98 MiB** (0.46%). Host RAM used 7.3 GiB, available **8.1 GiB**;
+swap used 3.9 GiB / 4 GiB, free 52 MiB. Это baseline готового нового процесса.
+Он близок к первому snapshot, но не доказывает стабильность под нагрузкой
+или причину прежних 9.99 GiB anon-rss. Повторять token smoke не требуется:
+prompt/runtime не менялись, 7.1 остаётся принятой.
+
+Следующий серверный шаг — один tuning-case q01 в двух режимах с наблюдением
+за памятью, вместо всего corpus. В отдельном терминале `docker stats` по всем
+контейнерам позволяет увидеть также временный evaluation container:
+
+```bash
+docker stats --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}'
+```
+
+Без другого chat/harness traffic выполнить в основном терминале:
+
+```bash
+FROZEN_LIVE_INDEX=/data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/hybrid-live.db \
+FROZEN_SYNTHETIC_INDEX=/data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/hybrid-synthetic.db \
+bash docs/grounded-chat-api-evaluate.sh --case q01
+```
+
+Ожидаются по одному case row и summary в каждом режиме. После завершения
+снять `docker stats --no-stream` для llm/app и `free -h`; передать новые JSONL,
+stderr и наблюдавшееся потребление памяти. Один post-run snapshot не является
+измерением пиков. При повторном сбое не делать retry; при признаках нового
+дефицита памяти остановить LLM через `docker compose stop llm`, после чего
+прогон считается прерванным и требуется диагностика/recovery до любых completions.
+Ctrl+C только у клиента не гарантирует прекращения серверной генерации.
+
+Успех одного case не закрывает 7.2 и не доказывает отсутствие накопления памяти.
+Подготовленные 13 tuning cases пока не запускаются; следующие действия зависят
+от результата малого прогона и memory observations. Runtime/model/flags,
+лимиты Docker, swap и сторонние сервисы не менялись. Агент серверный прогон
+не выполнял. Дополнен только журнал, tests не повторялись;
+`git diff --check` успешен. **Прогресс 26/29; 7.2–7.4 открыты.**
+
+### Следующий подход подготовлен к согласованию, 2026-10-22
+
+Последний завершённый q01 review выше имеет приоритет над инструкцией повторного
+запуска в предыдущем разделе readiness: без нового изменения повторять этот run
+не требуется. Git status подтвердил ранее незакоммиченные журнал, tasks и q01 review;
+эти результаты сохранены. Новые ответы модели в этой сессии не получены.
+
+Подготовлен [проект составного ответа за один completion](grounded-chat-api-answer-parts-proposal.md).
+Он предлагает явные части ответа со статусами supported/missing/conflict,
+локальными citations и проверкой согласованности выбранного моделью kind.
+Backend не добавляет markers, не исправляет insufficiency и не ослабляет прежние
+validators. Преимущество остаётся гипотезой до live-проверки; полнота и entailment,
+ложные пробелы и команды вне fences остаются предметом обязательного ручного review.
+
+Проект содержит новый внутренний JSON contract, поправки к четырём planning
+artifacts, область реализации, ограничения output budget и последовательность
+проверок. Это изменение design §5, поэтому ожидается согласование владельца
+до изменения planning artifacts и реализации. Действующие prompt/runtime/model,
+flags и validators в этой сессии не менялись. 7.1 остаётся принятой для прежних
+messages; переоткрытие потребуется только при фактической смене messages.
+**Прогресс 26/29; 7.2–7.4 открыты.** Новые серверные команды не запрашиваются.
+
+Локально: `openspec validate grounded-chat-api --strict` — valid;
+`openspec validate --all --strict` — 11 passed, 0 failed. Это проверка действующих
+artifacts, не одобрение проекта протокола. `git diff --check` успешен.
+Runtime tests не повторялись: изменены только документация и предложение.
+
+### Завершённая задача 7.5: сводка OOM и recovery, 2026-10-22
+
+Продолжение по запросу владельца `$openspec-apply-change grounded-chat-api`
+после пересмотра planning от 2026-10-22. Ниже сведены уже полученные результаты;
+новых серверных команд или completions агент не выполнял. Исторические записи
+и их verdicts выше сохранены, включая исходную непройденную 7.2.
+
+| Evidence в этом журнале | Установленный факт | Время и предел вывода |
+|---|---|---|
+| «Docker подтвердил OOM после сбоя tuning run» | `status=exited running=false pid=0 oom=true exit=137 restarts=0 error=""`; прежний процесс и его генерация завершены | Последний показанный slot selection: `2026-10-22T08:19:00.454756853Z`; это не timestamp самого OOM |
+| «Установлен global OOM хоста» | Kernel: `global_oom`, `constraint=CONSTRAINT_NONE`, victim `llama-server`, PID `3709157`; `anon-rss:10472084kB` (около 9.99 GiB), `total-vm:14432636kB`, `file-rss:0kB` | Docker `FinishedAt=2026-10-22T08:19:06.484686921Z`; точный timestamp kernel event в сохранённой записи не приведён |
+| Тот же раздел | Docker `memory_limit_bytes=0`, `memory_swap_bytes=0`; после завершения RAM available 10 GiB, swap free 47 MiB из 4 GiB | Индивидуальные Docker limits не заданы; global OOM установлен kernel record. Снимок памяти после освобождения процесса не показывает расход на пике |
+| «Первый замер после OOM recovery» | Оператор выполнил start прежнего LLM container и restart app после подтверждённого завершения старого процесса | Новый старт `2026-10-22T08:23:37Z`; ранние 5.182 GiB LLM / 71.64 MiB app ещё не доказывали readiness |
+| «Readiness и baseline свежей LLM подтверждены» | Внутренний `/health` вернул `{"status":"ok"}`; готовая LLM 5.192 GiB, app 71.98 MiB; host available 8.1 GiB; swap used 3.9 GiB, free 52 MiB | Дата операторского результата 2026-10-22; отдельный точный timestamp snapshot не сохранён. Readiness подтверждает загрузку, но не устойчивость генерации |
+| «q01 после recovery и второй правки prompt: оба режима завершены» | Один end-to-end и один generation-only completion завершены без fallback/transport failure: calculated/actual 2734/2734 и 1761/1761; generation 58.881 s / 41.285 s, total 62.635 s / 41.305 s | Дата результата 2026-10-22; report directory `grounded-chat-api-eval.rIqyY87D`. Это успешный транспорт двух запросов, оба прежних semantic verdicts остаются fail |
+| Тот же раздел, post-run snapshot | LLM 5.697 GiB, app 71.98 MiB, host available 7.4 GiB, swap free 66 MiB | Разница с baseline LLM +0.505 GiB; отсутствуют непрерывные samples и измерение пика |
+
+Причина транспортного сбоя установлена: LLM завершена global OOM хоста.
+Механизм большого anon-rss **не установлен**. Leak, KV/prompt/graph cache,
+вклад weights и конкурирующая нагрузка остаются гипотезами; Docker container
+memory, kernel anon-rss и total-vm нельзя приравнивать. Наличие recovery и двух
+успешных completions не означает устранения OOM либо устойчивости серии.
+Повторять прежние inspect/kernel/health/recovery для закрытия 7.5 не требуется.
+
+**7.5 выполнена; прогресс 27/31.** Следующая задача — 7.6, отдельный новый
+интервал измерений по design §9. Требуются операторские результаты ровно
+20 последовательных end-to-end HTTP chat запросов в заданном там порядке,
+без generation-only и добавочных completions; свежие pre-run identity/baseline,
+samples раз в секунду app/LLM/временных harness containers и host
+MemAvailable/swap, request boundaries/status/counts/timings, post-response memory,
+доступные peak/OOM/process counters и index identity. Sampled maximum не является
+абсолютным пиком; область учёта peak counters должна быть указана.
+
+При исходном `MemAvailable < 2097152 KiB` серия не начинается. Новый OOM,
+завершение LLM, падение ниже этого порога или transport/uncertain failure
+останавливают подачу запросов; retry до recovery запрещён. При memory pressure
+оператор подтверждённо останавливает LLM. Порог консервативный и не гарантирует
+предотвращения OOM. Pass требует полной telemetry, headroom и оценки всей серии,
+включая повторы; необъяснённый продолжающийся рост оставляет gate открытым.
+Прежние snapshots не заменяют этих измерений. Старый evaluation wrapper,
+запускающий оба режима, не выполняет протокол 7.6.
+
+Live-доступ к целевому Linux/Compose серверу в этой сессии отсутствует;
+7.6 не запускалась. Зависимые 7.3 → 7.2 → 7.4 остаются открытыми. Stability
+и safety pass не установлены; известные q13/q18 safety blockers требуют отдельной
+проверки. Прежние semantic failures не исправлены и не переименованы в pass.
+Модель/image/flags/settings, ресурсы/swap, сторонние сервисы и frozen inputs
+в этой сессии не менялись.
+
+Проверки сводки: сопоставлены перечисленные исходные разделы журнала и q01
+counts/timings; `openspec validate grounded-chat-api --strict` — valid;
+`openspec validate --all --strict` — 11 passed, 0 failed;
+`git diff --check` — успешно. Runtime tests не запускались: изменены только
+этот журнал и отметка 7.5 в tasks. Эти проверки не закрывают live gates или 7.4.

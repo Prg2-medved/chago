@@ -1,5 +1,8 @@
 # Spec Delta
 
+> Review draft, 2026-10-22: поправки к области MVP согласуются до реализации.
+> Прежняя semantic acceptance не пройдена; исторические verdicts сохраняются.
+
 ## Purpose
 
 Предоставить минимальный локальный read-only RAG API, который отвечает по найденной документации, возвращает проверяемые источники и явно сообщает о недостатке сведений.
@@ -64,11 +67,13 @@
 - **THEN** API возвращает HTTP 422, не обрезая вопрос и не отправляя генерацию
 
 ### Requirement: Grounded Russian answers and insufficiency
-LLM SHALL получать строгие правила: факты только из CONTEXT, русский язык ответа, точное сохранение identifiers, параметров, путей и команд, запрет дополнения из собственных знаний. При достаточном контексте ответ SHALL быть кратким, содержать необходимые подтверждённые факты и citations. При полном отсутствии сведений SHALL использоваться фраза `В документации недостаточно информации для ответа на этот вопрос.`; при подтверждении только части SHALL выдаваться подтверждённая часть с явно указанными пробелами; при неоднозначности SHALL допускаться один короткий уточняющий вопрос в том же вызове. Полный отказ, частичный ответ и уточнение SHALL иметь insufficient_context=true, полный ответ — false. Отказ/уточнение без фактических утверждений SHALL допускать пустые sources; содержательная часть частичного ответа SHALL иметь citations. Высокий retrieval score SHALL NOT разрешать выдумывание отсутствующих сведений.
+LLM SHALL получать прежние строгие правила: факты только из CONTEXT, русский язык ответа, точное сохранение identifiers, параметров, путей и команд, запрет дополнения из собственных знаний, полнота запрошенных фактов при достаточном evidence, обозначение пробелов и короткое уточнение при неоднозначности. Внутренний формат SHALL оставаться единственным JSON object `{kind, answer}` с прежними allowed kinds и parser/validators; протокол `parts` SHALL NOT реализовываться в этом этапе. Полный отказ, частичный ответ и уточнение SHALL иметь insufficient_context=true, полный ответ — false. При refuse backend SHALL использовать фразу `В документации недостаточно информации для ответа на этот вопрос.`. Отказ/уточнение без фактических утверждений SHALL допускать пустые sources; answer/partial SHALL требовать citations. Высокий retrieval score SHALL NOT разрешать выдумывание отсутствующих сведений. Backend SHALL NOT исправлять kind/insufficient_context по наличию citations или добавлять отсутствующие модельные citations.
+
+Полнота required facts, семантическая обоснованность kind и entailment допустимых citations SHALL измеряться отдельным quality verdict как открытые post-MVP цели SPEC §27, без требования общего semantic pass для MVP. Это SHALL NOT отменять обязательные MVP validators/fail-closed, exact commands, unanswerable/conflict/injection safety и read-only. Формальное соответствие mapping kind SHALL NOT объявляться доказательством правильности семантического выбора.
 
 #### Scenario: Sufficient evidence
 - **WHEN** найденные и переданные источники содержат обязательные факты контрольного вопроса
-- **THEN** ответ сообщает эти факты по-русски с подтверждающими citations, без добавленных значений или инструкций
+- **THEN** MVP проверяет формат, mapping kind, citations/commands validators и безопасность; полнота и обоснованность kind/citations получают отдельный quality verdict, а пропуски или необоснованная недостаточность остаются post-MVP defects без преобразования в pass
 
 #### Scenario: Unanswerable question despite nearby results
 - **WHEN** retrieval вернул похожие chunks, но ответа на контрольный вопрос в них нет
@@ -76,7 +81,7 @@ LLM SHALL получать строгие правила: факты тольк�
 
 #### Scenario: Partial and ambiguous evidence
 - **WHEN** подтверждена только часть вопроса либо неясно, о каком объекте спрашивает пользователь
-- **THEN** ответ обозначает недостающие сведения либо задаёт одно короткое уточнение, не выдумывая недостающую часть
+- **THEN** prompt требует обозначить пробел либо задать короткое уточнение, parser/validators проверяют прежний формат partial/clarify; семантический выбор kind фиксируется quality verdict отдельно, без разрешения нарушать safety gates
 
 ### Requirement: Backend-owned citations and source fragments
 LLM SHALL ссылаться только на chunk IDs, выданные в фактически переданном CONTEXT. Backend SHALL проверять каждый citation ID и формировать номера, title, heading path и URL из index metadata, а quote — дословно из исходных source ranges сохранённого Markdown соответствующего chunk. Generated fences/headers и `search_text` с generated segments SHALL NOT выдаваться за исходные цитаты. Несмежные ranges SHALL показываться отдельными source entries, без выдачи склейки за единый дословный fragment. Source URL SHALL NOT приниматься из output LLM. Если есть неизвестная/некорректная citation либо содержательный ответ не имеет citations, API SHALL возвращать HTTP 200, insufficient_context=true, сообщение о невозможности подтвердить ответ и доступные исходные fragments из переданного CONTEXT без сгенерированных утверждений. Backend SHALL NOT вызывать LLM повторно для исправления.
@@ -155,13 +160,47 @@ Wiki text SHALL передаваться как явно обозначенны�
 - **WHEN** transport envelope валиден, но модель вернула непарсируемое содержимое вместо согласованного формата ответа
 - **THEN** backend не показывает сырой output, возвращает неподтверждённый ответ с исходными fragments и не повторяет генерацию
 
+### Requirement: Observed LLM memory stability
+MVP приёмка SHALL сначала свести уже собранные process/container/kernel/cgroup observations global OOM, readiness/baseline и recovery из acceptance report (разделы/факты перечислены в design §9), без повторения серверной диагностики кроме конкретно указанного пробела. Неподтверждённый механизм роста памяти SHALL NOT объявляться leak либо cache growth. Затем оператор SHALL выполнить ровно 20 последовательных end-to-end tuning/live HTTP chat запросов в порядке `q01, q02, q03, q05, q06, q07, q09, q11, q12, q13, q14, q15, q17, q19, q01, q02, q03, q05, q06, q19`, с исходными frozen questions, без перестановок, замены или добавочных completions/generation-only. Серия SHALL сохранять прежний runtime, samples раз в секунду, request boundaries, observed peaks и post-response measurements, host MemAvailable/swap и OOM/process observations. Область peak counters и отличие sampled maxima от абсолютного пика SHALL раскрываться. Смена модели/image/flags, sampling/window/reserve/timeout, retrieval ranking и frozen inputs SHALL NOT использоваться как неявное исправление. Holdout SHALL NOT входить в нагрузку или использоваться для настройки.
+
+Новый OOM, завершение LLM, host `/proc/meminfo:MemAvailable` ниже 2 GiB (2097152 KiB), transport failure или generation_uncertain SHALL останавливать подачу запросов и оставлять gate невыполненным; при исходном MemAvailable ниже порога серия SHALL NOT начинаться. Порог SHALL описываться как консервативный, без гарантии предотвращения OOM. При memory pressure оператор SHALL подтвердить остановку LLM; retry до ручного recovery SHALL отсутствовать. Pass SHALL требовать завершения всех 20 запросов по API contract без непредусмотренных transport failures/OOM, достаточного host headroom и полной telemetry. Тренд SHALL оцениваться по всей серии: baseline, всем post-response samples, peaks, MemAvailable/swap и повторным одинаковым cases. Продолжающийся необъяснённый рост (включая ступенчатый/немонотонный) или недостаточный headroom SHALL оставлять gate открытым; отсутствие монотонного роста последних пяти samples SHALL NOT быть достаточным основанием pass. Safe validation fallback SHALL учитываться отдельно, без выдачи его за safety/quality pass. Ограниченная серия SHALL NOT объявляться доказательством отсутствия leak на любой нагрузке.
+
+#### Scenario: Incomplete memory observations
+- **WHEN** доступны только baseline и один post-run snapshot либо серия прервана
+- **THEN** отчёт сохраняет наблюдения, но не объявляет memory stability или пик измеренными и не закрывает gate
+
+#### Scenario: Resource failure during the series
+- **WHEN** достигнут stop threshold, появился OOM/uncertain generation либо неразобранный продолжающийся рост
+- **THEN** дальнейшие completions не отправляются, gate остаётся открытым и требуются diagnostics/recovery либо отдельное решение владельца, без автоматической смены runtime
+
+#### Scenario: Completed bounded series
+- **WHEN** все 20 запросов завершены с соблюдением pass criteria и сохранёнными observations
+- **THEN** отчёт подтверждает устойчивость только этой серии и допускает переход к отдельной Compose concurrency/recovery приёмке, не подменяя её
+
+### Requirement: Reproducible timeout fault injection prerequisite
+Перед операторским Compose timeout испытанием SHALL быть подготовлена конкретная воспроизводимая test-only fault-injection процедура с точными командами, preconditions, request timeline, наблюдением upstream completion count и cleanup/recovery. Production runtime flags/settings/timeout SHALL сохраняться. Процедура SHALL подтверждать fault после возможной отправки completion без доказанного завершения; клиентский timeout SHALL NOT заменять timeout transport приложения. Проверочные chat запросы после generation_uncertain SHALL получать 503 и SHALL NOT отправлять следующий upstream completion. Процедура SHALL исключать прямые LLM completions/probes, retry, снятие блокировки либо restart только app до подтверждённой остановки прежней LLM, её запуска и restart app. Если безопасный способ fault injection/наблюдения не определён, испытание SHALL NOT начинаться и gate SHALL оставаться открытым.
+
+#### Scenario: Timeout procedure is missing
+- **WHEN** нет конкретной воспроизводимой процедуры, сохраняющей production settings и исключающей следующий completion при generation_uncertain
+- **THEN** операторское timeout испытание не начинается и ни fake tests, ни общий план не засчитываются как Compose pass
+
 ### Requirement: Grounded answer acceptance evidence
-Приёмка SHALL включать автоматические проверки API/validators и фактические ответы локальной целевой модели на single-question evaluation cases: обычный текст, identifiers, code, table, partial, clarify, contradictions, injection и все `answerable: false`. Проверяющий SHALL вручную оценить обязательные факты, соответствие citations утверждениям, дословность команд и отсутствие неподтверждённых сведений. Отчёт SHALL различать retrieved evidence misses и generation failures, сохранять настройки, fingerprints, case IDs, timings и ограничения без изменения frozen corpus, expectations, splits и исторических baseline. Follow-up acceptance SHALL оставаться следующему этапу. Достижение Hit@5 ≥90% SHALL NOT быть условием завершения этого change согласно SPEC.md §§12.5,27; отсутствие evidence SHALL вести к частичному ответу/уточнению/отказу.
+Приёмка SHALL включать автоматические проверки API/validators и фактические ответы локальной целевой модели на single-question evaluation cases: обычный текст, identifiers, code, table, partial, clarify, contradictions, injection и все `answerable: false`, отдельно end-to-end и generation-only с фиксированным достаточным evidence. Проверяющий SHALL вручную оценить обязательные факты, соответствие citations утверждениям, дословность команд и отсутствие неподтверждённых сведений. Отчёт SHALL раздельно фиксировать stability (ресурсы/transport/concurrency/recovery/offline), safety (API/validators/fallback/команды/unanswerable/ambiguity/conflict/injection/isolation/read-only) и semantic quality (полнота, семантический kind, entailment). MVP SHALL требовать pass stability и safety. Только изолированный quality fail SHALL оставаться неблокирующим открытым post-MVP defect; quality classification SHALL NOT отменять safety fail того же ответа.
+
+Известные q13 (неоднозначный объект) и q18 (противоречие) SHALL рассматриваться как потенциальные safety blockers, а не автоматически неблокирующие ошибки kind/полноты. Подстановка неизвестного объекта в q13 и выбор варианта при неразрешённом конфликте q18 SHALL оцениваться отдельным safety verdict. Без доказанного safety verdict gate SHALL оставаться открытым. Раскрытый q18 holdout SHALL NOT использоваться для настройки; его сохранённый результат и финальная safety-проверка SHALL NOT становиться основанием tuning prompt/runtime/validators/retrieval.
+
+Отчёт SHALL различать retrieved evidence misses и generation failures, сохранять настройки, fingerprints, case IDs, timings и ограничения без изменения frozen corpus, expectations, splits и исторических baseline. Прежние failed verdicts и непройденная исходная 7.2 SHALL сохраняться с исходными критериями; новая область MVP SHALL указываться отдельно с датой решения владельца. Непройденные, частично выполненные и незапущенные проверки SHALL NOT отмечаться успешными. Follow-up acceptance SHALL оставаться следующему этапу; Hit@5 ≥90% SHALL NOT быть gate этого change. Раскрытый holdout SHALL NOT использоваться для tuning; изменение критериев SHALL NOT становиться настройкой ответов по holdout.
+
+Порядок оставшейся приёмки SHALL быть: диагностика global OOM → последовательная memory series → Compose concurrency/cancellation/timeout/generation_uncertain → ручной recovery с успешным новым chat → offline/app-only/isolation/неизменность SQLite → итоговый live MVP run и сверка. Прежние unit tests или единичный OOM/recovery SHALL NOT заменять обязательные live gates. Принятый token gate 7.1 SHALL сохраняться для неизменных messages/runtime identity, без необоснованного повторения. Выпуск этого API SHALL NOT объявляться завершением UI/history/расширенного health или всего MVP продукта.
 
 #### Scenario: Live server review
 - **WHEN** проводится приёмка на подготовленном локальном индексе и Qwen в Compose
-- **THEN** отдельный отчёт фиксирует реальные ответы, evidence coverage, ручной verdict и ограничения; все unanswerable cases проходят без выдуманного содержательного ответа
+- **THEN** отдельный отчёт фиксирует реальные ответы, evidence coverage, отдельные stability/safety/semantic quality verdicts и ограничения; все unanswerable cases проходят без выдуманного содержательного ответа, safety/validators и эксплуатационные gates пройдены фактически
 
 #### Scenario: Evidence miss
 - **WHEN** нужные факты есть в документации, но не попали в переданный CONTEXT
-- **THEN** отсутствие полного ответа отражается как retrieval/context miss, а модель явно сообщает недостаток данных вместо дополнения из знаний
+- **THEN** отсутствие evidence отражается как retrieval/context miss, prompt запрещает дополнение из знаний; отчёт отдельно оценивает безопасность и quality, не принимает score либо существование citation за доказательство достаточности
+
+#### Scenario: Previously failed semantic acceptance
+- **WHEN** старый review содержит fail по полноте, kind или entailment, а новая техническая MVP приёмка успешна
+- **THEN** старый fail сохраняется, новый MVP verdict относится только к пересмотренным требованиям, дефекты качества остаются открытыми post-MVP, без реализации parts

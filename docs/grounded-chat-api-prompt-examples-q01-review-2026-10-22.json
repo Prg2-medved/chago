@@ -1,0 +1,155 @@
+{
+  "protocol": "grounded-chat-api-manual-review-v1",
+  "review_basis": "Operator pasted completed two-mode q01 stdout and post-run Docker stats/free. No continuous peak-memory series or separate stderr/identity files provided.",
+  "source_sha256": "7d90cba95d989aaa86164009ffa77dc457193200d8ae7ea8adf76f92a569ab8e",
+  "server_reports": "/home/prg2/chago-llm/chago/data/grounded-chat-api-eval.rIqyY87D",
+  "scope": "Single tuning question on prompt revision with fictional examples; not full acceptance.",
+  "gate_7_2": "not_accepted",
+  "cases": [
+    {
+      "id": "q01",
+      "source_set": "live",
+      "split": "tuning",
+      "answerable": true,
+      "expected_behavior": "answer",
+      "retrieved_ids": [
+        "45d55467ee65d4684bf160ad725aae9bc6efa48f6208ae8006860eda808e8132",
+        "fba8058ab5f3fb60a77ef52684241f32e535c0434c0df763e68eb8558b4bfcce",
+        "038d1a279825ee78784f1e7464ee2e4c824c340a049fb31faa3712a698ecebac",
+        "5e13d3960bd6484b1c387d0ffa605b8faee1864e389c2d8e3f01315ec7a03dc7",
+        "0d500e60d97179b58c06832cbe4a206d4fdea6064073ac44f9ed156203fd0149",
+        "930d4ed2b3d524c71a584750dbd211adfbbbeef56dc06712532e712708298fce"
+      ],
+      "supplied_ids": [
+        "45d55467ee65d4684bf160ad725aae9bc6efa48f6208ae8006860eda808e8132",
+        "fba8058ab5f3fb60a77ef52684241f32e535c0434c0df763e68eb8558b4bfcce",
+        "038d1a279825ee78784f1e7464ee2e4c824c340a049fb31faa3712a698ecebac",
+        "5e13d3960bd6484b1c387d0ffa605b8faee1864e389c2d8e3f01315ec7a03dc7",
+        "0d500e60d97179b58c06832cbe4a206d4fdea6064073ac44f9ed156203fd0149",
+        "930d4ed2b3d524c71a584750dbd211adfbbbeef56dc06712532e712708298fce"
+      ],
+      "packed_ids": [
+        "45d55467ee65d4684bf160ad725aae9bc6efa48f6208ae8006860eda808e8132",
+        "fba8058ab5f3fb60a77ef52684241f32e535c0434c0df763e68eb8558b4bfcce",
+        "038d1a279825ee78784f1e7464ee2e4c824c340a049fb31faa3712a698ecebac",
+        "5e13d3960bd6484b1c387d0ffa605b8faee1864e389c2d8e3f01315ec7a03dc7",
+        "0d500e60d97179b58c06832cbe4a206d4fdea6064073ac44f9ed156203fd0149",
+        "930d4ed2b3d524c71a584750dbd211adfbbbeef56dc06712532e712708298fce"
+      ],
+      "supplied_evidence_complete": true,
+      "packed_evidence_complete": true,
+      "diagnostic": "review_generation",
+      "prompt_tokens": 2734,
+      "actual_prompt_tokens": 2734,
+      "token_count_matches": true,
+      "validation_fallback": false,
+      "validation_error": null,
+      "timings_ms": {
+        "retrieval": 3728.5162433981895,
+        "budget": 24.737760424613953,
+        "generation": 58881.13857805729,
+        "total": 62634.66779887676
+      },
+      "manual_verdict": "fail",
+      "mode": "end-to-end",
+      "review_note": "Complete packed evidence but stage/segment/concurrent-route/route-control facts omitted. Claims about missing interactions/track-merging details are unjustified and [2] does not substantiate their absence. Insufficient partial response; no structural fallback.",
+      "insufficient_context": true,
+      "source_count": 2
+    },
+    {
+      "id": "q01",
+      "source_set": "live",
+      "split": "tuning",
+      "answerable": true,
+      "expected_behavior": "answer",
+      "retrieved_ids": [],
+      "supplied_ids": [
+        "f89ae4301edc766201e9055860746fd1dcb7566a07f0aeea706be190b2a3a8d6",
+        "edd7f16c838ba53ce771b72e2a601f4d76d84786dac64cbd79d58953225c53e5",
+        "a4656eb62b91ceef667ecad29d1c514346e021e3159124c6b21792cd6c721c2e"
+      ],
+      "packed_ids": [
+        "f89ae4301edc766201e9055860746fd1dcb7566a07f0aeea706be190b2a3a8d6",
+        "edd7f16c838ba53ce771b72e2a601f4d76d84786dac64cbd79d58953225c53e5",
+        "a4656eb62b91ceef667ecad29d1c514346e021e3159124c6b21792cd6c721c2e"
+      ],
+      "supplied_evidence_complete": true,
+      "packed_evidence_complete": true,
+      "diagnostic": "review_generation",
+      "prompt_tokens": 1761,
+      "actual_prompt_tokens": 1761,
+      "token_count_matches": true,
+      "validation_fallback": false,
+      "validation_error": null,
+      "timings_ms": {
+        "retrieval": 0.06474554538726807,
+        "budget": 19.76282149553299,
+        "generation": 41285.13786941767,
+        "total": 41305.33914268017
+      },
+      "manual_verdict": "fail",
+      "mode": "generation-only",
+      "review_note": "Stage/segment, concurrency and route/step facts present, explicit route-control detail omitted; insufficient_context=true without named gap or conflict. Complete-answer contract still fails; no structural fallback.",
+      "insufficient_context": true,
+      "source_count": 3
+    }
+  ],
+  "summaries": {
+    "end-to-end": {
+      "protocol": "grounded-single-question-v1",
+      "mode": "end-to-end",
+      "corpus_version": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a",
+        "live_index": "c792e5dd0d5b93f6496b50715f17e29d6617817475ff790104fd81582141ea8d",
+        "synthetic_index": "60e5369be9e965a480b13fdd7fdf25ae4966384e4d1648c533931111982e2e68"
+      },
+      "follow_up_acceptance": false,
+      "manual_review_required": true,
+      "settings": {
+        "model_name": "Qwen3-4B-Instruct-2507",
+        "max_tokens": 768,
+        "context_size": 8192,
+        "timeout_seconds": 300,
+        "temperature": 0.2,
+        "top_p": 0.8,
+        "top_k": 20
+      }
+    },
+    "generation-only": {
+      "protocol": "grounded-single-question-v1",
+      "mode": "generation-only",
+      "corpus_version": 1,
+      "fingerprints": {
+        "questions": "916c65e0e589a27e86b9afafdc91c6cad6c4b3ecbad8ab941f5af87bd1e14181",
+        "manifest": "9cea48706b1d4118c0a57cd88cce009f3f1ee6576c8b9c3d0dbd84bcec06c3a3",
+        "live_reference": "63ad12fec898ef6c73c5c37a66d18e0d1327c91f1f79102dfa646cadd8c9f95f",
+        "synthetic_reference": "9fe75320ace79ef6ee707f189137c6fd9fd886341b65395c87393ea4f2d9cf1a"
+      },
+      "follow_up_acceptance": false,
+      "manual_review_required": true,
+      "settings": {
+        "model_name": "Qwen3-4B-Instruct-2507",
+        "max_tokens": 768,
+        "context_size": 8192,
+        "timeout_seconds": 300,
+        "temperature": 0.2,
+        "top_p": 0.8,
+        "top_k": 20
+      }
+    }
+  },
+  "memory_observations": {
+    "before_llm_gib": 5.192,
+    "after_llm_gib": 5.697,
+    "delta_llm_gib": 0.505,
+    "after_app_mib": 71.98,
+    "host_available_gib_before": 8.1,
+    "host_available_gib_after": 7.4,
+    "after_swap_free_mib": 66,
+    "limitation": "Post-run snapshot only; no measured peak, no proof of a leak, long-run stability or cause of previous OOM."
+  }
+}
