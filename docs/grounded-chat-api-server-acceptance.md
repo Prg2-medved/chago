@@ -1602,3 +1602,99 @@ memory threshold/OOM/process/inventory checks, независимая от за�
 не Linux cgroup/Compose/live pass. Полный app pytest не повторялся: production
 код не менялся. Для pytest требовался запуск вне sandbox из-за блокировки
 временных файлов; итоговый профильный запуск прошёл без skips.
+
+### Preflight 7.6: settings identity mismatch до запросов, 2026-10-22
+
+Оператор запустил memory-series script с app URL `http://192.168.12.100:8091`.
+Каталог отчёта: `/home/prg2/chago-llm/chago/data/grounded-chat-api-memory.r8gy8__x`.
+Получено `STOP: settings_identity_mismatch`, `State: incomplete`.
+Ветка остановки предшествует readiness и `run_series`: chat/completion запросов
+этот запуск не отправлял. Это preflight failure, не timeout генерации;
+сам этот запуск не создаёт generation_uncertain и не требует OOM recovery.
+Серия 7.6 не начата, прогресс остаётся 27/31. Отчёт не удаляется и не заменяется
+будущими результатами.
+
+Локально обнаружен дефект harness: четыре значения сравнивались как raw env
+strings, без defaults/целочисленного parsing из deployed `load_chat_settings()`.
+При отсутствующей переменной с прежним default или эквивалентном числе с ведущими
+нулями это давало ложный mismatch. Фактические значения на сервере пока не
+получены, поэтому причина именно этого серверного stop ещё не подтверждена.
+
+Исправлен только preflight harness: вызывается config loader текущего app через
+`docker exec`, без HTTP/LLM/retrieval/ingestion. Сравниваются typed effective values
+с прежними alias/context/reserve/timeout. `settings-check.json` сохраняет только
+четыре разрешённых env-поля, expected/effective и названия несовпавших полей;
+прочие environment values/credentials не выводятся. Отсутствие/ошибка loader не
+заменяется догадкой о defaults, реальные mismatch остаются блокирующими.
+`identity-before.json` дополнен effective settings. Production config/runtime,
+модель, flags, timeout, индекс и frozen inputs не менялись.
+
+Следующий операторский шаг — только прочитать эти четыре explicit/effective
+settings, чтобы отличить ложное срабатывание от реального расхождения.
+Нагрузку до этого не повторять; автоматической смены settings/recovery нет.
+
+Проверки из `app/`:
+`../.venv/Scripts/python.exe -m pytest tests/test_chat_memory_series.py -q` —
+19 passed, 10 subtests passed;
+`../.venv/Scripts/python.exe -m mypy ../docs/grounded-chat-api-memory-series.py tests/test_chat_memory_series.py`
+— success, 2 source files. Новые случаи проверяют настоящие defaults/парсинг
+loader, сохранение блокировки при реальном mismatch/ошибке loader и отсутствие
+sentinel credentials в diagnostics. Серверный stop не засчитан как memory gate.
+
+### В deployed app отсутствует chat config loader, 2026-10-22
+
+Операторский read-only `docker compose exec -T app python` завершился:
+`ImportError: cannot import name 'load_chat_settings' from 'app.config' (/app/app/config.py)`.
+В текущем checkout loader существует. Подтверждено расхождение deployed config
+с реализацией change; предположение только о пропущенных env defaults не
+объясняет этот ImportError. Полный состав старого app пока не сверён.
+Диагностика не отправляла HTTP chat/completion и не создала generation_uncertain.
+
+Прежние live harness запускали актуальные исходники через read-only bind mount
+поверх существующего app image и напрямую обращались к LLM. Поэтому их успешный
+транспорт не доказывал актуальность кода работающего HTTP app. Ранее указанное
+«build/recreate app не требуется» неприменимо к установленному расхождению:
+нужна выкладка app из актуального checkout. Restart старого container не обновляет
+встроенные исходники. Исторические результаты token gates/Qwen сохраняются;
+HTTP/memory/Compose gates остаются открытыми.
+
+Harness теперь сначала проверяет deployed code (включая `index_state.py`),
+сохраняет `code-check.json` с hashes/отсутствующими файлами и явно называет
+несовпавшие модули, до импорта нового loader, hash GGUF или HTTP probes.
+Добавлен `--preflight-only`: проверка identity/readiness/baseline завершается
+`preflight_passed_no_chat`, без `run_series` или completion. Это проверка
+готовности к серии, не memory acceptance.
+
+Операторский путь после переноса актуальных исходников и исправленного harness:
+
+```bash
+docker image inspect python:3.12-slim >/dev/null &&
+docker build --network=none --pull=false -t chago-app ./app &&
+docker compose up -d --no-deps --no-build app
+```
+
+Tag `chago-app` соответствует переданному оператором Compose output. Команды
+обновляют только app, не llm, Wiki.js, модель, runtime flags или индекс. Build
+использует штатный Dockerfile; network=none отключает сеть RUN steps (pip),
+pull=false не запрашивает принудительное обновление base image. Проверка
+наличия локального base выполняется до build. При недоступном base/cache или
+ошибке offline build остановиться и передать вывод, не добавлять сетевую установку
+или смену image/dependencies как обход. Оператор ранее подтвердил отсутствие
+timeout/обрывов после recovery и другого traffic; если состояние изменилось,
+app deployment не является recovery неопределённой генерации.
+
+После успешной выкладки, до нагрузки:
+
+```bash
+python3 docs/grounded-chat-api-memory-series.py \
+  --app-url http://192.168.12.100:8091 --preflight-only
+```
+
+Передать вывод и diagnostics при stop; 20 запросов автоматически не запускаются.
+Результат выкладки/preflight ещё не получен. **27/31, задача 7.6 открыта.**
+
+Локально из `app/`: `../.venv/Scripts/python.exe -B -m pytest tests/test_chat_memory_series.py -q`
+— 21 passed, 10 subtests passed. В том числе проверены отсутствующие/старые
+deployed modules и успешный preflight-only с единственным HTTP GET health
+и нулём вызовов серии. Production код не менялся; серверная сборка/выкладка
+локально не выполнялась.

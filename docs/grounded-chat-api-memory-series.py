@@ -31,11 +31,14 @@ THRESHOLD = 2097152  # KiB, host MemAvailable; conservative, not an OOM guarante
 DIGEST = "ghcr.io/ggml-org/llama.cpp@sha256:f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283"
 MODEL_HASH = "2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e"
 CODE = ("grounding.py", "chat.py", "chat_api.py", "llm_client.py", "config.py",
-        "retrieval.py", "__main__.py", "main.py")
+        "retrieval.py", "index_state.py", "__main__.py", "main.py")
 SETTING_NAMES = ("LLM_BASE_URL", "LLM_MODEL_NAME", "LLM_MAX_TOKENS", "LLM_CONTEXT_SIZE",
                  "LLM_TIMEOUT_SECONDS", "RETRIEVAL_SEMANTIC_CANDIDATES", "RETRIEVAL_LEXICAL_CANDIDATES",
                  "RETRIEVAL_RRF_CONSTANT", "RETRIEVAL_TOP_K", "EMBEDDING_MODEL_PATH", "EMBEDDING_MODEL_ID",
                  "EMBEDDING_MODEL_REVISION", "EMBEDDING_BATCH_SIZE", "EMBEDDING_CPU_THREADS")
+CHAT_IDENTITY = {"model_name": "Qwen3-4B-Instruct-2507", "context_size": 8192,
+                 "max_tokens": 768, "timeout_seconds": 300}
+CHAT_ENV_NAMES = ("LLM_MODEL_NAME", "LLM_CONTEXT_SIZE", "LLM_MAX_TOKENS", "LLM_TIMEOUT_SECONDS")
 LLM_COMMAND = ["--model", "/models/model.gguf", "--alias", "Qwen3-4B-Instruct-2507", "--host", "0.0.0.0",
                "--port", "8080", "--ctx-size", "8192", "--threads", "8", "--threads-batch", "8",
                "--parallel", "1", "--gpu-layers", "0", "--device", "none", "--no-webui"]
@@ -59,6 +62,40 @@ def command(*args: str, timeout: float = 15) -> str:
 
 def docker_json(*args: str) -> Any:
     return json.loads(command("docker", *args))
+
+
+def check_code_identity(app_id: str, report: Path) -> dict[str, str]:
+    expected = {name: sha(Path("app/app") / name) for name in CODE}
+    remote = json.loads(command(
+        "docker", "exec", app_id, "python", "-c",
+        "import app,hashlib,json,pathlib; p=pathlib.Path(app.__file__).parent; "
+        "print(json.dumps({n:hashlib.sha256((p/n).read_bytes()).hexdigest() "
+        "if (p/n).is_file() else None for n in " + repr(CODE) + "}))"))
+    mismatches = [name for name in CODE if remote.get(name) != expected[name]]
+    write_json(report / "code-check.json", {"expected": expected, "deployed": remote, "mismatches": mismatches})
+    if mismatches:
+        raise Stop("deployed_code_differs_from_checkout:" + ",".join(mismatches))
+    return expected
+
+
+def check_chat_identity(app_id: str, env: dict[str, str], report: Path) -> dict[str, Any]:
+    """Read effective values through the deployed app's own loader, without LLM calls."""
+    diagnostic = {"explicit_env": {key: env.get(key) for key in CHAT_ENV_NAMES},
+                  "expected": CHAT_IDENTITY}
+    write_json(report / "settings-check.json", diagnostic)
+    try:
+        effective = json.loads(command(
+            "docker", "exec", app_id, "python", "-c",
+            "import json; from app.config import load_chat_settings; s=load_chat_settings(); "
+            "print(json.dumps({k:getattr(s,k) for k in " + repr(tuple(CHAT_IDENTITY)) + "}))"))
+    except Stop:
+        raise Stop("effective_settings_unavailable") from None
+    mismatches = [key for key, value in CHAT_IDENTITY.items() if effective.get(key) != value]
+    diagnostic.update(effective=effective, mismatches=mismatches)
+    write_json(report / "settings-check.json", diagnostic)
+    if mismatches:
+        raise Stop("settings_identity_mismatch:" + ",".join(mismatches))
+    return effective
 
 
 def write_json(path: Path, value: Any) -> None:
@@ -314,6 +351,7 @@ def run_series(cases: list[dict[str, Any]], base_url: str, monitor: Monitor, rep
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--app-url", required=True, help="Existing host-published app origin")
+    parser.add_argument("--preflight-only", action="store_true", help="Check identity/readiness/baseline without chat requests")
     args = parser.parse_args()
     parsed = urlsplit(args.app_url)
     if (parsed.scheme != "http" or not parsed.hostname or parsed.username or parsed.password
@@ -337,25 +375,15 @@ def main() -> int:
         if not app_id or not llm_id:
             raise Stop("running_app_and_llm_required")
         app, llm = docker_json("inspect", app_id, llm_id)
+        code_hashes = check_code_identity(app_id, report)
         env = dict(item.split("=", 1) for item in app["Config"]["Env"])
         settings = {key: value for key, value in env.items() if key in SETTING_NAMES}
-        if any(env.get(key) != value for key, value in {
-            "LLM_MODEL_NAME": "Qwen3-4B-Instruct-2507", "LLM_CONTEXT_SIZE": "8192",
-            "LLM_MAX_TOKENS": "768", "LLM_TIMEOUT_SECONDS": "300"
-        }.items()):
-            raise Stop("settings_identity_mismatch")
+        effective_chat_settings = check_chat_identity(app_id, env, report)
         digests = docker_json("image", "inspect", llm["Image"])[0]["RepoDigests"]
         if DIGEST not in digests or sha(bound_path(llm, "/models/model.gguf")) != MODEL_HASH:
             raise Stop("llm_identity_mismatch")
         if llm["Config"]["Cmd"] != LLM_COMMAND or any(llm["NetworkSettings"]["Ports"].values()):
             raise Stop("llm_flags_or_ports_mismatch")
-        code_hashes = {name: sha(Path("app/app") / name) for name in CODE}
-        remote = command("docker", "exec", app_id, "python", "-c",
-                         "import app,hashlib,json,pathlib; p=pathlib.Path(app.__file__).parent; "
-                         "print(json.dumps({n:hashlib.sha256((p/n).read_bytes()).hexdigest() for n in "
-                         + repr(CODE) + "}))")
-        if json.loads(remote) != code_hashes:
-            raise Stop("deployed_code_differs_from_checkout")
         index_path = bound_path(app, env["INDEX_PATH"])
         before_index = index_identity(index_path)
         manifest = json.loads(Path("eval/manifest.json").read_text(encoding="utf-8"))["live"]
@@ -366,6 +394,7 @@ def main() -> int:
             raise Stop("app_index_is_not_frozen_live_corpus")
         write_json(report / "identity-before.json", {
             "app": inspect_summary(app), "llm": inspect_summary(llm), "settings": settings,
+            "effective_chat_settings": effective_chat_settings,
             "image_digests": digests, "model_sha256": MODEL_HASH, "code_sha256": code_hashes,
             "index": before_index, "questions_sha256": sha(Path("eval/questions.yaml")),
             "manifest_sha256": sha(Path("eval/manifest.json")), "harness_sha256": sha(Path(__file__)),
@@ -378,9 +407,12 @@ def main() -> int:
             raise Stop("llm_not_ready")
         monitor = Monitor(app, llm, report)
         monitor.sample("baseline")
-        run_series(cases, args.app_url.rstrip("/"), monitor, report)
-        monitor.sample("final")
-        verdict["state"] = "20_responses_completed_review_pending"
+        if args.preflight_only:
+            verdict["state"] = "preflight_passed_no_chat"
+        else:
+            run_series(cases, args.app_url.rstrip("/"), monitor, report)
+            monitor.sample("final")
+            verdict["state"] = "20_responses_completed_review_pending"
     except (Stop, OSError, ValueError, KeyError, sqlite3.Error) as error:
         reason = str(error) if isinstance(error, Stop) else "preflight_or_telemetry_error"
         verdict["reason"] = reason
@@ -422,7 +454,7 @@ def main() -> int:
         verdict["ended_at"] = utc()
         write_json(report / "summary.json", verdict)
         print(f"Reports: {report}\nState: {verdict['state']}; gate 7.6 remains open pending review.", flush=True)
-    return 0 if verdict["state"] == "20_responses_completed_review_pending" else 1
+    return 0 if verdict["state"] in {"20_responses_completed_review_pending", "preflight_passed_no_chat"} else 1
 
 
 if __name__ == "__main__":

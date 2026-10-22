@@ -1,6 +1,6 @@
 """Operator harness safety checks; no Docker, model assets or frozen-input writes."""
 
-from contextlib import closing, redirect_stdout
+from contextlib import chdir, closing, redirect_stdout
 import copy
 import importlib.util
 import io
@@ -30,6 +30,93 @@ def observation():
 
 
 class MemorySeriesTests(unittest.TestCase):
+    def test_missing_deployed_code_is_diagnosed_without_loading_config(self):
+        expected = {name: "fixture-hash" for name in series.CODE}
+        remote = {**expected, "config.py": "old-hash", "chat.py": None}
+        with tempfile.TemporaryDirectory() as directory, patch.object(series, "sha", return_value="fixture-hash"), \
+                patch.object(series, "command", return_value=json.dumps(remote)) as command:
+            with self.assertRaisesRegex(series.Stop, "deployed_code_differs_from_checkout"):
+                series.check_code_identity("fixture", Path(directory))
+            diagnostic = json.loads((Path(directory) / "code-check.json").read_text())
+            self.assertEqual(set(diagnostic["mismatches"]), {"config.py", "chat.py"})
+            self.assertNotIn("load_chat_settings", command.call_args.args[-1])
+            self.assertEqual(command.call_count, 1)
+
+    def test_preflight_only_never_starts_series(self):
+        from types import SimpleNamespace
+
+        manifest = json.loads((ROOT / "eval/manifest.json").read_text(encoding="utf-8"))["live"]
+        index = {"snapshot_metadata": [[1, manifest["source"]]], "documents": sorted(
+            (doc["page_id"], doc["locale"], doc["path"], doc["content_sha256"]) for doc in manifest["documents"])}
+        app = {"Id": "app", "Config": {"Env": ["INDEX_PATH=/data/index.sqlite3"]}}
+        llm = {"Id": "llm", "Image": "image", "Config": {"Cmd": series.LLM_COMMAND},
+               "NetworkSettings": {"Ports": {"8080/tcp": None}}}
+
+        def command(*args):
+            if "exec" in args:
+                return '{"status":"ok"}'
+            return args[-1]
+
+        def docker_json(*args):
+            return [{"RepoDigests": [series.DIGEST]}] if args[0] == "image" else [app, llm]
+
+        with tempfile.TemporaryDirectory() as directory, redirect_stdout(io.StringIO()), chdir(ROOT):
+            with patch.object(series.sys, "argv", ["series", "--app-url", "http://fixture", "--preflight-only"]), \
+                    patch.object(series.sys, "platform", "linux"), patch.object(series.os, "umask"), \
+                    patch.object(series.tempfile, "mkdtemp", return_value=directory), \
+                    patch.object(series, "host_memory", return_value={"MemAvailable": series.THRESHOLD}), \
+                    patch.object(series, "check_code_identity", return_value={}), \
+                    patch.object(series, "check_chat_identity", return_value=series.CHAT_IDENTITY), \
+                    patch.object(series, "sha", return_value=series.MODEL_HASH), \
+                    patch.object(series, "bound_path", return_value=Path("fixture")), \
+                    patch.object(series, "index_identity", return_value=index), \
+                    patch.object(series, "inspect_summary", return_value={}), \
+                    patch.object(series, "command", side_effect=command), \
+                    patch.object(series, "docker_json", side_effect=docker_json), \
+                    patch.object(series, "http", return_value=(200, {"status": "ok"})) as transport, \
+                    patch.object(series, "Monitor"), patch.object(series, "run_series") as run, \
+                    patch.object(series.subprocess, "run", return_value=SimpleNamespace(stdout="", stderr="")):
+                self.assertEqual(series.main(), 0)
+                run.assert_not_called()
+                transport.assert_called_once_with("http://fixture/health", timeout=5)
+            summary = json.loads((Path(directory) / "summary.json").read_text())
+            self.assertEqual(summary["state"], "preflight_passed_no_chat")
+
+    def test_settings_use_deployed_loader_defaults_and_integer_values(self):
+        from app.config import load_chat_settings
+
+        for env in ({}, {"LLM_MAX_TOKENS": "0768", "LLM_TIMEOUT_SECONDS": "0300"}):
+            with self.subTest(env=env), patch.dict(series.os.environ, env, clear=True):
+                loaded = load_chat_settings()
+                effective = {key: getattr(loaded, key) for key in series.CHAT_IDENTITY}
+                with tempfile.TemporaryDirectory() as directory, patch.object(
+                        series, "command", return_value=json.dumps(effective)) as command:
+                    report = Path(directory)
+                    self.assertEqual(series.check_chat_identity("fixture", env, report), series.CHAT_IDENTITY)
+                    diagnostic = json.loads((report / "settings-check.json").read_text())
+                    self.assertEqual(diagnostic["mismatches"], [])
+                    self.assertIsNone(diagnostic["explicit_env"]["LLM_CONTEXT_SIZE"])
+                    self.assertIn("load_chat_settings", command.call_args.args[-1])
+                    self.assertEqual(command.call_count, 1)
+
+    def test_real_settings_mismatch_still_stops_and_saves_safe_diagnostics(self):
+        effective = {**series.CHAT_IDENTITY, "timeout_seconds": 600}
+        env = {"LLM_TIMEOUT_SECONDS": "600", "WIKI_DB_PASSWORD": "SENTINEL_SECRET"}
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+                series, "command", return_value=json.dumps(effective)):
+            report = Path(directory)
+            with self.assertRaisesRegex(series.Stop, "settings_identity_mismatch:timeout_seconds"):
+                series.check_chat_identity("fixture", env, report)
+            diagnostic = (report / "settings-check.json").read_text()
+            self.assertNotIn("SENTINEL_SECRET", diagnostic)
+            self.assertEqual(json.loads(diagnostic)["effective"]["timeout_seconds"], 600)
+
+    def test_invalid_runtime_settings_never_fall_back_to_defaults(self):
+        with tempfile.TemporaryDirectory() as directory, patch.object(
+                series, "command", side_effect=series.Stop("command_failed:docker")):
+            with self.assertRaisesRegex(series.Stop, "effective_settings_unavailable"):
+                series.check_chat_identity("fixture", {"LLM_TIMEOUT_SECONDS": "invalid"}, Path(directory))
+
     def test_order_preserves_duplicates_and_only_tuning_live(self):
         cases = series.select_cases(ROOT / "eval/questions.yaml")
         expected = "q01 q02 q03 q05 q06 q07 q09 q11 q12 q13 q14 q15 q17 q19 q01 q02 q03 q05 q06 q19".split()
