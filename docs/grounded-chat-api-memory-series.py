@@ -141,7 +141,8 @@ def select_cases(path: Path, order: list[str] = ORDER) -> list[dict[str, Any]]:
 
 
 def check_llm_command(llm: dict[str, Any], cache_ram_zero: bool) -> None:
-    expected = LLM_COMMAND + (["--cache-ram", "0"] if cache_ram_zero else [])
+    # Owner-approved MVP argv; the four-request experiment uses the same flags.
+    expected = LLM_COMMAND + ["--cache-ram", "0"]
     if llm["Config"]["Cmd"] != expected or any(llm["NetworkSettings"]["Ports"].values()):
         raise Stop("llm_flags_or_ports_mismatch")
     if cache_ram_zero:

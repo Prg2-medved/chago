@@ -51,11 +51,31 @@ class MemorySeriesTests(unittest.TestCase):
         with patch.object(series.Path, "read_bytes", return_value=b"llama-server\0--cache-ram\08192\0"):
             with self.assertRaisesRegex(series.Stop, "llm_process_flags_mismatch"):
                 series.check_llm_command(llm, True)
-        with self.assertRaisesRegex(series.Stop, "llm_flags_or_ports_mismatch"):
+        with patch.object(series.Path, "read_bytes") as read_process:
             series.check_llm_command(llm, False)
+            read_process.assert_not_called()
         llm["Config"]["Cmd"] = series.LLM_COMMAND
         with self.assertRaisesRegex(series.Stop, "llm_flags_or_ports_mismatch"):
             series.check_llm_command(llm, True)
+
+    def test_standard_series_requires_cache_ram_zero_and_exact_other_flags_and_ports(self):
+        command = series.LLM_COMMAND + ["--cache-ram", "0"]
+        invalid_commands = [command[:-2], command[:-1] + ["8192"],
+                            command + ["--cache-ram", "0"], command + ["--extra-flag"]]
+        for position in range(len(series.LLM_COMMAND)):
+            changed = command.copy()
+            changed[position] = "unexpected"
+            invalid_commands.append(changed)
+        for invalid in invalid_commands:
+            with self.subTest(command=invalid):
+                llm = {"Config": {"Cmd": invalid},
+                       "NetworkSettings": {"Ports": {"8080/tcp": None}}}
+                with self.assertRaisesRegex(series.Stop, "llm_flags_or_ports_mismatch"):
+                    series.check_llm_command(llm, False)
+        llm = {"Config": {"Cmd": command}, "NetworkSettings": {
+            "Ports": {"8080/tcp": [{"HostIp": "127.0.0.1", "HostPort": "8080"}]}}}
+        with self.assertRaisesRegex(series.Stop, "llm_flags_or_ports_mismatch"):
+            series.check_llm_command(llm, False)
 
     def test_failure_stage_and_type_are_saved_without_exception_content(self):
         from types import SimpleNamespace
@@ -115,7 +135,7 @@ class MemorySeriesTests(unittest.TestCase):
         index = {"snapshot_metadata": [[1, manifest["source"]]], "documents": sorted(
             (doc["page_id"], doc["locale"], doc["path"], doc["content_sha256"]) for doc in manifest["documents"])}
         app = {"Id": "app", "Config": {"Env": ["INDEX_PATH=/data/index.sqlite3"]}}
-        llm = {"Id": "llm", "Image": "image", "Config": {"Cmd": series.LLM_COMMAND},
+        llm = {"Id": "llm", "Image": "image", "Config": {"Cmd": series.LLM_COMMAND + ["--cache-ram", "0"]},
                "NetworkSettings": {"Ports": {"8080/tcp": None}}}
 
         def command(*args):
