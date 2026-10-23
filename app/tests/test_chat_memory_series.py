@@ -30,6 +30,33 @@ def observation():
 
 
 class MemorySeriesTests(unittest.TestCase):
+    def test_cache_ram_experiment_is_four_original_tuning_questions(self):
+        cases = series.select_cases(ROOT / "eval/questions.yaml", series.CACHE_RAM_ZERO_ORDER)
+        self.assertEqual([case["id"] for case in cases], ["q01", "q02", "q01", "q02"])
+        self.assertEqual(cases[0], cases[2])
+        self.assertEqual(cases[1], cases[3])
+        with tempfile.TemporaryDirectory() as directory, redirect_stdout(io.StringIO()), patch.object(
+                series, "http", return_value=(200, BODY)) as transport:
+            series.run_series(cases, "http://fixture", Mock(), Path(directory))
+            self.assertEqual(transport.call_count, 4)
+            self.assertEqual([call.args[1]["message"] for call in transport.call_args_list],
+                             [case["question"] for case in cases])
+
+    def test_cache_ram_experiment_requires_config_and_running_process_flags(self):
+        command = series.LLM_COMMAND + ["--cache-ram", "0"]
+        llm = {"Config": {"Cmd": command}, "State": {"Pid": 123},
+               "NetworkSettings": {"Ports": {"8080/tcp": None}}}
+        with patch.object(series.Path, "read_bytes", return_value=("llama-server\0" + "\0".join(command) + "\0").encode()):
+            series.check_llm_command(llm, True)
+        with patch.object(series.Path, "read_bytes", return_value=b"llama-server\0--cache-ram\08192\0"):
+            with self.assertRaisesRegex(series.Stop, "llm_process_flags_mismatch"):
+                series.check_llm_command(llm, True)
+        with self.assertRaisesRegex(series.Stop, "llm_flags_or_ports_mismatch"):
+            series.check_llm_command(llm, False)
+        llm["Config"]["Cmd"] = series.LLM_COMMAND
+        with self.assertRaisesRegex(series.Stop, "llm_flags_or_ports_mismatch"):
+            series.check_llm_command(llm, True)
+
     def test_failure_stage_and_type_are_saved_without_exception_content(self):
         from types import SimpleNamespace
 

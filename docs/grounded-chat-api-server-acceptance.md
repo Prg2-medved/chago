@@ -1757,3 +1757,552 @@ Chat/completion отсутствуют в этом режиме. Серия и �
 — 23 passed, 10 subtests passed; mypy для harness и теста — success, 2 source files.
 Новые тесты подтверждают stage/type без sentinel secret/HTTP traffic и точную
 категорию отсутствующей SQLite metadata table при сохранённом hash файла.
+
+### Серия 7.6 завершена по HTTP, memory stability не подтверждена, 2026-10-23
+
+Источник: переданная оператором сводка серверного отчёта
+`data/grounded-chat-api-memory.1iqwooas/`. Этого каталога в локальном workspace
+нет; исходные JSON/JSONL агентом не прочитаны. Ниже факты по сводке отделены от
+выводов по коду сборщика и от гипотез. Предыдущие записи о незапущенной серии
+описывают прежние стадии и сохраняются как история.
+
+**Наблюдения, сообщённые оператором:**
+
+| Показатель | Начало → конец / результат |
+| --- | --- |
+| HTTP | 20/20 HTTP 200, без transport failures |
+| LLM cgroup memory | 5,70 → 7,35 GiB (около +1,65 GiB) |
+| LLM anonymous memory | 3,33 → 6,05 GiB (около +2,72 GiB) |
+| App cgroup memory | 0,06 → 1,17 GiB (около +1,11 GiB) |
+| Host MemAvailable | 6,10 → 3,13 GiB (около −2,97 GiB) |
+| Host SwapFree | 0,83 → 0 GiB |
+| LLM memory.peak | 7,84 GiB |
+| Телеметрия | 967 samples, максимальный интервал около 1,06 s |
+| Identity / OOM / SQLite | PID и контейнеры стабильны, новых OOM нет, индекс не изменился |
+
+Это завершение транспорта ограниченной серии, не pass stability/safety/quality.
+Конечный MemAvailable выше stop threshold 2 GiB примерно на 1,13 GiB, но минимум
+всей серии из сводки неизвестен. Занятый swap сам по себе не доказывает активный
+thrashing; однако доступный swap исчерпан, RAM headroom уменьшился и устойчивость
+дальнейшей работы не установлена. `memory.peak` относится ко времени жизни cgroup,
+не обязательно к интервалу серии; sampled maximum нужно вычислить отдельно.
+Интервал 1,06 s не означает измерение всех промежуточных пиков; также нужно
+проверить длительность самих samples, boundaries и completeness sidecars.
+
+**Что можно установить из существующей телеметрии.** Локально прочитан
+`docs/grounded-chat-api-memory-series.py`: `cgroup_memory()` сохраняет полный
+`memory.stat`, `memory.current`, доступные `memory.swap.current/peak`, events,
+PID/start time, а также `VmRSS`, `VmHWM`, `RssAnon`, `RssFile`, `VmSwap` основного
+процесса. `memory.jsonl` содержит baseline, before_request, during_request,
+post_response и final всех работающих контейнеров Compose project; requests и
+numeric metrics позволяют сопоставить память с конкретными запросами.
+
+- На уровне cgroup можно различить resident anon, file и kernel charge, а swap
+  рассматривать отдельно от `memory.current`. Поле `file` включает tmpfs/shmem;
+  `shmem`, active/inactive и другие подкатегории нельзя повторно прибавлять к
+  родительским значениям. File cache не тождественен cache модели: KV/prompt/graph
+  buffers или allocator cache могут учитываться как anonymous memory.
+- Если указанные LLM anonymous значения взяты именно из `stat.anon`, то прирост
+  anon около 2,72 GiB сопровождается уменьшением остатка `current − anon`
+  примерно на 1,07 GiB. Это совместимо с вытеснением других категорий, но не
+  доказывает уменьшение именно file cache без `stat.file/kernel`. Если источник —
+  `RssAnon` основного PID, такое вычитание смешивает разные области учёта и
+  непригодно. Источник цифры нужно проверить по raw samples.
+- Для app итоговые 1,17 GiB пока не разложены. Его anon/file/kernel/swap и RSS
+  покажут, какая категория выросла, а все post-response samples — произошёл ли
+  основной скачок при первом retrieval либо рост продолжался на повторах.
+- Cgroup swap позволит отнести занятый swap к app/LLM/другим контейнерам project;
+  host SwapFree относится ко всему хосту. Разница host и project не идентифицирует
+  конкретные сторонние процессы. `VmSwap` основного PID не заменяет swap cgroup
+  и не включает swapped shmem. RSS из `/proc/PID/status` имеет погрешность учёта.
+- Дельты имеющихся `pgfault/pgmajfault`, `pgscan/pgsteal` полезны для локализации
+  fault/reclaim activity, но не доказывают swap-in/out или thrashing. Сборщик не
+  сохраняет host `pswpin/pswpout`, PSI и disk I/O; нет smaps по mappings, истории
+  allocations, разметки внутренних LLM buffers или длительного idle-наблюдения.
+
+Семантика счётчиков сверена с документацией ядра:
+[cgroup v2 memory](https://docs.kernel.org/admin-guide/cgroup-v2.html#memory) и
+[/proc status/smaps](https://docs.kernel.org/filesystems/proc.html).
+
+**Гипотезы, а не установленные причины:** lazy E5/библиотеки и рабочие buffers
+могут объяснять стартовый рост app; LLM может удерживать рабочие allocations,
+runtime caches либо allocator arenas. Возможны и нежелательное удержание объектов
+или утечка. По endpoints серии различить эти варианты нельзя. Рост resident anon
+также может включать возврат ранее swapped страниц; нужны совместные траектории
+anon и swap. Стабильный PID исключает restart как объяснение, но не устанавливает
+владельца allocations. Отсутствие OOM в этой серии не доказывает устранение
+прежнего global OOM.
+
+**Недостающие данные:** raw summary/identity, все 20 post-response measurements,
+пики/минимум host headroom и transient categories, распределение swap, поведение
+повторных cases относительно первого прохода, фактические counts/timings и их
+полнота. Без этого нельзя подтвердить plateau или оценить допустимую длительность
+эксплуатации. Даже разложение по категориям не установит конкретный C++/Python
+allocation site; профилирование или отдельные пассивные process measurements
+следует выбирать только после разбора уже записанного ряда.
+
+**Один рекомендуемый следующий шаг — read-only разбор существующего отчёта.**
+Не повторять 20 запросов. На Linux-сервере из корня проекта выполнить следующий
+inline reader и передать stdout. Он только читает сохранённые файлы, не импортирует
+harness, не обращается к Docker/HTTP/LLM и не создаёт диагностических файлов.
+Ответы, prompt, вопросы, environment и исходный текст Wiki не выводятся.
+
+```bash
+python3 -B - <<'PY'
+import json
+from pathlib import Path
+
+p = Path('data/grounded-chat-api-memory.1iqwooas')
+def read(name):
+    return json.loads((p / name).read_text())
+def emit(kind, value):
+    print(json.dumps({'kind': kind, 'value': value}, ensure_ascii=False))
+
+emit('summary', read('summary.json'))
+identity = read('identity-before.json')
+emit('container_roles', {role: identity[role] for role in ('app', 'llm')})
+emit('effective_chat_settings', identity.get('effective_chat_settings'))
+emit('index_matches_before', read('index-after.json') == identity['index'])
+rows = [json.loads(line) for line in (p / 'memory.jsonl').read_text().splitlines()]
+emit('coverage', {
+    'samples': len(rows), 'first_utc': rows[0]['utc'], 'last_utc': rows[-1]['utc'],
+    'max_sample_duration_s': max(r.get('sample_duration_s', 0) for r in rows),
+    'max_sample_gap_s': max(r.get('sample_gap_s') or 0 for r in rows),
+    'min_MemAvailable_kib': min(r['host_kib']['MemAvailable'] for r in rows),
+    'min_SwapFree_kib': min(r['host_kib']['SwapFree'] for r in rows),
+    'host_oom_delta': rows[-1]['host_oom_kill'] - rows[0]['host_oom_kill'],
+})
+# All 967 numeric samples, including peaks between response boundaries.
+# Keep full stat for kernel-version-specific counters; no source text is stored here.
+for row in rows:
+    emit('memory', row)
+for line in (p / 'requests.jsonl').read_text().splitlines():
+    row = json.loads(line)
+    emit('request', {k: row.get(k) for k in (
+        'request', 'case_id', 'event', 'started_at', 'ended_at', 'status', 'total_ms')})
+emit('numeric_metrics', read('metrics.json'))
+PY
+```
+
+`container_roles` использует сохранённый `inspect_summary`, без raw environment;
+он связывает container IDs с app/LLM и исходными process identities. `coverage`
+проверяет минимум headroom, интервалы и длительность samples. Все numeric samples
+нужны для разложения current/anon/file/kernel/swap, локализации пиков и сравнения
+всех post-response точек, включая повторы, без выборки только последних запросов.
+Requests/metrics дают существующие counts/timings; отсутствие полных counters
+нужно раскрыть, а не восполнять новыми completions. Это извлечение ранее не
+прочитанных результатов новой серии, не повтор принятой диагностики/recovery.
+
+До разбора **безопасная эксплуатация MVP не подтверждена; 7.6 остаётся `[ ]`,
+прогресс 27/31; 7.3 не начинается**. Если ряд покажет продолжающийся anon+swap
+рост, потребуется дальнейшая адресная диагностика; если стартовую ступень и
+удержание памяти — отдельно оценить bounded plateau, headroom и swap activity.
+Ни один вариант заранее не объявляется pass. Модель/image/runtime flags,
+Compose, лимиты, swap, production-код, frozen inputs и исторические результаты
+не менялись; дополнительные scripts не созданы. Runtime tests не повторялись:
+изменён только этот отчёт, проверены diff и соответствие reader схеме harness.
+
+### Review исходной телеметрии 7.6: anon растёт у LLM, app после загрузки почти стабилен, 2026-10-23
+
+Оператор добавил локально исходный каталог
+`data/grounded-chat-api-memory.1iqwooas/`. Предыдущий раздел фиксирует состояние
+до получения файлов; его запрос на извлечение отчёта теперь выполнен и повторять
+не требуется. Ниже — результаты непосредственного чтения всех 967 samples,
+requests, numeric metrics, identity/check sidecars и проверки JSON contract всех
+20 сохранённых responses. Семантический safety/quality review сюда не входит.
+
+**Полнота и identity.** Summary: `20_responses_completed_review_pending`.
+Начало/конец memory measurements: `2026-10-23T05:57:59.775Z` —
+`2026-10-23T06:13:36.142Z` (08:57:59–09:13:36 МСК, около 15 min 36 s).
+Имеются 1 baseline, 20 before_request, 925 during_request, 20 post_response и
+1 final; максимальный gap 1,059721 s, sample duration 0,136925 s. Все 20 запросов
+в согласованном порядке, включая повторы; HTTP 200 и сохранённый JSON contract
+подтверждены. Два контейнера во всех samples, без изменения PID/start/restarts/
+cgroup: app PID 3795439, LLM PID 3717920. Host oom_kill остаётся 3, cgroup OOM
+events — 0. Containers-after совпадает с исходной process/image identity.
+Index-after равен исходной index identity. Code/settings checks без mismatches;
+hash локального harness совпадает с записанным. LLM image digest/model hash,
+flags и effective context/reserve/timeout прежние: 8192/768/300.
+
+**Весь post-response ряд, GiB (округление до 4 знаков):**
+
+| Точка / case | LLM current | LLM anon | LLM file | LLM swap | App current | App anon |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Baseline | 5,7041 | 3,3278 | 2,3621 | 0 | 0,0626 | 0,0509 |
+| 1 q01 | 5,6631 | 3,3050 | 2,3438 | 0,0255 | 1,5047 | 0,8533 |
+| 2 q02 | 6,0682 | 3,7118 | 2,3412 | 0,0249 | 1,5047 | 0,8533 |
+| 3 q03 | 6,0685 | 3,7122 | 2,3412 | 0,0249 | 1,5056 | 0,8541 |
+| 4 q05 | 6,0705 | 3,7138 | 2,3412 | 0,0236 | 1,5077 | 0,8550 |
+| 5 q06 | 5,9983 | 3,6398 | 2,3426 | 0,1004 | 1,5096 | 0,8551 |
+| 6 q07 | 6,4715 | 4,1115 | 2,3426 | 0,1077 | 1,5104 | 0,8551 |
+| 7 q09 | 6,9367 | 4,5756 | 2,3426 | 0,1048 | 1,5110 | 0,8552 |
+| 8 q11 | 6,8969 | 4,5359 | 2,3426 | 0,2324 | 1,3564 | 0,8552 |
+| 9 q12 | 7,2596 | 4,8983 | 2,3426 | 0,2761 | 1,3520 | 0,8553 |
+| 10 q13 | 7,2600 | 4,8986 | 2,3426 | 0,2761 | 1,3528 | 0,8561 |
+| 11 q14 | 7,2607 | 4,8995 | 2,3426 | 0,2758 | 1,3539 | 0,8561 |
+| 12 q15 | 7,4527 | 5,2351 | 2,1984 | 0,3610 | 1,3123 | 0,8562 |
+| 13 q17 | 7,6008 | 5,6531 | 1,9277 | 0,3609 | 1,2431 | 0,8562 |
+| 14 q19 | 7,6009 | 5,6532 | 1,9277 | 0,3608 | 1,2436 | 0,8562 |
+| 15 q01 | 7,2854 | 5,6587 | 1,6067 | 0,3608 | 1,1703 | 0,8562 |
+| 16 q02 | 7,6914 | 6,0640 | 1,6067 | 0,3608 | 1,1703 | 0,8562 |
+| 17 q03 | 7,6915 | 6,0640 | 1,6067 | 0,3608 | 1,1703 | 0,8563 |
+| 18 q05 | 7,6916 | 6,0641 | 1,6067 | 0,3608 | 1,1703 | 0,8563 |
+| 19 q06 | 7,3520 | 5,9884 | 1,3429 | 0,3612 | 1,1700 | 0,8563 |
+| 20 q19 | 7,3505 | 6,0477 | 1,2819 | 0,3612 | 1,1700 | 0,8563 |
+| Final | 7,3505 | 6,0477 | 1,2819 | 0,3612 | 1,1700 | 0,8563 |
+
+Anon в этой таблице — именно `memory.stat.anon`, swap —
+`memory.swap.current`, file — `memory.stat.file`, всё в bytes / 2^30.
+
+**Установленное разложение роста:**
+
+- LLM: anon **+2,720 GiB**, file **−1,080 GiB**, kernel около +0,006 GiB;
+  swap вырос с 0 до **0,361 GiB**. Это рост anonymous footprint, частично
+  замаскированный reclaim file cache, а не рост только файлового cache. Anon и
+  swap выросли совместно примерно на 3,081 GiB: простое перемещение прежних
+  swapped страниц обратно в RAM не объясняет итог. У основного PID RssAnon
+  3488376 → 6340884 KiB, VmSwap 0 → 379648 KiB: process counters подтверждают
+  направление cgroup observations, без точного равенства разных областей учёта.
+- Заметные ступени LLM anon (>0,15 GiB между соседними samples) появились на
+  запросах **2, 6, 7, 9, 12, 13, 16**. На повторном q02 (запрос 16) скачок
+  около **0,405 GiB**, хотя prompt-eval count в обоих q02 одинаков — 2209.
+  От post-response 14 до 20 anon вырос ещё на **0,394 GiB**, file уменьшился
+  на **0,646 GiB**, поэтому снижение current на этом участке не означает
+  освобождения anonymous memory. Изменение длины prompt само по себе этот
+  ряд не объясняет; cache/runtime buffers/allocator retention остаются гипотезами.
+- App: за первые примерно 5 s первого запроса anon 0,051 → 0,853 GiB,
+  file 0,009 → 0,633 GiB; `pids.current` 17 → 56 (это tasks, включая threads,
+  а не доказательство 56 отдельных процессов). После первого ответа anon
+  увеличился только примерно на **3,1 MiB** до конца, а на участке 14 → 20 —
+  на 24 KiB. File к final снизился до 0,299 GiB, kernel составил 0,0145 GiB;
+  app swap **0 во всех samples**. В этой серии нет сопоставимого с LLM
+  продолжающегося накопления app anon. Стартовая ступень совместима с lazy
+  E5/библиотеками/рабочими buffers; `RetrievalService._search()` создаёт
+  `LocalEncoder` при первом search и удерживает hybrid view. Категория/время
+  роста подтверждены, точное распределение bytes по этим объектам не измерено.
+
+**Пики, давление и swap:** sampled LLM current maximum **7,6916 GiB**;
+`memory.peak` вырос с 5,7096 до **7,8434 GiB**, последнее увеличение зафиксировано
+на запросе 19. Теперь установлено, что новый lifetime record достигнут именно
+в интервале серии; время самого краткого пика и его anon/file split между
+samples неизвестны. App sampled maximum **1,5110 GiB**, peak counter
+**1,5349 GiB**, новый record уже на первом запросе.
+
+Минимальный host MemAvailable **3157132 KiB = 3,0109 GiB** на запросе 20:
+порог 2 GiB выдержан с минимальным запасом около 1,011 GiB. SwapFree уже после
+запроса 12 около 0,0002 GiB, точный ноль впервые записан на запросе 19;
+final — около 0,0001 GiB, практически весь swap занят. Из расходования host
+SwapFree за серию около 0,832 GiB только 0,361 GiB приходится на LLM, app — 0;
+остаток около **0,471 GiB вне двух контейнеров этого Compose project**.
+Это не идентификация стороннего владельца или причины его swapping.
+
+LLM pgmajfault +3802, pgscan +994950, pgsteal +388248; app соответственно
++958/+119240/+101461. Имеются faults и reclaim activity, но нет host swap I/O
+rates/PSI и наблюдения отзывчивости Wiki.js: постоянный thrashing этим рядом
+не доказан и не исключён. Host harness RSS 26260 → 31508 KiB, swap 0;
+он не объясняет GiB роста anonymous memory LLM.
+
+**Неполная telemetry:** `metrics.json` содержит ровно 20 троек LLM prompt eval /
+eval / total, каждая по timestamp попадает в соответствующий HTTP request.
+HTTP total 29,983–63,938 s. Нет app query/retrieval/wait/generation timings:
+`app_numeric_metrics_present=false`. Также нет полных `prompt done` counters;
+prompt-eval tokens не выдаются за полный `usage.prompt_tokens`, LLM total tokens
+не заменяют его. Наличие 60 numeric records не делает telemetry полной.
+Эти пробелы нельзя исправить задним числом расчётом app фаз из разности HTTP
+и LLM durations или повтором нагрузки без решения о следующем эксперименте.
+
+**Вывод:** категория роста LLM локализована до anonymous resident+swap,
+но конкретный allocator/runtime cache и его конечная граница не установлены.
+Не объявлять это утечкой. App показывает преимущественно стартовую загрузку
+с последующим почти постоянным anon в пределах этой серии. LLM plateau не
+подтверждён, даже на повторах; current снижается из-за потери file cache.
+**7.6 остаётся `[ ]`, 27/31, 7.3 не начинается; безопасная эксплуатация MVP
+не подтверждена.**
+
+**Один следующий шаг: извлечь имеющиеся LLM memory/cache diagnostics из Docker
+logs за startup и эту серию**, без нового HTTP traffic или смены logging flags.
+Существующий metrics filter сохранял только timings/counts и отбросил сообщения
+о runtime cache/buffers. Их bytes/limits и timestamps могут проверить конкретную
+гипотезу retained prompt state на ступенях, прежде чем выбирать профилирование.
+Наличие RAM prompt cache в upstream — основание проверить эту гипотезу, а не
+доказательство его работы/defaults в закреплённом image:
+[upstream server context](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/server-context.cpp).
+Не переносить defaults текущего master на установленный digest.
+
+На сервере из корня проекта (Bash), передать stdout:
+
+```bash
+set -o pipefail
+# Saved container ID: no broad inspect or environment dump.
+llm_id=b4c8c90fe38673ae8359c3c64106b7a280f2afa5ae3cebd81d4f23410e861a3e
+docker logs --timestamps --since 2026-10-22T08:23:37Z \
+  --until 2026-10-23T06:13:37Z "$llm_id" 2>&1 |
+python3 -B -c '
+import json, re, sys
+patterns = [
+    r"prompt cache is enabled, size limit: (?:[0-9.]+ MiB|no limit)",
+    r"prompt cache is disabled",
+    r"cache state: [0-9]+ prompts, [0-9.]+ MiB[^\r\n]*",
+    r"saving prompt with length [0-9]+, total state size = [0-9.]+ MiB",
+    r"context checkpoints enabled, max = [0-9]+(?:, min spacing = [0-9]+)?",
+    r"context checkpoints disabled",
+    r"(?:CPU|CPU_Mapped|CPU_REPACK) (?:model|KV|compute|output) buffer size\s*=\s*[0-9.]+ MiB",
+]
+count = 0
+for line in sys.stdin:
+    stamp = re.match(r"[0-9]{4}-[0-9T:.+-]+Z?", line)
+    for pattern in patterns:
+        match = re.search(pattern, line)
+        if match:
+            # Cache-state suffix: emit numeric limits only, never the raw suffix.
+            value = match.group(0)
+            if value.startswith("cache state:"):
+                value = re.match(r"cache state: [0-9]+ prompts, [0-9.]+ MiB", value).group(0)
+                limits = re.search(r"limits: (-?[0-9.]+) MiB", match.group(0))
+                if limits:
+                    value += "; limit_MiB=" + limits.group(1)
+            print(json.dumps({"utc": stamp.group(0) if stamp else None, "memory_diagnostic": value}))
+            count += 1
+            break
+print(json.dumps({"matched_records": count}))
+'
+```
+
+Команда читает только существующие logs и выводит разрешённые numeric/cache
+сообщения, без prompt/source text, addresses или environment. Это новый пробел
+внутренней memory diagnostics, не повтор kernel/health/recovery checks.
+При отсутствии retained logs/совпадений результат не доказывает выключенный
+cache: сохранить ошибку/нулевой count, не включать verbose logging, не менять
+flags и не запускать новые completions. Даже совпадение cache bytes со ступенями
+не закрывает gate автоматически: требуются граница footprint и достаточный
+headroom, а недостающие app timings/full counts остаются раскрыты.
+
+Локально выполнены read-only расчёты всех samples, identity/process/OOM/index
+сверка, JSON contract всех responses и timestamp correlation 20 троек metrics.
+Изменён только этот acceptance report; новые scripts, runtime changes и нагрузка
+отсутствуют. Production tests не повторялись для документального review.
+
+### Фильтр LLM memory logs вернул ноль совпадений, 2026-10-23
+
+Оператор передал `{"matched_records": 0}` для окна startup → конец серии.
+Вставленный transcript содержит повреждённый фрагмент Python вместо окончания
+цикла, который в таком виде дал бы SyntaxError; поэтому точный исполненный
+текст по transcript восстановить нельзя. Не считать это доказанной ошибкой
+исполнения: показан валидный JSON результата, а фактический stdin/exit status
+Docker и reader не переданы.
+
+Установлен только нулевой результат фильтра. Не установлено, были ли retained
+logs в этом окне, успешно ли прочитал их Docker, совпадает ли формат закреплённого
+build с шаблонами и публиковались ли cache diagnostics на текущем log level.
+Выводы о выключенном cache, отсутствии удержанных allocations или утечке
+из этого результата не следуют. Не менять flags/log level и не повторять нагрузку.
+
+Следующий минимальный read-only шаг — проверить покрытие logs и получить
+только revision label закреплённого image, чтобы отличить отсутствие данных от
+несовместимости фильтра и при необходимости читать исходники именно этого build.
+Команды Bash из корня проекта:
+
+```bash
+set -o pipefail
+llm_id=b4c8c90fe38673ae8359c3c64106b7a280f2afa5ae3cebd81d4f23410e861a3e
+docker logs --timestamps --since 2026-10-22T08:23:37Z --until 2026-10-23T06:13:37Z "$llm_id" 2>&1 |
+python3 -B -c 'import sys,json,re; a=list(sys.stdin); t=[s.split()[0] for s in a if re.match(r"^\d{4}-\d{2}-\d{2}T",s)]; print(json.dumps({"lines":len(a),"timestamped_lines":len(t),"first_utc":t[0] if t else None,"last_utc":t[-1] if t else None,"keywords":{k:sum(k in s.lower() for s in a) for k in ("cache","buffer","checkpoint","state size","mib","error")}}))'
+printf 'pipeline_status=%s\n' "${PIPESTATUS[*]}"
+docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' sha256:3646ddb3a55bdbec3eacba16f8cb435dc1dc47dee57549437b8a361982a37454
+```
+
+Передать весь stdout и возможную ошибку последнего inspect. Reader выводит
+только counts и timestamps, без исходных log lines, prompt, source text и
+environment. `pipeline_status` нужно сохранить сразу после pipeline: первое
+число — Docker, второе — Python; успешный reader не доказывает успешный Docker.
+`keywords` лишь проверяет наличие более широких групп строк, а не memory bytes
+или фактическую конфигурацию cache. Revision label может отсутствовать; это
+также не причина подменять pinned build текущим upstream master.
+
+Новая проверка закрывает конкретный пробел нулевого результата фильтра; принятые
+kernel/process/health/recovery проверки не повторяются. **27/31, 7.6 `[ ]`,
+7.3 не начата.** Изменён только отчёт; runtime tests не повторялись.
+
+### Анализ исходников закреплённой llama.cpp и ступеней памяти, 2026-10-23
+
+**Область:** локальное исследование причины роста в 7.6, без нового traffic,
+изменения runtime или повторения серверных проверок. Этот раздел дополняет
+историю выше; отрицательный verdict 7.6, прежний global OOM и пробелы telemetry
+сохраняются. Переданные владельцем дополнительные факты: после длительного
+простоя LLM память не освободила, MemAvailable около 2,99 GiB; в 234 строках
+существующих logs сообщений cache/checkpoints/buffers нет. Это операторские
+результаты, не новые проверки Codex.
+
+**Точная ревизия установлена локально.** Уже сохранённая таблица identity в
+[`local-cpu-runtime-benchmark.md`](local-cpu-runtime-benchmark.md) связывает
+закреплённый RepoDigest `sha256:f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283`
+с llama.cpp `0.5.0-dev`, build `11243`, commit `fc07d781e`.
+`identity-before.json` серии подтверждает тот же RepoDigest и image ID
+`sha256:3646ddb3a55bdbec3eacba16f8cb435dc1dc47dee57549437b8a361982a37454`.
+GitHub API разрешил commit в полный SHA
+`fc07d781e61f0d23764394e902b88d26a974e202`. Исследованы исходники именно этого
+commit, скачанные в игнорируемый `.tmp/llama-fc07d781e/`; master не использован.
+Новая revision label с сервера для выбора исходников не нужна: прежний запрос
+label выше этим локальным установлением соответствия исчерпан. Связь build с
+digest основана на сохранённом измерении версии, не на независимой повторной
+проверке содержимого OCI image.
+
+**Механизмы и defaults данной ревизии:**
+
+| Механизм | Что установлено по исходникам |
+| --- | --- |
+| Рабочий KV cache | По умолчанию K/V `f16`. `llama_kv_cache` выделяет и обнуляет buffers при создании; `seq_rm()` освобождает логические cells, но не возвращает весь KV buffer ОС после ответа. Это постоянная память context, а не отдельный новый KV buffer на каждый запрос. |
+| RAM prompt cache | `cache_ram_mib=8192`: `--cache-ram N`, `0` отключает, `-1` снимает byte limit. Cache сохраняет сериализованные KV states в `std::vector<uint8_t>`, отдельно от рабочего KV. Лимит 8 GiB относится к cache states, не к RSS всего процесса и не подбирается по MemAvailable. |
+| Сохранение/восстановление prompt | `get_slot()` при LRU-выборе либо потере большой части прежнего context вызывает `prompt_save()` → `prompt_load()` → `update()`. Это происходит до обработки нового prompt и не ограждено request `cache_prompt`. Сохранённый state включает прежний prompt и уже обработанную часть ответа. |
+| Request `cache_prompt=false` | App действительно передаёт false (`app/app/llm_client.py`). В `update_slots()` это выключает reuse общего prefix (`n_past`), но не отключает описанное выше сохранение в RAM prompt cache. Следовательно, stateless API и нулевой reused token count не означают отсутствия RAM cache. |
+| Eviction и повторы | `alloc()` проверяет общий prefix полной последовательности, пропускает уже содержащиеся states, удаляет поглощённые states и вытесняет старые при byte limit. `load()` выбирает более подходящий state по prefix/долям, после восстановления удаляет его из cache. Повтор вопроса не гарантирует отсутствия allocation: сохраняется также предыдущий ответ; при отличающейся генерации полные последовательности различны. |
+| Token limit cache | В `update()` исходный `limit_tokens=n_ctx` динамически увеличивается до `max(limit_tokens, limit_size / average_bytes_per_token)`. Поэтому context 8192 не ограничивает суммарное число cached tokens значением 8192. |
+| Idle slots | `--cache-idle-slots` включён по умолчанию; сохранение остальных idle slots запускается при новом task. При одном активном слоте это не главный путь накопления: существенно сохранение выбранного слота в `get_slot()`. `kv_unified=false` по умолчанию при явно заданном parallel=1. |
+| Context checkpoints | `--ctx-checkpoints=32`, `--checkpoint-min-step=8192`. Однако checkpoints создаются для моделей с ограниченным rollback/recurrent state либо SWA, а не для любой completion. Обычный Qwen3 full attention без SWA не даёт основания объяснять эти ступени 32 checkpoints. Копии checkpoints, если они есть, учитываются в размере RAM cache state. |
+| Compute/output buffers | Batch defaults 2048/512, flash attention auto. Context резервирует graph buffers, GGML allocator переиспользует их и расширяет при необходимости; CPU `work_data` увеличивается при большем `cplan.work_size` и удерживается до освобождения backend. Output buffer также переиспользуется. Completion не уничтожает context/backend. Возможны удерживаемые рабочие allocations, но нет основания приписывать им все измеренные ступени. |
+| Освобождение после completion/idle | `release()` переводит обычный slot в IDLE, вызывает reset, но очищает prompt немедленно только у child slots. У RAM cache нет idle TTL; eviction вызывается операциями с cache. `--sleep-idle-seconds` default `-1` (выгрузка при простое отключена). Поэтому длительный простой сам по себе не обязан освобождать KV, RAM prompt cache и рабочие buffers. Освобождение C++ объекта также не тождественно немедленному снижению RSS allocator. |
+
+Это **defaults и условия кода**, не новое измерение effective cache size или
+allocator live bytes работающего PID. Сохранённый argv не содержит overrides
+cache/batch/checkpoints/sleep; неизвестные environment overrides не объявляются
+проверенными. Настройки повторно у оператора не запрашиваются.
+
+Первоисточники с фиксированной ревизией:
+[defaults](https://github.com/ggml-org/llama.cpp/blob/fc07d781e61f0d23764394e902b88d26a974e202/common/common.h),
+[flags и environment aliases](https://github.com/ggml-org/llama.cpp/blob/fc07d781e61f0d23764394e902b88d26a974e202/common/arg.cpp),
+[get_slot / prompt_save / release / checkpoint conditions](https://github.com/ggml-org/llama.cpp/blob/fc07d781e61f0d23764394e902b88d26a974e202/tools/server/server-context.cpp),
+[RAM cache alloc/load/update](https://github.com/ggml-org/llama.cpp/blob/fc07d781e61f0d23764394e902b88d26a974e202/tools/server/server-task.cpp),
+[cache state accounting](https://github.com/ggml-org/llama.cpp/blob/fc07d781e61f0d23764394e902b88d26a974e202/tools/server/server-task.h),
+[KV allocation/serialization](https://github.com/ggml-org/llama.cpp/blob/fc07d781e61f0d23764394e902b88d26a974e202/src/llama-kv-cache.cpp),
+[graph/output reserve](https://github.com/ggml-org/llama.cpp/blob/fc07d781e61f0d23764394e902b88d26a974e202/src/llama-context.cpp),
+[GGML allocation](https://github.com/ggml-org/llama.cpp/blob/fc07d781e61f0d23764394e902b88d26a974e202/ggml/src/ggml-alloc.c),
+[CPU work buffer](https://github.com/ggml-org/llama.cpp/blob/fc07d781e61f0d23764394e902b88d26a974e202/ggml/src/ggml-cpu/ggml-cpu.cpp).
+
+**Новое количественное сопоставление существующих данных.** Для архитектуры
+Qwen3-4B-Instruct-2507: 36 layers, 8 KV heads, head_dim=128, без SWA
+([config владельца модели](https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507/blob/main/config.json)).
+При K/V f16 полезные KV bytes на обработанный token:
+`36 × 8 × 128 × (2 + 2) = 147456`, то есть 144 KiB/token.
+Полезный рабочий KV на 8192 tokens — 1,125 GiB; это не полный footprint модели.
+Архитектурные размеры здесь взяты из model config, не из нового чтения GGUF на
+сервере; defaults f16 и соответствие конвертированного GGUF остаются условиями
+расчёта. Малые serialization headers/metadata в формулу не включены.
+
+Взяты точные bytes post-response samples из `memory.jsonl` и counts из уже
+сопоставленных 20 троек `metrics.json`. Сравнивается **anon + swap**, чтобы
+swapping не скрывал allocation. Для обычной генерации последний sampled token
+ещё не прошёл decode: полезный KV предыдущего запроса оценивается как
+`(prompt_eval + eval - 1) × 147456`. Это расчёт KV по runtime counters, а не
+попытка восстановить отсутствующий полный `usage.prompt_tokens`.
+
+| Ступень при запросе | Предыдущий запрос | Предыдущие processed tokens (оценка) | Ожидаемый KV state, GiB | Фактический Δ(anon+swap), GiB |
+| --- | --- | ---: | ---: | ---: |
+| 2 q02 | 1 q01 | 2955 | 0,405807 | 0,406178 |
+| 6 q07 | 5 q06 | 3486 | 0,478729 | 0,478962 |
+| 7 q09 | 6 q07 | 3354 | 0,460602 | 0,461151 |
+| 9 q12 | 8 q11 | 2954 | 0,405670 | 0,406048 |
+| 12 q15 | 11 q14 | 3078 | 0,422699 | 0,420792 |
+| 13 q17 | 12 q15 | 3042 | 0,417755 | 0,417866 |
+| 16 q02 | 15 q01 | 2951 | 0,405258 | 0,405296 |
+| Сумма этих семи ступеней | | | **2,996521** | **2,996292** |
+
+На каждой из семи ступеней абсолютное расхождение менее 2 MiB. Их сумма —
+около 2,996 GiB против полного прироста anon+swap baseline → final около
+3,081 GiB. Это существенно более конкретное объяснение, чем зависимость от
+длины **текущего** prompt: основная прибавка соответствует KV state
+**предыдущего** completion, который server может сохранять при выборе слота.
+Таблица намеренно проверяет семь ранее выделенных крупных положительных
+ступеней; она не является точной симуляцией всех alloc/free всего процесса.
+
+В частности, рост на повторном q02 объясним сохранением предшествующего q01:
+ожидание 0,405258 GiB, измерено 0,405296 GiB. У двух q01 eval counts различаются
+(222 и 218), поэтому одинаковый вопрос не означает одинакового полного state.
+Отсутствие роста на каждом запросе совместимо с prefix deduplication/restore/
+eviction; точные LCP и содержимое списка states из агрегированных counters
+восстановить нельзя. Для последних переходов 18 → 19 и 19 → 20 наблюдаемые
+Δ(anon+swap) равны −0,075363 и +0,059364 GiB: одни лишь новые полные snapshots
+их не описывают, необходим учёт удаления/замещения allocations и прочей памяти.
+Эти точки не отброшены и не объявлены доказанным plateau.
+
+**Почему отсутствие cache logs не опровергает механизм.** В этом commit
+сообщения `prompt cache is enabled`, `saving prompt`, `cache state` и startup
+checkpoint diagnostics идут через `SRV_TRC`, то есть verbosity 4. Стандартный
+порог — INFO=3; детали не обязаны попадать в Docker logs. Это проверено по
+`server-context.cpp`, `server-task.cpp` и
+[log macros/default](https://github.com/ggml-org/llama.cpp/blob/fc07d781e61f0d23764394e902b88d26a974e202/common/log.h).
+KV/compute buffer startup messages имеют иной путь INFO; отсутствие таких строк
+не восстанавливает startup allocations и не доказывает выключенный cache.
+Повторять фильтрацию тех же 234 строк или включать trace не требуется.
+
+**Разделение степени подтверждения:**
+
+- Факты: pinned revision, независимый путь RAM prompt cache в её коде,
+  request `cache_prompt=false`, сохранённые counters и семь количественных
+  совпадений; anon вырос на 2,720 GiB, swap на 0,361 GiB. File reclaim объясняет
+  маскировку роста в current, но не появление anonymous bytes. Простой не вызвал
+  наблюдаемого освобождения; код не обещает idle eviction при defaults.
+- Сильная гипотеза: основной источник ступеней — сериализованные KV states в
+  RAM prompt cache при переключении запросов, несмотря на `cache_prompt=false`.
+  Удержание этого cache вместе с постоянными KV/compute buffers объясняет
+  сохранение footprint в idle. Связь с прежним global OOM правдоподобна, но
+  тот исторический PID не имеет такого же allocation trace.
+- Не установлены: фактический список/bytes/limit cache работающего PID,
+  его исходное заполнение до серии, точные alloc/free и LCP на каждом переходе,
+  вклад allocator arenas/фрагментации/других buffers, объяснение остатка и всех
+  последних переходов. Утечка не доказана. Наличие eviction в исходниках не
+  доказывает безопасную границу RSS; cache budget 8 GiB добавляется к остальной
+  памяти и способен быть чрезмерным для хоста ещё до достижения лимита.
+
+**Достаточность и серверные действия.** Локальных данных достаточно, чтобы
+выделить наиболее обоснованную возможную причину с сильным количественным
+подкреплением. Их недостаточно для строгой объектной атрибуции всего footprint
+или положительной приёмки стабильности. Для этой границы нужны внутренние
+live bytes/states cache и allocator, которых нет в сохранённой telemetry;
+обычный повтор `/proc/status`, memory samples или idle/log checks их не даст.
+Исследованные публичные read-only endpoints не предоставляют список RAM prompt
+cache states с размерами. Поэтому **на данном этапе новых команд оператору
+не требуется**: не запрашивать повторно identity/settings/samples/idle/logs и
+не выдавать неинформативный read-only snapshot за проверку владельцев allocations.
+Новых серверных проверок Codex не выполнял.
+
+**Один следующий минимальный шаг:** отдельно согласовать способ прямой проверки
+вклада RAM prompt cache (измерение его внутренних live bytes либо отдельный
+контролируемый эксперимент). Это будущая работа, а не разрешение менять flags,
+включать trace/профилирование, подключать debugger или отправлять новые
+completions в текущей задаче. Сейчас сохраняются runtime и остановка перед 7.3.
+
+Изменён только этот acceptance report, с сохранением существовавших локальных
+правок. Проверены исходники и расчёты по существующим JSON, production tests
+не запускались для документального анализа. **OpenSpec: 27/31; задача 7.6 `[ ]`,
+отрицательный verdict сохранён; к 7.3 не переходить.**
+
+### Подготовлен согласованный эксперимент `--cache-ram 0`, 2026-10-23
+
+Новое решение владельца разрешает ограниченный диагностический эксперимент;
+это отдельное разрешение после анализа выше, не постоянное изменение MVP.
+В `compose.yaml` добавлены только `--cache-ram`, `0` у llm. Model/image/context
+8192/threads/FastAPI и ресурсы не менялись. Harness расширен opt-in режимом
+`--cache-ram-zero-experiment`: q01 → q02 → q01 → q02, strict config/process argv,
+прежние memory/OOM/index/stop checks, 10 s post-series idle telemetry. Полная
+20-request серия не запускалась и не предписывается этим экспериментом.
+
+Точные последовательные Linux-команды preconditions/backup/recreate только LLM/
+readiness/effective flags/baseline/четырёх запросов/review/rollback находятся в
+[операторском плане](grounded-chat-api-cache-ram-zero-experiment.md).
+Там же критерии поддержки/недостаточности гипотезы и ограничение сравнения с
+историей: restart baseline сам по себе не доказывает роль cache. Сравниваются
+все anon+swap steps, включая оба перехода q01 → q02, отдельно current/file,
+headroom/peaks и неизменность индекса. После опыта обязателен возврат исходной
+конфигурации, если постоянный флаг отдельно не утверждён.
+
+Локально: профильный pytest — **25 passed, 10 subtests passed**; mypy harness/tests —
+без ошибок. Первый sandbox pytest не имел прав записи во временный каталог;
+повтор вне sandbox прошёл. `openspec validate grounded-chat-api --strict` и
+`openspec validate --all --strict` — pass (11 items в общей проверке).
+YAML сравнен с HEAD: единственная разница — добавление двух llm arguments;
+Python snippets операторского плана разобраны через AST, Bash-блоки прошли
+`bash -n` без выполнения (Git Bash запускался вне sandbox после отказа доступа).
+`git diff --check` — pass; случайный tracked bytecode от tests восстановлен.
+Docker CLI локально отсутствует: resolved Compose/readiness/live argv и memory
+не проверены, для них подготовлены операторские команды. Серверные операции
+Codex не выполнял. **27/31, 7.6 `[ ]`, 7.3 не начата; прежний fail не отменён.**

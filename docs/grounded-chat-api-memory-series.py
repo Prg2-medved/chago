@@ -27,6 +27,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 
 
 ORDER = "q01 q02 q03 q05 q06 q07 q09 q11 q12 q13 q14 q15 q17 q19 q01 q02 q03 q05 q06 q19".split()
+CACHE_RAM_ZERO_ORDER = "q01 q02 q01 q02".split()
 THRESHOLD = 2097152  # KiB, host MemAvailable; conservative, not an OOM guarantee.
 DIGEST = "ghcr.io/ggml-org/llama.cpp@sha256:f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283"
 MODEL_HASH = "2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e"
@@ -126,17 +127,27 @@ def host_memory() -> dict[str, int]:
     return {key: values[key] for key in ("MemAvailable", "SwapTotal", "SwapFree")}
 
 
-def select_cases(path: Path) -> list[dict[str, Any]]:
+def select_cases(path: Path, order: list[str] = ORDER) -> list[dict[str, Any]]:
     corpus = json.loads(path.read_text(encoding="utf-8"))
-    selected = {case["id"]: case for case in corpus["questions"] if case["id"] in ORDER}
-    if set(selected) != set(ORDER) or any(
+    selected = {case["id"]: case for case in corpus["questions"] if case["id"] in order}
+    if set(selected) != set(order) or any(
         case["split"] != "tuning" or case["source_set"] != "live" for case in selected.values()
     ):
         raise Stop("case_metadata_mismatch")
     # The approved order includes q09 (tagged follow_up). Send only its original
     # question as one stateless request; never add previous_turns/history or claim
     # follow-up acceptance from this resource measurement.
-    return [selected[case_id] for case_id in ORDER]
+    return [selected[case_id] for case_id in order]
+
+
+def check_llm_command(llm: dict[str, Any], cache_ram_zero: bool) -> None:
+    expected = LLM_COMMAND + (["--cache-ram", "0"] if cache_ram_zero else [])
+    if llm["Config"]["Cmd"] != expected or any(llm["NetworkSettings"]["Ports"].values()):
+        raise Stop("llm_flags_or_ports_mismatch")
+    if cache_ram_zero:
+        actual = Path(f"/proc/{llm['State']['Pid']}/cmdline").read_bytes().decode().rstrip("\0").split("\0")
+        if actual[-len(expected):] != expected:
+            raise Stop("llm_process_flags_mismatch")
 
 
 def bound_path(container: dict[str, Any], target: str) -> Path:
@@ -314,7 +325,7 @@ def run_series(cases: list[dict[str, Any]], base_url: str, monitor: Monitor, rep
         monitor.sample("before_request", number)
         row = {"request": number, "case_id": case["id"], "started_at": utc()}
         append(report / "requests.jsonl", {**row, "event": "start"})
-        print(f"{number}/20 {case['id']} started", flush=True)
+        print(f"{number}/{len(cases)} {case['id']} started", flush=True)
         done: queue.Queue[tuple[int, Any] | None] = queue.Queue()
 
         def send() -> None:
@@ -349,13 +360,15 @@ def run_series(cases: list[dict[str, Any]], base_url: str, monitor: Monitor, rep
             raise Stop("http_" + str(response[0]))
         if not valid_response(response[1]):
             raise Stop("invalid_api_contract")
-        print(f"{number}/20 {case['id']} HTTP 200, {row['total_ms'] / 1000:.1f}s", flush=True)
+        print(f"{number}/{len(cases)} {case['id']} HTTP 200, {row['total_ms'] / 1000:.1f}s", flush=True)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--app-url", required=True, help="Existing host-published app origin")
     parser.add_argument("--preflight-only", action="store_true", help="Check identity/readiness/baseline without chat requests")
+    parser.add_argument("--cache-ram-zero-experiment", action="store_true",
+                        help="Require --cache-ram 0; only q01/q02/q01/q02, then 10 seconds of idle telemetry; never gate 7.6 pass")
     args = parser.parse_args()
     parsed = urlsplit(args.app_url)
     if (parsed.scheme != "http" or not parsed.hostname or parsed.username or parsed.password
@@ -368,14 +381,16 @@ def main() -> int:
     print(f"Reports: {report}", flush=True)
     since = utc()
     llm = app = index_path = before_index = None
-    verdict = {"state": "incomplete", "manual_review_required": True, "order": ORDER,
+    order = CACHE_RAM_ZERO_ORDER if args.cache_ram_zero_experiment else ORDER
+    verdict = {"state": "incomplete", "manual_review_required": True, "order": order,
+               "cache_ram_zero_experiment": args.cache_ram_zero_experiment,
                "started_at": since, "stop_threshold_kib": THRESHOLD, "sample_interval_s": 1}
     stage = "host_memory"
     try:
         if host_memory()["MemAvailable"] < THRESHOLD:
             raise Stop("memory_pressure_before_start")
         stage = "case_selection"
-        cases = select_cases(Path("eval/questions.yaml"))
+        cases = select_cases(Path("eval/questions.yaml"), order)
         stage = "container_inspect"
         app_id = command("docker", "compose", "ps", "-q", "app").strip()
         llm_id = command("docker", "compose", "ps", "-q", "llm").strip()
@@ -393,8 +408,7 @@ def main() -> int:
         if DIGEST not in digests or sha(bound_path(llm, "/models/model.gguf")) != MODEL_HASH:
             raise Stop("llm_identity_mismatch")
         stage = "llm_flags_and_ports"
-        if llm["Config"]["Cmd"] != LLM_COMMAND or any(llm["NetworkSettings"]["Ports"].values()):
-            raise Stop("llm_flags_or_ports_mismatch")
+        check_llm_command(llm, args.cache_ram_zero_experiment)
         stage = "index_path"
         index_path = bound_path(app, env["INDEX_PATH"])
         stage = "index_metadata"
@@ -430,9 +444,15 @@ def main() -> int:
         else:
             stage = "memory_series"
             run_series(cases, args.app_url.rstrip("/"), monitor, report)
+            if args.cache_ram_zero_experiment:
+                stage = "post_series_idle"
+                for _ in range(10):
+                    time.sleep(1)
+                    monitor.sample("post_series_idle")
             stage = "final_telemetry"
             monitor.sample("final")
-            verdict["state"] = "20_responses_completed_review_pending"
+            verdict["state"] = ("4_responses_experiment_review_pending" if args.cache_ram_zero_experiment
+                                else "20_responses_completed_review_pending")
     except (Stop, OSError, ValueError, KeyError, sqlite3.Error) as error:
         reason = str(error) if isinstance(error, Stop) else stage + ":" + type(error).__name__
         verdict["reason"] = reason
@@ -476,7 +496,8 @@ def main() -> int:
         verdict["ended_at"] = utc()
         write_json(report / "summary.json", verdict)
         print(f"Reports: {report}\nState: {verdict['state']}; gate 7.6 remains open pending review.", flush=True)
-    return 0 if verdict["state"] in {"20_responses_completed_review_pending", "preflight_passed_no_chat"} else 1
+    return 0 if verdict["state"] in {"20_responses_completed_review_pending", "preflight_passed_no_chat",
+                                      "4_responses_experiment_review_pending"} else 1
 
 
 if __name__ == "__main__":

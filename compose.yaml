@@ -68,6 +68,9 @@ services:
       - --device
       - none
       - --no-webui
+      # Temporary owner-approved diagnostic; roll back after the bounded run.
+      - --cache-ram
+      - "0"
 
 networks:
   default:
