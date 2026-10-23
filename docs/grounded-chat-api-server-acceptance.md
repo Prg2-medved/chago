@@ -1698,3 +1698,62 @@ python3 docs/grounded-chat-api-memory-series.py \
 deployed modules и успешный preflight-only с единственным HTTP GET health
 и нулём вызовов серии. Production код не менялся; серверная сборка/выкладка
 локально не выполнялась.
+
+### App пересобран оператором, preflight-only ещё не пройден, 2026-10-23
+
+Оператор выполнил обычное обновление `docker compose up -d app --build`.
+Build завершён успешно за 82.1 s, image
+`sha256:bdcce0cd70a5bd134dbef2c18060db2705ca3834aaaf978059205ffcb697b08d`,
+tag `chago-app`; контейнер `chago-app-1` Started. Использован базовый Python
+image digest `a0f57064cbdcd6285fa45f51237ab0b35ea8ebaed06a1f5973e89e19dfb86704`,
+выполнен штатный pip install из requirements (72.6 s). Этот build не является
+проверкой offline runtime или подтверждением отсутствия downloads при сборке.
+В переданном выводе нет пересоздания LLM либо изменения её model/flags.
+
+Последующий `--preflight-only` записал отчёт
+`/home/prg2/chago-llm/chago/data/grounded-chat-api-memory.6m403os1`
+и остановился с `preflight_or_telemetry_error`, state incomplete.
+Этот режим не отправляет chat/completion. Причина скрыта общей категорией
+исключения и пока не установлена: сначала нужны список сохранённых sidecars
+и summary этого отчёта, чтобы определить последнюю завершённую стадию без
+новой сборки, генерации либо предположений о неисправности индекса/cgroup.
+Успешный build не засчитывается как успешный preflight или memory series.
+**Прогресс 27/31, 7.6 остаётся открытой.**
+
+Незавершённый вспомогательный offline-build script и его тесты удалены:
+оператор выбрал самостоятельное штатное обновление Compose. Дополнительных
+build helpers не требуется. Production код, memory harness и tasks в этой
+сессии не менялись; runtime tests не повторялись.
+
+### Уточнение стадии preflight по sidecars, 2026-10-23
+
+Оператор передал список файлов `grounded-chat-api-memory.6m403os1`:
+`code-check.json`, `settings-check.json`, `containers-after.json`, `metrics.json`,
+`summary.json`. В summary: начало `2026-10-23T05:16:05.655Z`, завершение
+`2026-10-23T05:16:07.679Z`, reason `preflight_or_telemetry_error`, state incomplete;
+app/LLM numeric metrics отсутствуют. `identity-before.json` и `memory.jsonl`
+не созданы.
+
+По управляющему потоку проверки deployed code и effective settings завершились:
+иначе reason был бы отдельной категорией Stop. Необработанное предметной категорией
+исключение произошло после settings-check и до сохранения identity-before:
+LLM image/model/flags, index pathname/SQLite metadata, frozen manifest либо запись
+identity report. Это ещё не cgroup baseline или measurement failure под нагрузкой.
+Конкретный механизм/неисправность индекса по этим данным не установлен.
+
+Исправлена недостаточная диагностика memory harness: каждая стадия имеет имя,
+summary сохраняет `failure_stage` и `exception_type`; для не-Stop ошибок reason
+содержит только stage/type, без raw exception message, credentials или source data.
+SQLite проверка отдельно сообщает отсутствующие обязательные таблицы по известному
+списку, не изменяя файл. Это не разрешает пропускать metadata validation или
+создавать отсутствующие таблицы. Production app/Compose/runtime не менялись.
+
+Следующий шаг — перенести только исправленный `grounded-chat-api-memory-series.py`
+и выполнить `--preflight-only`, передать новый вывод; build/restart не нужны.
+Chat/completion отсутствуют в этом режиме. Серия и зависимые gates не начаты,
+**27/31; 7.6 открыта**.
+
+Из `app/`: `../.venv/Scripts/python.exe -B -m pytest tests/test_chat_memory_series.py -q`
+— 23 passed, 10 subtests passed; mypy для harness и теста — success, 2 source files.
+Новые тесты подтверждают stage/type без sentinel secret/HTTP traffic и точную
+категорию отсутствующей SQLite metadata table при сохранённом hash файла.

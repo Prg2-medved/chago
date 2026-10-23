@@ -30,6 +30,45 @@ def observation():
 
 
 class MemorySeriesTests(unittest.TestCase):
+    def test_failure_stage_and_type_are_saved_without_exception_content(self):
+        from types import SimpleNamespace
+
+        app = {"Id": "app", "Config": {"Env": []}}
+        llm = {"Id": "llm"}
+        output = io.StringIO()
+        with tempfile.TemporaryDirectory() as directory, redirect_stdout(output):
+            with patch.object(series.sys, "argv", ["series", "--app-url", "http://fixture", "--preflight-only"]), \
+                    patch.object(series.sys, "platform", "linux"), patch.object(series.os, "umask"), \
+                    patch.object(series.tempfile, "mkdtemp", return_value=directory), \
+                    patch.object(series, "host_memory", return_value={"MemAvailable": series.THRESHOLD}), \
+                    patch.object(series, "select_cases", return_value=[]), \
+                    patch.object(series, "command", return_value="fixture"), \
+                    patch.object(series, "docker_json", return_value=[app, llm]), \
+                    patch.object(series, "check_code_identity", return_value={}), \
+                    patch.object(series, "check_chat_identity", side_effect=KeyError("SENTINEL_SECRET")), \
+                    patch.object(series, "inspect_summary", return_value={}), \
+                    patch.object(series.subprocess, "run", return_value=SimpleNamespace(stdout="", stderr="")), \
+                    patch.object(series, "http") as transport, patch.object(series, "run_series") as run:
+                self.assertEqual(series.main(), 1)
+                transport.assert_not_called()
+                run.assert_not_called()
+            summary = json.loads((Path(directory) / "summary.json").read_text())
+            self.assertEqual(summary["reason"], "chat_settings:KeyError")
+            self.assertEqual(summary["failure_stage"], "chat_settings")
+            self.assertEqual(summary["exception_type"], "KeyError")
+            self.assertNotIn("SENTINEL_SECRET", json.dumps(summary) + output.getvalue())
+
+    def test_missing_index_table_has_a_specific_read_only_diagnostic(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "index.sqlite3"
+            with closing(sqlite3.connect(path)) as connection:
+                connection.execute("CREATE TABLE snapshot_metadata (singleton)")
+                connection.execute("CREATE TABLE documents (page_id)")
+            before = series.sha(path)
+            with self.assertRaisesRegex(series.Stop, "index_missing_tables:reindex_metadata"):
+                series.index_identity(path)
+            self.assertEqual(series.sha(path), before)
+
     def test_missing_deployed_code_is_diagnosed_without_loading_config(self):
         expected = {name: "fixture-hash" for name in series.CODE}
         remote = {**expected, "config.py": "old-hash", "chat.py": None}

@@ -156,6 +156,10 @@ def index_identity(path: Path) -> dict[str, Any]:
     if not path.is_file() or any(Path(str(path) + suffix).exists() for suffix in ("-wal", "-journal")):
         raise Stop("index_missing_or_has_journal")
     with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)) as connection:
+        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        missing = sorted({"snapshot_metadata", "reindex_metadata", "documents"} - tables)
+        if missing:
+            raise Stop("index_missing_tables:" + ",".join(missing))
         metadata = connection.execute("SELECT * FROM snapshot_metadata").fetchall()
         reindex = connection.execute("SELECT * FROM reindex_metadata").fetchall()
         documents = connection.execute("SELECT page_id, locale, path, content_sha256 FROM documents ORDER BY page_id").fetchall()
@@ -366,32 +370,43 @@ def main() -> int:
     llm = app = index_path = before_index = None
     verdict = {"state": "incomplete", "manual_review_required": True, "order": ORDER,
                "started_at": since, "stop_threshold_kib": THRESHOLD, "sample_interval_s": 1}
+    stage = "host_memory"
     try:
         if host_memory()["MemAvailable"] < THRESHOLD:
             raise Stop("memory_pressure_before_start")
+        stage = "case_selection"
         cases = select_cases(Path("eval/questions.yaml"))
+        stage = "container_inspect"
         app_id = command("docker", "compose", "ps", "-q", "app").strip()
         llm_id = command("docker", "compose", "ps", "-q", "llm").strip()
         if not app_id or not llm_id:
             raise Stop("running_app_and_llm_required")
         app, llm = docker_json("inspect", app_id, llm_id)
+        stage = "deployed_code"
         code_hashes = check_code_identity(app_id, report)
+        stage = "chat_settings"
         env = dict(item.split("=", 1) for item in app["Config"]["Env"])
         settings = {key: value for key, value in env.items() if key in SETTING_NAMES}
         effective_chat_settings = check_chat_identity(app_id, env, report)
+        stage = "llm_image_and_model"
         digests = docker_json("image", "inspect", llm["Image"])[0]["RepoDigests"]
         if DIGEST not in digests or sha(bound_path(llm, "/models/model.gguf")) != MODEL_HASH:
             raise Stop("llm_identity_mismatch")
+        stage = "llm_flags_and_ports"
         if llm["Config"]["Cmd"] != LLM_COMMAND or any(llm["NetworkSettings"]["Ports"].values()):
             raise Stop("llm_flags_or_ports_mismatch")
+        stage = "index_path"
         index_path = bound_path(app, env["INDEX_PATH"])
+        stage = "index_metadata"
         before_index = index_identity(index_path)
+        stage = "frozen_manifest"
         manifest = json.loads(Path("eval/manifest.json").read_text(encoding="utf-8"))["live"]
         expected_documents = sorted((doc["page_id"], doc["locale"], doc["path"], doc["content_sha256"])
                                     for doc in manifest["documents"])
         if (before_index["documents"] != expected_documents
                 or before_index["snapshot_metadata"][0][1] != manifest["source"]):
             raise Stop("app_index_is_not_frozen_live_corpus")
+        stage = "identity_report"
         write_json(report / "identity-before.json", {
             "app": inspect_summary(app), "llm": inspect_summary(llm), "settings": settings,
             "effective_chat_settings": effective_chat_settings,
@@ -399,23 +414,30 @@ def main() -> int:
             "index": before_index, "questions_sha256": sha(Path("eval/questions.yaml")),
             "manifest_sha256": sha(Path("eval/manifest.json")), "harness_sha256": sha(Path(__file__)),
             "required_operator_preconditions": "No uncertain generation, other traffic or index replacement since app start"})
+        stage = "app_readiness"
         if http(args.app_url.rstrip("/") + "/health", timeout=5) != (200, {"status": "ok"}):
             raise Stop("app_not_ready")
+        stage = "llm_readiness"
         readiness = command("docker", "exec", app_id, "python", "-c",
                             "import urllib.request; print(urllib.request.build_opener(urllib.request.ProxyHandler({})).open('http://llm:8080/health',timeout=5).read().decode())")
         if json.loads(readiness) != {"status": "ok"}:
             raise Stop("llm_not_ready")
+        stage = "baseline_telemetry"
         monitor = Monitor(app, llm, report)
         monitor.sample("baseline")
         if args.preflight_only:
             verdict["state"] = "preflight_passed_no_chat"
         else:
+            stage = "memory_series"
             run_series(cases, args.app_url.rstrip("/"), monitor, report)
+            stage = "final_telemetry"
             monitor.sample("final")
             verdict["state"] = "20_responses_completed_review_pending"
     except (Stop, OSError, ValueError, KeyError, sqlite3.Error) as error:
-        reason = str(error) if isinstance(error, Stop) else "preflight_or_telemetry_error"
+        reason = str(error) if isinstance(error, Stop) else stage + ":" + type(error).__name__
         verdict["reason"] = reason
+        verdict["failure_stage"] = stage
+        verdict["exception_type"] = type(error).__name__
         print("STOP: " + reason + ". No retry or next completion.", flush=True)
         if llm and reason in {"memory_pressure", "new_host_oom", "new_container_oom"}:
             try:
