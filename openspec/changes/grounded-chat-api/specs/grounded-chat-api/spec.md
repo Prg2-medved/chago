@@ -148,9 +148,23 @@ Wiki text SHALL передаваться как явно обозначенны�
 ### Requirement: Technical errors and app-only compatibility
 Отсутствующий/невалидный индекс, несовместимые или недоступные embedding assets, ошибки retrieval и недоступная LLM SHALL давать безопасную HTTP 503; timeout LLM SHALL давать HTTP 504; некорректный transport response LLM SHALL давать HTTP 502. Некорректный формат содержимого генерации SHALL обрабатываться как неподтверждённый ответ HTTP 200 с исходными fragments. Технические ошибки SHALL NOT представляться отказом по отсутствию сведений в Wiki.js. App-only startup и `GET /health` SHALL сохранять HTTP 200 и `{"status":"ok"}` без LLM/model readiness checks. Система SHALL логировать query, retrieval, LLM wait и generation durations и безопасные категории ошибок, без credentials/DSN, raw exceptions, полного prompt/документов, session_id или message.
 
+Штатный запуск SHALL обеспечивать INFO query/retrieval/wait/generation records
+logger `app.chat`, без ручного включения его уровня тестом или оператором.
+Исправление этого выявленного deployment logging defect SHALL оставаться
+обязательной задачей MVP 7.7 по SPEC §24. Локальная проверка SHALL использовать
+штатную logging configuration; фактические безопасные records SHALL быть
+подтверждены на предусмотренных запросах следующей Compose приёмки 7.3.
+Отсутствие этих records в принятой 7.6 SHALL раскрываться отдельно и SHALL NOT
+требовать повтора 20 запросов только ради логов. Unit checks SHALL NOT заменять
+live logging evidence 7.3; 7.7 SHALL NOT закрываться до обоих видов проверки.
+
 #### Scenario: Missing index or model
 - **WHEN** app запущен без готового индекса либо embedding assets
 - **THEN** health работает по прежнему контракту, chat возвращает техническую HTTP 503 без создания индекса или загрузок
+
+#### Scenario: App timings in the normal startup configuration
+- **WHEN** приложение запускается штатно и выполняет предусмотренные проверки 7.3
+- **THEN** Docker logs содержат безопасные query/retrieval/wait/generation timings без дополнительного включения INFO; для cancellation допускается поздняя отдельная generation record
 
 #### Scenario: LLM failures
 - **WHEN** LLM недоступна, превышает timeout либо возвращает сломанный HTTP JSON/envelope
@@ -163,7 +177,17 @@ Wiki text SHALL передаваться как явно обозначенны�
 ### Requirement: Observed LLM memory stability
 MVP приёмка SHALL сначала свести уже собранные process/container/kernel/cgroup observations global OOM, readiness/baseline и recovery из acceptance report (разделы/факты перечислены в design §9), без повторения серверной диагностики кроме конкретно указанного пробела. Неподтверждённый механизм роста памяти SHALL NOT объявляться leak либо cache growth. Затем оператор SHALL выполнить ровно 20 последовательных end-to-end tuning/live HTTP chat запросов в порядке `q01, q02, q03, q05, q06, q07, q09, q11, q12, q13, q14, q15, q17, q19, q01, q02, q03, q05, q06, q19`, с исходными frozen questions, без перестановок, замены или добавочных completions/generation-only. Серия SHALL сохранять прежний runtime, samples раз в секунду, request boundaries, observed peaks и post-response measurements, host MemAvailable/swap и OOM/process observations. Область peak counters и отличие sampled maxima от абсолютного пика SHALL раскрываться. Смена модели/image/flags, sampling/window/reserve/timeout, retrieval ranking и frozen inputs SHALL NOT использоваться как неявное исправление. Holdout SHALL NOT входить в нагрузку или использоваться для настройки.
 
-Новый OOM, завершение LLM, host `/proc/meminfo:MemAvailable` ниже 2 GiB (2097152 KiB), transport failure или generation_uncertain SHALL останавливать подачу запросов и оставлять gate невыполненным; при исходном MemAvailable ниже порога серия SHALL NOT начинаться. Порог SHALL описываться как консервативный, без гарантии предотвращения OOM. При memory pressure оператор SHALL подтвердить остановку LLM; retry до ручного recovery SHALL отсутствовать. Pass SHALL требовать завершения всех 20 запросов по API contract без непредусмотренных transport failures/OOM, достаточного host headroom и полной telemetry. Тренд SHALL оцениваться по всей серии: baseline, всем post-response samples, peaks, MemAvailable/swap и повторным одинаковым cases. Продолжающийся необъяснённый рост (включая ступенчатый/немонотонный) или недостаточный headroom SHALL оставлять gate открытым; отсутствие монотонного роста последних пяти samples SHALL NOT быть достаточным основанием pass. Safe validation fallback SHALL учитываться отдельно, без выдачи его за safety/quality pass. Ограниченная серия SHALL NOT объявляться доказательством отсутствия leak на любой нагрузке.
+Новый OOM, завершение LLM, host `/proc/meminfo:MemAvailable` ниже 2 GiB (2097152 KiB), transport failure или generation_uncertain SHALL останавливать подачу запросов и оставлять gate невыполненным; при исходном MemAvailable ниже порога серия SHALL NOT начинаться. Порог SHALL описываться как консервативный, без гарантии предотвращения OOM. При memory pressure оператор SHALL подтвердить остановку LLM; retry до ручного recovery SHALL отсутствовать. Pass SHALL требовать завершения всех 20 запросов по API contract без непредусмотренных transport failures/OOM, достаточного host headroom и полной telemetry согласованного протокола. Тренд SHALL оцениваться по всей серии: baseline, всем post-response samples, peaks, MemAvailable/swap и повторным одинаковым cases. Абсолютное отсутствие любого роста и доказательство бесконечного plateau SHALL NOT требоваться. Величина и динамика residual anon+swap SHALL оцениваться совместно с transient peaks, повторами и host headroom. Небольшой остаточный рост MAY быть принят явным решением владельца только для конкретного измеренного интервала с обоснованием и ограничениями; такой допуск SHALL NOT становиться универсальным порогом. Неразобранный тренд без такого решения, рост с неприемлемым ресурсным риском или недостаточный headroom SHALL оставлять gate открытым; отсутствие монотонного роста последних пяти samples SHALL NOT быть достаточным основанием pass. Safe validation fallback SHALL учитываться отдельно, без выдачи его за safety/quality pass. Положительный результат SHALL ограничиваться измеренными sequence/duration/runtime identity/исходным состоянием и SHALL NOT объявляться доказательством отсутствия leak, устранения исторического OOM или устойчивости на иной/неограниченной нагрузке.
+
+Сохранённые HTTP durations и LLM prompt-eval/eval/total counts/timings SHALL
+считаться достаточными counts/timings для memory gate 7.6. Полные usage.prompt_tokens,
+cache counters, PSI и allocation traces SHALL оставаться диагностическими
+измерениями, не отдельными gates 7.6; prompt-eval SHALL NOT выдаваться за полный
+prompt count. Это SHALL NOT ослаблять отдельное обязательное логирование SPEC §24.
+
+#### Scenario: Accepted residual growth in a measured series
+- **WHEN** владелец 2026-10-23 принимает существующую серию `data/grounded-chat-api-memory.oytj57gl/` с утверждённым `--cache-ram 0`, 20/20 HTTP 200, полной memory telemetry, без новых OOM, min MemAvailable 5372156 KiB и residual LLM anon+swap +4,684 MiB
+- **THEN** 7.6 принята только для интервала 2026-10-23T12:53:18.538Z–13:08:51.271Z, измеренного runtime/исходного состояния и заданных 20 запросов; 4,684 MiB не является будущим порогом, прежние отрицательные verdicts и открытые safety/quality/logging gates сохраняются
 
 #### Scenario: Incomplete memory observations
 - **WHEN** доступны только baseline и один post-run snapshot либо серия прервана

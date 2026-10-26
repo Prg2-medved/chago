@@ -2306,3 +2306,337 @@ Python snippets операторского плана разобраны чер�
 Docker CLI локально отсутствует: resolved Compose/readiness/live argv и memory
 не проверены, для них подготовлены операторские команды. Серверные операции
 Codex не выполнял. **27/31, 7.6 `[ ]`, 7.3 не начата; прежний fail не отменён.**
+
+### Полная серия с утверждённым `--cache-ram 0`: review 7.6, 2026-10-23
+
+Владелец утвердил `--cache-ram 0` для MVP после завершённого эксперимента 4/4.
+Это новое решение заменяет требование отката из исторического плана эксперимента;
+прошлые результаты и verdicts выше сохраняются. Обычный harness теперь требует
+эту пару argv, сохраняя остальные проверки и отдельный экспериментальный режим.
+Оператор сообщил `preflight_passed_no_chat`, затем передал полную серию
+`data/grounded-chat-api-memory.oytj57gl/`. Отдельный каталог этого preflight не
+указан: его результат известен из сообщения оператора, не из отдельного sidecar.
+
+Локально непосредственно прочитаны **все файлы обеих серий**, включая все
+**962 новых / 967 прежних samples**, по 40 request boundaries, по 60 numeric
+metrics, все identity/check/final sidecars и по 20 responses. Старый каталог —
+`data/grounded-chat-api-memory.1iqwooas/`. Анализ только сохранённых данных:
+Docker/HTTP/LLM команды не выполнялись, runtime и production-код не менялись.
+
+**Transport, coverage и identity.** Новый memory interval:
+`2026-10-23T12:53:18.538Z`–`13:08:51.271Z` (15:53:18–16:08:51 МСК),
+932,733 s. Имеются baseline=1, before_request=20, during_request=920,
+post_response=20, final=1. Для каждого запроса есть before/during/post samples;
+максимальный gap **1,064153 s**, duration **0,063430 s**, пропусков по принятому
+критерию gap >2 s / duration >1 s нет. Проверены монотонность timestamps,
+соответствие записанного gap разнице monotonic, последовательные неперекрывающиеся
+HTTP intervals и их длительности. Все 20 HTTP 200, порядок точно design §9,
+повторы сохранены, только tuning/live; q18/holdout отсутствуют. Summary остаётся
+`20_responses_completed_review_pending`, это состояние harness до ручного verdict.
+
+Во всех samples ровно app/LLM; временных harness containers нет. App PID
+**3795439**, LLM PID **3833263**, start/restarts/cgroup постоянны; final inspect
+совпадает с исходным. Host oom_kill **3 → 3**, все cgroup OOM events **0 → 0**,
+OOMKilled=false, ExitCode=0. Доступные peak/swap/process counters присутствуют
+во всех samples. Harness VmRSS 26404 → 31908 KiB, VmSwap=0.
+
+App container/image/PID не изменились между сериями. LLM container/process новый;
+единственная разница сохранённого command — добавленные `--cache-ram 0`.
+Одинаковы image digest `f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283`,
+model hash `2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e`,
+settings и effective context/reserve/timeout **8192/768/300**, code hashes,
+frozen questions/manifest hashes. Code/settings checks без mismatches;
+сверены также с локальными code/input hashes и hash текущего harness.
+Index identity одинакова до/после и между сериями: hash
+`96159df1c9c8cfacf88727b645d87850712bf1b45507641b8aa1f412953e3c74`,
+device/inode/snapshot/reindex metadata/document inventory без изменений.
+Port check обычного harness пройден по control flow; raw Docker port mapping и
+`/proc/PID/cmdline` в sidecars не сохраняются, поэтому отдельного replay этих
+проверок по файлам нет. В обычном режиме проверяется Config.Cmd; process argv
+остаётся дополнительной проверкой отдельного экспериментального режима.
+
+**Весь post-response ряд.** Anon+swap = `memory.stat.anon` +
+`memory.swap.current`, bytes / 2^30; MemAvailable — KiB / 2^20. Counts ниже —
+только LLM prompt-eval/eval tokens, не `usage.prompt_tokens`.
+
+| № / case | Прежний LLM anon+swap, GiB | Новый LLM anon+swap, GiB | Новый MemAvailable, GiB | Prompt-eval / eval tokens | HTTP, s |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Baseline | 3,327808 | 2,915230 | 5,182301 | — | — |
+| 1 q01 | 3,330517 | 2,915825 | 5,209446 | 2734 / 154 | 47,337 |
+| 2 q02 | 3,736694 | 2,916084 | 5,208736 | 2209 / 160 | 39,645 |
+| 3 q03 | 3,737068 | 2,916458 | 5,206409 | 2185 / 182 | 42,027 |
+| 4 q05 | 3,737461 | 2,916977 | 5,180965 | 2731 / 233 | 55,888 |
+| 5 q06 | 3,740238 | 2,917679 | 5,175236 | 3366 / 119 | 56,291 |
+| 6 q07 | 4,219200 | 2,917988 | 5,163197 | 3170 / 219 | 62,782 |
+| 7 q09 | 4,680351 | 2,918392 | 5,174816 | 3426 / 181 | 63,710 |
+| 8 q11 | 4,768341 | 2,918541 | 5,196289 | 2927 / 28 | 40,522 |
+| 9 q12 | 5,174389 | 2,918613 | 5,183815 | 2235 / 28 | 29,974 |
+| 10 q13 | 5,174614 | 2,918640 | 5,178070 | 2097 / 94 | 33,907 |
+| 11 q14 | 5,175293 | 2,919212 | 5,165455 | 3051 / 28 | 42,135 |
+| 12 q15 | 5,596085 | 2,919228 | 5,165585 | 3018 / 25 | 41,998 |
+| 13 q17 | 6,013950 | 2,919262 | 5,159512 | 2547 / 28 | 34,656 |
+| 14 q19 | 6,014088 | 2,919399 | 5,126213 | 2960 / 93 | 46,891 |
+| 15 q01 | 6,019497 | 2,919456 | 5,140694 | 2734 / 157 | 49,239 |
+| 16 q02 | 6,424793 | 2,919456 | 5,171543 | 2209 / 172 | 41,623 |
+| 17 q03 | 6,424866 | 2,919540 | 5,163979 | 2185 / 182 | 41,973 |
+| 18 q05 | 6,424927 | 2,919575 | 5,155872 | 2731 / 248 | 57,322 |
+| 19 q06 | 6,349564 | 2,919781 | 5,171440 | 3366 / 121 | 56,381 |
+| 20 q19 / final | 6,408928 | 2,919804 | 5,165829 | 2960 / 93 | 47,184 |
+
+**Разложение, повторы и transient peaks:**
+
+- Новый LLM current **3,410145 → 3,423077 GiB** (+13,242 MiB), anon
+  **2,915230 → 2,919804 GiB** (+4,684 MiB), file **0,483135 → 0,491486 GiB**
+  (+8,551 MiB), kernel +0,012 MiB. LLM swap=0 во всех samples. Прежний
+  anon+swap вырос на **3155,066 MiB**, новый — на **4,684 MiB**; снижение current
+  за счёт file reclaim больше не маскирует GiB anonymous growth.
+- На переходе post 15 → 16 (повтор q02) прежняя ступень anon+swap была
+  **415,023 MiB**, новая — **0**. Для одинаковых cases разность второго и первого
+  post-response: q01 **3,719 MiB**, q02 **3,453**, q03 **3,156**, q05 **2,660**,
+  q06 **2,152**, q19 **0,414**. Это накопление между точками, а не allocation
+  только данного case. Prompt-eval counts всех 20 позиций совпадают с прежней
+  серией; eval counts меняются вместе с ответами.
+- Остаточный рост реален и не вычеркнут как округление: post 14 → 20
+  **+424 KiB**, с 15 → 20 **+364 KiB**. Anon достигает нового максимума ещё на
+  запросе 20; окончательная граница/причина этих небольших allocations не
+  измерена. Большие прежние ступени отсутствуют, но это не доказанное постоянное
+  plateau и не доказательство отсутствия leak. Установленного допуска на такой
+  продолжающийся рост в критерии 7.6 нет; новый допуск этим review не вводится.
+- Sampled LLM current max **3,423435 GiB**, during запроса 11,
+  `2026-10-23T13:01:44.344Z`, выше final на 0,367 MiB. Sampled anon+swap max
+  **2,919804 GiB** на запросе 20. Прежние maxima — **7,691608 GiB current** и
+  **6,424931 GiB anon+swap**. Новый `memory.peak` **4,126709 GiB** не менялся
+  от baseline до final: record предшествовал серии, точный пик этой серии между
+  samples не выделяется. Прежний peak вырос **5,709557 → 7,843437 GiB**.
+- Новый app current **1,143616 → 1,144833 GiB**, sampled max **1,145088 GiB**
+  на запросе 16; anon+swap **0,857071 → 0,857903 GiB** (+0,852 MiB).
+  Swap постоянен **6,551 MiB**, file +0,395 MiB. После первого ответа до final
+  anon+swap прибавил только **4 KiB**. App уже прогрет: его прежняя стартовая
+  ступень +824,676 MiB anon здесь не повторяется. App `memory.peak`
+  **1,534924 GiB** также исторический, не увеличился.
+- Host MemAvailable **5434036 → 5423460 KiB**, минимум **5372156 KiB**
+  (5,123 GiB), запас над stop threshold минимум **3275004 KiB** (3,123 GiB).
+  Прежний минимум **3157132 KiB** (3,011 GiB). Host SwapFree
+  **582784 → 586792 KiB**, минимум **581928 KiB**; исчерпания swap в новом
+  интервале нет, в прежнем минимум был 0. Общий swap всё ещё в основном занят:
+  это состояние хоста до серии, не новый расход LLM.
+- Новый LLM pgmajfault/pgscan/pgsteal delta **117/350/350**, app **6/7616/0**;
+  прежние — **3802/994950/388248** и **958/119240/101461**. Эти счётчики не
+  измеряют swap I/O rate или thrashing. LLM RssAnon **3055616 → 3060864 KiB**,
+  VmSwap=0; VmHWM **5490352 KiB** постоянен. RSS/HWM основного PID и cgroup
+  charge имеют разные области учёта, не складываются с cgroup peaks.
+
+Сравнение не является одновременным A/B: новый LLM и прогретый app, разные
+host/swap/file-cache baselines, между сериями был отдельный опыт. Изменение
+согласуется с отключением RAM prompt cache, но не устанавливает единственную
+причину всех различий и не объясняет весь исторический global OOM.
+
+**Metrics и responses.** Все 60 новых numeric records — 20 троек LLM
+prompt eval / eval / total; каждая тройка по timestamp находится внутри своего
+HTTP interval, лишних троек в сохранённом metrics нет. HTTP total
+**29,974–63,710 s**. Это наблюдение сохранённых логов, не независимый глобальный
+счётчик всех upstream calls. Все 20 response JSON соответствуют contract;
+номера citations в пределах sources. Insufficient_context=true у 14 ответов,
+false у 6; пять стандартных отказов (q11/q12/q14/q15/q17), validation fallback
+с сообщением «Не удалось подтвердить ответ…» отсутствует. Повторные ответы не
+объявляются одинаковыми или семантически правильными по HTTP статусу.
+
+q13 снова возвращает конкретную Docker restart command с insufficient_context=false,
+а единственный source.quote содержит лишь заголовок «Перезапустить Docker».
+Так было и в прежнем response-10-q13.json. Команда не подтверждается именно
+возвращённой цитатой; packed manifest не сохранён, поэтому нарушение проверки
+команды по всему packed context из этого файла отдельно не доказывается.
+Прежний ambiguity/safety blocker сохраняется; эта серия не закрывает safety/7.2.
+Остальные сохранённые fenced blocks имеют точное вхождение в returned quotes.
+
+**Отсутствующие измерения и verdict 7.6.** Memory samples/boundaries/available
+peak/OOM/process/index observations полны в рамках сборщика. Однако
+`app_numeric_metrics_present=false`: нет **query/retrieval/wait/generation timings
+для всех 20 запросов**. Нет **prompt done / n_cached_tokens / полного
+usage.prompt_tokens**; prompt-eval и total tokens ими не являются. Вычитать
+LLM time из HTTP time для восстановления app фаз нельзя. Не сохранены packed
+manifests, raw completion usage, host swap-in/out rates/PSI, allocation traces
+или post-series idle interval. Последние не добавляются как новые обязательные
+критерии; они ограничивают выводы о причине роста, swap activity и освобождении
+памяти. Sampled maxima не являются абсолютными пиками; lifetime peak counters
+не дают anon/file split и точного времени пика между samples.
+
+**7.6 остаётся `[ ]`, прогресс 27/31.** Подтверждены завершение транспорта,
+headroom и отсутствие новых OOM в измеренном интервале; прежний GiB growth не
+воспроизводится. Полное выполнение gate не подтверждено из-за неполных
+counts/timings и сохраняющегося необъяснённого малого anon growth, граница которого
+не установлена. Это не диагноз leak и не новый fail исторической серии; прежние
+verdicts не изменяются. Stability всего MVP, safety и semantic quality не приняты.
+**7.3 не начинается.**
+
+**Один минимальный следующий шаг:** read-only извлечение недостающих numeric
+app timings и полных prompt counters из уже существующих Docker logs ровно за
+новый интервал. Это попытка дополнить evidence этого же запуска, без новых
+chat requests, restart, смены flags/log level или повторения серии. Если строки
+не записывались/уже ротированы, явно оставить их unavailable; вычислять или
+добирать их новой нагрузкой в рамках этого review нельзя. Даже их извлечение
+само по себе не докажет конечность малого residual growth.
+
+```bash
+python3 -B - <<'PY'
+import json, re, subprocess
+roles = {
+    'app': '287d9119a730a9beb07ff545d5bd716de77edd52346d7800f1dc44e61c222a20',
+    'llm': '10afff72cf57f4cfa342af439ed8f17bb0af0f0a5b15c07961f8276fa990430a',
+}
+for role, cid in roles.items():
+    result = subprocess.run([
+        'docker', 'logs', '--timestamps', '--since', '2026-10-23T12:53:16Z',
+        '--until', '2026-10-23T13:08:52Z', cid,
+    ], capture_output=True, text=True, check=True)
+    count = 0
+    for line in (result.stdout + '\n' + result.stderr).splitlines():
+        if role == 'app' and 'chat ' in line:
+            values = dict(re.findall(r'\b(query_ms|retrieval_ms|wait_ms|generation_ms)=([0-9.]+)', line))
+        elif role == 'llm' and 'prompt done' in line:
+            values = dict(re.findall(r'\b(n_tokens|n_past|n_prompt_tokens|n_cached_tokens)\s*=\s*(\d+)', line))
+        else:
+            continue
+        if values:
+            stamp = re.match(r'\d{4}-\d{2}-\d{2}T[0-9:.]+Z', line)
+            print(json.dumps({'service': role, 'utc': stamp[0] if stamp else None, 'values': values}))
+            count += 1
+    print(json.dumps({'service': role, 'matched_records': count}))
+PY
+```
+
+Локальные проверки: read-only reader разобрал все JSON/JSONL обоих каталогов,
+проверил assertions coverage/order/status/identity/hash/time correlation и response
+contract/citation bounds; отдельная проверка returned fenced blocks выявила
+описанный q13 в обеих сериях. SHA-256 всех входных файлов сохранены в локальной
+сводке `data/memory-series-local-review.json`, исходные evidence не изменены.
+Runtime tests не повторялись: изменён только acceptance report. Локальный reader
+и проверка неизменности SHA-256 всех evidence прошли; исторический текст отчёта
+сохранён как точный prefix, Python snippet выше разобран через AST без выполнения.
+`openspec validate grounded-chat-api --strict`, `openspec validate --all --strict`
+(11 items) и `git diff --check` — pass.
+
+### Решение владельца: 7.6 принята в пределах измеренной серии, 2026-10-23
+
+После предыдущего review оператор выполнил предложенное read-only извлечение
+из существующих Docker logs: **app matched_records=0, llm matched_records=0**.
+Недостающие app фазовые timings и prompt done counters из этого источника
+не получены; новых запросов не было. Это не отменяет 60 LLM prompt-eval/eval/total
+records, ранее сохранённых в `metrics.json`.
+
+Владелец явно принял **7.6 по существующей серии
+`data/grounded-chat-api-memory.oytj57gl/`**, допустив наблюдаемый residual LLM
+anon+swap **+4,684 MiB**. Основание: 20/20 HTTP 200 в точном порядке,
+962 полных memory samples с boundaries/post-response measurements, без новых
+OOM/смен process identity, min MemAvailable **5372156 KiB**, сохранённая
+code/model/image/settings/index identity, проверенные transient peaks и повторы.
+Прежние GiB ступени отсутствуют; допуск не скрывает измеренные +424 KiB
+между post-response 14 и 20 и не приписывает allocations известную причину.
+
+**Новый verdict — pass memory gate 7.6 только для интервала
+2026-10-23T12:53:18.538Z–13:08:51.271Z (15:53:18–16:08:51 МСК), сохранённого
+исходного состояния, runtime identity с утверждённым `--cache-ram 0` и данной
+последовательности 20 запросов.** Число **4,684 MiB не является универсальным
+порогом** или разрешением аналогичного роста в будущих испытаниях. Не требуется
+абсолютная неизменность памяти/доказательство бесконечного plateau; обязательны
+review величины/тренда, peaks, повторов, headroom и явные границы вывода.
+Pass не доказывает отсутствие leak на любой нагрузке, устранение исторического
+global OOM или устойчивость при иной длительности/конкурентности/состоянии хоста.
+
+SPEC §27 и OpenSpec согласованы с этим решением. Для counts/timings 7.6 приняты
+существующие HTTP durations и LLM prompt-eval/eval/total counts/timings.
+Отсутствие полных usage.prompt_tokens/cache counters/PSI/allocation traces
+остаётся диагностическим ограничением, не отдельным непройденным gate 7.6.
+App query/retrieval/wait/generation logs остаются обязательными по SPEC §24.
+
+Read-only проверка реализации установила: ChatService пишет timings через
+logger.info `app.chat`; штатный entrypoint вызывает Uvicorn без настройки этого
+logger. Локально при штатной Uvicorn config effective level=WARNING (30),
+INFO disabled, root/app.chat handlers отсутствуют. Тест включает INFO через
+caplog и не проверяет штатную logging configuration. Это дефект вывода уже
+существующих timings, а не основание требовать их восстановления новой серией.
+
+Добавлена **обязательная задача MVP 7.7 `[ ]`**: исправить штатную INFO
+configuration `app.chat`, локально проверить реальный startup configuration и
+безопасность логов; затем фактически подтвердить Docker log timings на уже
+предусмотренных запросах **последующей 7.3**, с учётом поздней generation record
+при cancellation. До обоих видов проверки 7.7 остаётся открытой; 7.3 также
+не закрывается без live logging evidence. **20 запросов только ради логов не
+повторять.** Код исправления в этом planning update не реализован.
+
+**7.6 `[x]`, прогресс 28/32**: закрыта одна прежняя задача и добавлена одна
+обязательная. Остались 7.7, 7.3, 7.2, 7.4. 7.3 в этом ходе не начиналась;
+runtime, контейнеры и production-код не менялись. Исторические записи «7.6
+остаётся открытой» выше описывают verdict до решения владельца и сохранены.
+Серия `data/grounded-chat-api-memory.1iqwooas/` остаётся непринятой; прежние
+safety/quality failures, включая q13, не переоценены. Принятие одного memory
+gate не завершает stability/safety приёмку или весь MVP.
+
+Проверки этого planning update: `openspec validate grounded-chat-api --strict`
+и `openspec validate --all --strict` — pass (11 items); CLI подтверждает 28/32.
+`git diff --check` — pass. Локальный read-only verifier подтвердил сохранность
+исторического prefix отчёта и неизменность SHA-256 всех исходных evidence обеих
+серий. Unit/runtime tests не запускались: изменены только SPEC, planning artifacts
+и acceptance report, реализация логирования остаётся следующей задачей.
+
+### Локальная часть 7.7 и подготовка 7.3, 2026-10-26
+
+В `app/app/main.py` lifespan теперь устанавливает INFO и stderr StreamHandler
+для существующего `app.chat`; handler создаётся один раз. Root logger и логирование
+остальных библиотек не расширены. Формат содержит только уровень, имя logger и
+прежние безопасные timings/error categories; prompt, message, session_id,
+source text, credentials/DSN и raw exceptions в records не добавляются.
+
+Обновлён capture-log API test: ручное включение INFO удалено. Новый тест отдельного
+Python-процесса применяет штатную `uvicorn.config.LOGGING_CONFIG`, затем реальный
+lifespan/TestClient, success и ошибку с sentinel данными. Проверяет INFO в stderr,
+все timings и безопасную error category, отсутствие sentinel и удвоения records
+при двух startup. Отдельные lifecycle/concurrency tests подтверждают
+`client_cancelled` и позднюю generation record при полном ответе и при timeout.
+
+Подготовлены [серверные шаги](grounded-chat-api-compose-checks.md) и
+[test-only entrypoint](grounded-chat-api-fault.py). Он отправляет реальный HTTP
+completion один раз и удерживает чтение response до разрешения либо штатного
+transport timeout; payload/model/production flags/settings не меняются. Записывает
+UTC/monotonic события и счётчик **полностью отправленных** upstream completion
+requests, без содержимого. Это не число принятых/завершённых LLM задач: требуется
+сопоставление с реальными LLM logs. SIGUSR1 служит явной test-only ASGI cancellation;
+закрытие curl само по себе ей не приравнивается. Native timeout при withheld
+response доказывает неопределённость для app, а не непрерывную генерацию Qwen
+все 300 s. Прямые probes/completions после uncertain исключены до полного recovery.
+
+Новые fake-server tests проверили неизменённые messages, точную однократную
+отправку, неперехваченные template/tokenize, withholding/release, 504 с uncertain,
+наблюдаемость следующей отправки и отсутствие текста в trace. Проверка последующей
+отправки в этом unit test использует **только fake server и bare HTTP client**;
+операторская процедура не разрешает такую отправку через заблокированный app.
+Linux SIGUSR1/реальная Qwen/Docker network и logs локально не проверены.
+
+Команды из `app/` (Python 3.12, Windows):
+
+```powershell
+../.venv/Scripts/python.exe -B -m pytest -q -rs -p no:cacheprovider --basetemp=../.tmp/grounded-77-final tests/test_chat_api.py tests/test_chat_concurrency.py tests/test_chat_fault_transport.py tests/test_health.py
+../.venv/Scripts/python.exe -B -m pytest -q -rs -p no:cacheprovider --basetemp=../.tmp/grounded-77-full
+../.venv/Scripts/python.exe -B -m mypy app ../docs/grounded-chat-api-fault.py --follow-imports=silent --cache-dir ../.tmp/mypy-grounded-77
+```
+
+Результаты: профильный итог **50 passed, 1 warning, 13.46 s**; полный pytest
+**1047 passed, 46 skipped, 35 subtests passed, 1 warning, 125.27 s**; mypy —
+**success, 31 source files**. После полного прогона уточнены только тест отдельного
+процесса (Uvicorn config/`-B`) и UTC metadata test-only trace; итоговые профильные
+50 тестов и mypy проверяют окончательную версию. Production code после полного
+прогона не менялся. Предварительный sandbox pytest получил WinError 5 на temp;
+успешные pytest выполнены вне sandbox, без missing dependencies.
+
+46 skips относятся к платформе: 3 symlink privilege tests (chunking/index/lexical
+CLI), 1 actual Linux flock (indexer), 4 POSIX permissions (ingestion),
+38 actual Linux Bash/flock/signals (reindex script). Они не выдаются за Windows
+pass и не заменяют Linux/Compose приёмку. Единственный warning — прежний
+Starlette TestClient/httpx deprecation. OpenSpec strict validation change/all —
+pass (11 items); Git diff whitespace check — pass.
+
+**Прогресс 28/32.** Полная 7.7 остаётся открытой до фактических безопасных INFO
+records в Docker logs предусмотренной 7.3; затем следуют 7.2 и 7.4. На сервер
+Codex не подключался, контейнеры/runtime/index/frozen inputs не менялись,
+20-запросная серия не повторялась. Новая локальная проверка не переоценивает
+исторические OOM, memory verdicts и safety/semantic failures.

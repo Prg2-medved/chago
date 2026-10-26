@@ -1,7 +1,8 @@
 from dataclasses import replace
 import json
-import logging
 import sqlite3
+import subprocess
+import sys
 
 from fastapi.testclient import TestClient
 import pytest
@@ -194,7 +195,6 @@ def test_malformed_generated_content_has_safe_200_fallback(chat_api):
 def test_logs_and_errors_do_not_contain_sensitive_text(chat_api, caplog, monkeypatch):
     client, fake, _, results = chat_api
     results[0] = replace(results[0], chunk=chunk("SECRET_SOURCE"))
-    caplog.set_level(logging.INFO, logger="app.chat")
     response = send(client, "SECRET_MESSAGE", "SECRET_SESSION")
     assert response.status_code == 200
     assert "query_ms=" in caplog.text and "retrieval_ms=" in caplog.text
@@ -203,6 +203,41 @@ def test_logs_and_errors_do_not_contain_sensitive_text(chat_api, caplog, monkeyp
     response = send(client, "SECRET_MESSAGE", "SECRET_SESSION")
     assert response.status_code == 503
     assert "SECRET" not in caplog.text and "SECRET" not in response.text
+
+
+def test_startup_emits_safe_info_to_stderr_in_fresh_process(tmp_path):
+    # No pytest logging handler or inherited logger level in this process.
+    script = '''
+import logging
+from logging.config import dictConfig
+import sys
+from unittest.mock import patch
+from uvicorn.config import LOGGING_CONFIG
+dictConfig(LOGGING_CONFIG)
+sys.path.insert(0, "tests")
+from test_chat_api import FakeClient, chunk, HybridResult, TestClient, app, send
+
+assert logging.getLogger("app.chat").getEffectiveLevel() == logging.WARNING
+fake = FakeClient()
+async def search(question):
+    return (HybridResult(1, 1.0, chunk("SECRET_SOURCE"), 1, 1.0, 1, -1, ()),)
+with patch("app.main.load_index_path", return_value=sys.argv[1]), patch("app.chat.LLMClient", return_value=fake):
+    for _ in range(2):
+        with TestClient(app) as client:
+            app.state.retrieval.search = search
+            fake.failure = None
+            assert send(client, "SECRET_MESSAGE", "SECRET_SESSION").status_code == 200
+            fake.failure = ("count", RuntimeError("SECRET_PASSWORD_DSN"))
+            assert send(client, "SECRET_MESSAGE", "SECRET_SESSION").status_code == 503
+'''
+    result = subprocess.run([sys.executable, "-B", "-c", script, str(tmp_path / "missing.db")],
+                            capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+    assert result.stderr.count("INFO app.chat chat generation_ms=") == 2
+    assert result.stderr.count("INFO app.chat chat outcome=ok query_ms=") == 2
+    assert result.stderr.count("outcome=retrieval_or_configuration_unavailable query_ms=") == 2
+    assert all(field in result.stderr for field in ("retrieval_ms=", "wait_ms=", "generation_ms="))
+    assert "SECRET" not in result.stdout + result.stderr
 
 
 def test_api_real_http_client_to_fake_server(chat_api, http_llm, monkeypatch):

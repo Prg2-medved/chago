@@ -1,5 +1,6 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+import logging
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -13,6 +14,12 @@ from app.index_state import RetrievalService
 
 @asynccontextmanager
 async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+    chat_logger = logging.getLogger("app.chat")
+    chat_logger.setLevel(logging.INFO)
+    if not chat_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s %(name)s %(message)s"))
+        chat_logger.addHandler(handler)
     retrieval = RetrievalService(load_index_path())
     chat = ChatService(retrieval)
     try:

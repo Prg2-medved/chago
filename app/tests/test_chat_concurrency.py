@@ -152,6 +152,33 @@ def test_cancellation_waits_for_late_full_response_before_release(barrier_llm):
     asyncio.run(run())
 
 
+@pytest.mark.parametrize("late_timeout", [False, True])
+def test_startup_logs_late_generation_after_cancellation(
+        barrier_llm, tmp_path, monkeypatch, caplog, late_timeout):
+    state = barrier_llm
+    monkeypatch.setenv("INDEX_PATH", str(tmp_path / "missing.db"))
+    async def run():
+        async with lifespan(app):
+            service = app.state.chat
+            service.retrieval = Retrieval()
+            first = asyncio.create_task(service.answer("SECRET_MESSAGE"))
+            await entered(state)
+            first.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await first
+            assert "outcome=client_cancelled query_ms=" in caplog.text
+            assert "chat generation_ms=" not in caplog.text
+            background = tuple(service.gate._tasks)
+            if not late_timeout:
+                state.release.set()
+            await asyncio.gather(*background, return_exceptions=True)
+            assert service.gate.generation_uncertain == late_timeout
+    asyncio.run(run())
+    assert "chat generation_ms=" in caplog.text
+    assert ("outcome=generation_uncertain" in caplog.text) == late_timeout
+    assert "SECRET" not in caplog.text
+
+
 def test_cancelled_waiter_never_sends_a_completion(barrier_llm):
     state = barrier_llm
     async def run():
