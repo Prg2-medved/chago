@@ -6,7 +6,7 @@
 
 Решение владельца от 2026-10-23: 7.6 принята по существующей серии с `--cache-ram 0`
 и residual 4,684 MiB только для её интервала. Добавлена обязательная открытая
-задача 7.7 по штатному INFO-логированию; текущий прогресс 28/32. Примечание
+задача 7.7 по штатному INFO-логированию; на дату этого решения прогресс 28/32. Примечание
 2026-10-22 выше описывает предшествующий planning review.
 
 ## 1. Интеграция активного индекса и retrieval
@@ -64,8 +64,8 @@ timeout, затем ручной recovery, затем offline/isolation. 7.7 з�
 
 - [x] 7.5 Свести уже собранные OOM/kernel/container/recovery results из разделов acceptance report, перечисленных в design §9: global_oom/CONSTRAINT_NONE, PID 3709157/anon-rss, OOMKilled/exit=137/PID=0/limits=0, подтверждённый stop/start LLM/restart app, readiness и baseline, завершённый q01 transport. Повторные inspect/kernel/health/recovery команды не запрашивать без конкретно названного пробела и объяснения недостаточности имеющихся данных. Отделить установленный global OOM от неизвестного механизма большого anon-rss и гипотез leak/cache. Недостающие memory series/peaks собирать в 7.6; свежий pre-run baseline относится к новому интервалу, а не повтору прежнего recovery. Не менять модель/image/flags/ресурсы/swap/сторонние сервисы; не объявлять OOM устранённым или серию устойчивой по единичному recovery.
 - [x] 7.6 После 7.5 выполнить оператором 20 последовательных end-to-end tuning HTTP chat запросов в точном порядке design §9, включая повторы, без generation-only/добавочных completions или замены cases. Samples раз в секунду для app/LLM/временных harness containers и host MemAvailable/swap; boundaries/status/HTTP durations/LLM prompt-eval/eval/total counts/timings, post-response memory, доступные peak/OOM/process counters и index identity. Stop при MemAvailable <2 GiB (2097152 KiB), новом OOM, завершении LLM или transport/uncertain failure; при исходном значении ниже порога не начинать, retry до recovery запрещён. Порог консервативный, не гарантирует предотвращения OOM. Pass только для полной серии с headroom/telemetry; оценить тренд всей серии, пики и повторные одинаковые cases. Абсолютное отсутствие роста/бесконечное plateau не требуются; небольшой residual может быть принят владельцем только для конкретного измеренного интервала с обоснованием и ограничениями. Неразобранный тренд без такого решения, неприемлемый ресурсный риск или недостаточный headroom оставляют gate открытым независимо от монотонности последних пяти samples. Раскрыть sampled peak limitations; не объявлять отсутствие leak на любой нагрузке. Holdout не включать и не использовать для настройки. Принято владельцем 2026-10-23 по `data/grounded-chat-api-memory.oytj57gl/`: 20/20 HTTP 200, 962 samples, без OOM, min MemAvailable 5372156 KiB; допуск residual LLM anon+swap 4,684 MiB только для этой серии на `--cache-ram 0`, не универсальный порог. Историческая серия `1iqwooas` и safety/quality verdicts не пересматриваются.
-- [ ] 7.7 Исправить штатное INFO-логирование существующего `app.chat` по обязательному SPEC §24: минимальная настройка уровня/handler, безопасные query/retrieval/wait/generation timings и error categories без secrets/DSN/prompt/document/message/session_id. Локально проверить штатную startup logging configuration без ручного включения INFO проверяемого logger тестом; capture-log checks должны подтвердить timings и отсутствие sensitive fields. Фактическую запись timings в Docker logs проверить на уже предусмотренных запросах последующей 7.3, включая поздний generation record при cancellation; сохранить evidence. До локальной и live проверки задача открыта, не переносится в post-MVP. Не повторять 20-запросную серию только ради логов и не менять LLM/runtime flags/settings ради этой задачи.
-- [ ] 7.3 После принятой 7.6 и локальной проверки исправления 7.7 проверить через Compose два одновременных HTTP chat запроса, cancellation с поздним полным ответом и с поздним timeout. До операторского timeout испытания подготовить конкретную воспроизводимую fault-injection процедуру по design §9: команды/preconditions/timeline/upstream completion count/cleanup, без изменения production flags/settings/timeout и без следующего completion при generation_uncertain. Без безопасной процедуры испытание не начинать, gate не закрывать. Подтвердить timeout приложения при возможной продолжающейся генерации, 504 исходному/503 ожидающим и новым, отсутствие upstream completion/retry от проверочных chat requests и сохранение блокировки при health=ok/задержке. Только затем подтверждённая остановка прежней LLM, её запуск и restart app разрешают новый completion; проверить успешный chat и неизменный index. Затем `/health` во время генерации, app-only/offline restart, один worker/одну генерацию, отсутствие host-published LLM port, downloads/внешних API и Wiki.js access/writes; сохранить evidence и SQLite hash/metadata до/после. Исторический OOM/recovery и unit tests этот Compose gate не заменяют. На предусмотренных запросах этой же 7.3 фактически подтвердить INFO query/retrieval/wait/generation timings и безопасные error categories app.chat в Docker logs; сохранить evidence для 7.7, включая поздний generation record при cancellation. Без live logging evidence 7.3 и 7.7 не закрывать; 20-запросную серию ради логов не повторять.
+- [x] 7.7 Исправить штатное INFO-логирование существующего `app.chat` по обязательному SPEC §24: минимальная настройка уровня/handler, безопасные query/retrieval/wait/generation timings и error categories без secrets/DSN/prompt/document/message/session_id. Локально проверить штатную startup logging configuration без ручного включения INFO проверяемого logger тестом; capture-log checks должны подтвердить timings и отсутствие sensitive fields. Фактическую запись timings в Docker logs проверить на уже предусмотренных запросах последующей 7.3, включая поздний generation record при cancellation; сохранить evidence. До локальной и live проверки задача открыта, не переносится в post-MVP. Не повторять 20-запросную серию только ради логов и не менять LLM/runtime flags/settings ради этой задачи.
+- [x] 7.3 После принятой 7.6 и локальной проверки исправления 7.7 проверить через Compose два одновременных HTTP chat запроса, cancellation с поздним полным ответом и с поздним timeout. До операторского timeout испытания подготовить конкретную воспроизводимую fault-injection процедуру по design §9: команды/preconditions/timeline/upstream completion count/cleanup, без изменения production flags/settings/timeout и без следующего completion при generation_uncertain. Без безопасной процедуры испытание не начинать, gate не закрывать. Подтвердить timeout приложения при возможной продолжающейся генерации, 504 исходному/503 ожидающим и новым, отсутствие upstream completion/retry от проверочных chat requests и сохранение блокировки при health=ok/задержке. Только затем подтверждённая остановка прежней LLM, её запуск и restart app разрешают новый completion; проверить успешный chat и неизменный index. Затем `/health` во время генерации, app-only/offline restart, один worker/одну генерацию, отсутствие host-published LLM port, downloads/внешних API и Wiki.js access/writes; сохранить evidence и SQLite hash/metadata до/после. Исторический OOM/recovery и unit tests этот Compose gate не заменяют. На предусмотренных запросах этой же 7.3 фактически подтвердить INFO query/retrieval/wait/generation timings и безопасные error categories app.chat в Docker logs; сохранить evidence для 7.7, включая поздний generation record при cancellation. Без live logging evidence 7.3 и 7.7 не закрывать; 20-запросную серию ради логов не повторять.
 - [ ] 7.2 После 7.5/7.6/7.3 выполнить итоговый live MVP run на закреплённой Qwen: end-to-end single-question corpus, все answerable=false и synthetic security/conflict cases, отдельно generation-only на фиксированном достаточном evidence. Раздельно оценить stability, safety и semantic quality. API/validators/fallback, exact commands, unanswerable/ambiguity/conflict/injection safety обязательны; известные q13 (неоднозначный объект) и q18 (противоречие) потенциально блокируют safety, их нельзя автоматически перенести в качество. MVP требует pass stability и safety; изолированные defects required facts/kind/entailment остаются post-MVP, не отменяя safety fail. Сохранить ответы/IDs/counts/timings/settings/fingerprints/misses/ограничения и прежнюю непройденную 7.2; frozen inputs не менять, раскрытый holdout (включая q18) не использовать для настройки. Не требовать Hit@5 ≥90%, не заявлять follow-up acceptance и не повторять неизменные завершённые проверки без причины.
 - [ ] 7.4 После фактических live gates сверить implementation со всеми обязательными MVP delta scenarios и отдельно перечислить deferred quality scenarios/дефекты и открытые safety blockers, выполнить `openspec validate grounded-chat-api --strict` и `openspec validate --all --strict`, проверить Git diff на отсутствие кода parts, несвязанных изменений/README/ROADMAP/frozen inputs/model/runtime/ranking. Сохранить прежние результаты, дату изменения критериев и раздельные stability/safety/semantic quality verdicts; отметить tasks только после фактических проверок. При отсутствии сервера или непройденной stability/safety приёмке оставить её открытой, не объявлять весь MVP продукта либо post-MVP качество завершёнными.
 
@@ -117,3 +117,73 @@ timeout/recovery и cleanup подготовлены в `docs/grounded-chat-api-
 Linux SIGUSR1/Compose/реальная Qwen не проверены. **7.7 остаётся `[ ]` до live
 logging evidence 7.3; 7.3/7.2/7.4 также `[ ]`, прогресс 28/32.** Серверные действия
 в этой сессии не выполнялись; 20-запросная серия не повторялась.
+
+### Review серверного архива 7.3 / 7.7, 2026-10-27
+
+Проверен SHA256 архива `data/grounded-chat-api-7.3-evidence.tar.gz`
+`407cfbccbaf4dac503b9d2cb5184319d1b96091fdb86fa7fe26e410d97563aa0`,
+все members безопасно распакованы; исходные bytes и hashes сохранены.
+Полный review и границы вывода — в разделе «Итоговый review серверных evidence
+7.3 / 7.7, 2026-10-27» acceptance report.
+
+**7.7 `[x]`, прогресс 29/32.** Прежняя локальная startup/sentinel проверка
+дополнена фактическими безопасными INFO timings/categories в Docker logs
+четырёх Compose cases, включая обе late cancellation records и штатный app
+после recovery. Code hashes соответствуют проверенной реализации.
+
+**7.3 `[ ]`**: concurrency, cancellation, native timeout/uncertain/probes,
+два полных recovery, app-only, SQLite identity и отсутствие Wiki/API traffic
+в четырёх захваченных `any` network windows подтверждены. Но нет health GET
+во время генерации (есть только startup/uncertain health), live PortBindings/Ports
+и сетевого inspect обеих сетей; network capture не покрывает штатные recovered
+chat. Сначала read-only дополнить существующие logs и filtered inspect.
+Если нужной health записи нет, минимальная непроведённая проверка — один
+health GET во время одного необходимого штатного indexed chat, совместив
+с capture `any`; успешно проверенные fault cases не повторять. Не объявлять
+незахваченные recovery интервалы наблюдавшимися.
+
+7.2 и 7.4 остаются `[ ]`; 7.2 не начиналась, change не архивирован.
+Runtime/settings/Compose/frozen inputs не изменены. Evidence и внутренние
+ответы остаются в ignored `data/`, без добавления в Git.
+
+### Review дополнения 7.3, 2026-10-27
+
+Проверен `data/grounded-chat-api-7.3-addendum.tar.gz`, SHA256
+`0ca5a8f01eff42800710fc156637a10154e7e0821d54bee8194bcde2e905d268`.
+Подробности — «Review addendum 7.3, 2026-10-27» acceptance report.
+Предыдущий архив и его verifier повторно проверены offline, без серверных запусков.
+
+**7.3 `[x]`, прогресс 30/32; 7.7 остаётся `[x]`.** Четыре health GET:
+HTTP 200 / `{"status":"ok"}`, 1,069–1,337 ms, timestamps внутри фактической
+LLM task 282 (prefill), indexed chat HTTP 200 / 80,893726 s.
+Filtered live ps/port/PortBindings подтверждают неопубликованный LLM port;
+network inspect — app в chago_default/wiki_default, LLM только в chago_default.
+Все 154 packets capture `any` разобраны, 0 dropped; только app↔LLM, входящий
+HTTP/ответы и loopback DNS, без Wiki/DB/external API/download connections.
+Эти данные дополняют прежние concurrency/cancellation/timeout/recovery,
+logging, app-only/offline и SQLite hash/metadata evidence. Границы наблюдения
+сохранены: прежние recovery/startup интервалы не объявляются захваченными,
+новый index snapshot после health-live в addendum отсутствует.
+
+**Открыты 7.2 и 7.4.** Следующий шаг 7.2 — предусмотренный
+`bash docs/grounded-chat-api-evaluate.sh`: итоговые end-to-end и fixed-evidence
+generation-only single-question cases, все answerable=false и synthetic
+security/conflict, отдельные stability/safety/semantic-quality verdicts.
+Обязателен ручной safety review q13/q18; раскрытый holdout и frozen inputs
+не используются для tuning, прежняя непройденная 7.2 сохраняется.
+Строгая валидация change и всех OpenSpec items — pass (11/11);
+`git diff --check` — pass. Серверные испытания и runtime tests не повторялись,
+настройки LLM не изменены, evidence остаются ignored, change не архивирован.
+
+### Локальная подготовка итоговой 7.2, 2026-10-27
+
+Существующий harness готов к операторскому запуску без изменения кода:
+`docs/grounded-chat-api-7.2-runbook.md` содержит точные команды и ожидаемые evidence.
+Проверены 10 профильных tests (pass), Bash syntax, frozen package v1,
+read-only inventory обоих evaluation-индексов (live 24 docs/910 chunks,
+synthetic 1/1), неизменность SQLite hashes и fixed manifests всех 18 cases.
+Harness идёт через admin pipeline, не HTTP route/semaphore; принятые API/Compose
+проверки не повторяются. Серверные запуск/ресурсы/assets оставлены оператору.
+**7.2 и 7.4 остаются `[ ]`, 30/32** до полного live run и ручного review,
+включая отдельные safety verdicts q13/q18. Frozen inputs, runtime и прежние
+отрицательные результаты не менялись; holdout не используется для tuning.

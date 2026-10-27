@@ -3,7 +3,8 @@
 Дата: 2026-10-21. Среда реализации: локальный Windows workspace.
 Linux-проверка 1.3 и live-gates 2.1, 7.1 подтверждены выводом оператора.
 `POST /api/chat` реализован локально; прогоны 7.2 выполнены оператором, но
-grounded acceptance не пройдена; серверная проверка 7.3 ещё не выполнена.
+grounded acceptance не пройдена. Актуально на 2026-10-27: серверная 7.3 принята
+по двум архивам evidence (review и addendum в конце отчёта); итоговая 7.2 открыта.
 
 ## Локальные проверки
 
@@ -2640,3 +2641,383 @@ records в Docker logs предусмотренной 7.3; затем следу
 Codex не подключался, контейнеры/runtime/index/frozen inputs не менялись,
 20-запросная серия не повторялась. Новая локальная проверка не переоценивает
 исторические OOM, memory verdicts и safety/semantic failures.
+
+### Итоговый review серверных evidence 7.3 / 7.7, 2026-10-27
+
+**Verdict: 7.7 `[x]`; 7.3 `[ ]` из-за конкретных пробелов ниже; прогресс
+29/32.** Проверены существующие результаты испытаний 2026-10-26, новых HTTP
+запросов и подключений к серверу не было. 7.2 и 7.4 не выполнялись, change не
+архивирован. Применены SPEC §§5,24,27, задачи 7.3/7.7, delta requirements
+`Serialized internal local runtime`, `Technical errors and app-only compatibility`,
+`Reproducible timeout fault injection prerequisite`, design §§7,9 и процедура
+`docs/grounded-chat-api-compose-checks.md`. Исторические verdicts выше сохранены.
+
+**Целостность и границы evidence.** SHA256
+`data/grounded-chat-api-7.3-evidence.tar.gz` совпал с переданным владельцем:
+`407cfbccbaf4dac503b9d2cb5184319d1b96091fdb86fa7fe26e410d97563aa0`.
+Проверены все 105 archive members, 48 805 548 распакованных bytes. До записи
+отклонялись абсолютные/Windows paths, `..`, повторные имена, symlinks/hardlinks,
+devices и иные специальные members; разрешены только directories/regular files
+в новом каталоге `data/grounded-chat-api-7.3-review/`. Файлы записаны без
+применения archive permissions/owners, затем побайтно сверены с архивом.
+Архив, распакованные ответы, verifier и его numeric summary остаются в ignored
+`data/`, в Git добавляется только отчёт и состояние tasks. SHA256 подтверждает
+соответствие полученному архиву, не является независимой аттестацией сервера.
+
+Основной каталог — `grounded-chat-api-compose.SBbtOlVc/`, preflight до —
+`grounded-chat-api-memory.1zktlxj0/` (08:23:19–08:23:24Z), после —
+`grounded-chat-api-memory.6fm68o0f/` (13:25:25–13:25:27Z).
+Оба `preflight_passed_no_chat`: поле `order` и пустые `metrics.json` здесь
+не означают новую четырёх- или двадцатизапросную серию. Ни прежняя принятая
+7.6, ни compatibility 7.1 не повторялись.
+
+**Identity и read-only index — подтверждены.** В двух preflight совпали settings,
+model/image, девять production code hashes, questions/manifest/harness fingerprints.
+Девять code hashes также совпадают с текущими `app/app/` файлами, включая logging
+fix в `main.py`. App image:
+`sha256:fdcd3c4bb0b8f84ebd9cc750046705d27e3bf8693fc1a54e39157d66986d6caf`;
+LLM image/digest/model — прежние, указанные выше в отчёте (model SHA256
+`2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e`).
+Сохранены context=8192, reserve=768, timeout=300 s, threads=8, parallel=1,
+CPU-only, `--cache-ram 0`, retrieval 10/10/60/6; оба settings/code-check без
+mismatches. Sampling не выгружен отдельно из каждого fault container: неизменность
+его реализации следует из code identity, не из нового измерения payload.
+
+Все четыре index snapshots (before/after внутри каждого preflight и между ними)
+полностью равны: SHA256
+`96159df1c9c8cfacf88727b645d87850712bf1b45507641b8aa1f412953e3c74`,
+device=64512, inode=1877967, snapshot/reindex metadata, 24 document fingerprints,
+910 chunks, reindex timestamp 2026-10-20T10:18:41.693304+00:00. Это подтверждает
+неизменность сохранённого SQLite между границами испытаний; не является audit
+каждого системного write с последующим возвратом исходных bytes.
+
+**HTTP / trace / реальные LLM tasks / timings.** Все времена ниже — UTC
+2026-10-26; network.txt использует МСК (UTC+3), trace UTC и monotonic согласованы.
+LLM logs кумулятивные: старые tasks в последующих файлах не считались повторными
+completions. Отбор по интервалу каждого case даёт 2/2/1/1 launch/release pairs
+слота 0, согласованные с trace counts и сетевыми connections.
+
+| Case | Фактический результат | Корреляция и вывод |
+| --- | --- | --- |
+| concurrent | first 200 / 170,787550 s; waiting 200 / 56,472188 s | send1 08:34:37.256 → task 3419 08:34:37.279–08:35:37.243; response удержан до 08:37:22.454, generation INFO 165200,200 ms; send2 08:37:22.529 → task 3701 08:37:22.551–08:38:13.846. Второй wait_ms=5080,319, retrieval_ms=10,081: ожидание действительно перекрывает первый HTTP, подтверждено также началом второго TCP request 08:37:17.373. Сериализация подтверждена, два 200 сами по себе не были основанием pass. |
+| cancel-full | cancelled.status пустой; waiting 200 / 125,302395 s | send1 12:33:36.157, ASGI cancellation 12:33:37.127 и INFO client_cancelled до release 12:33:42.168; task 3903 завершён 12:34:52.384, поздний generation INFO 76227,882 ms в 12:34:52.385; send2 только 12:34:52.416 → task 4367 до 12:35:44.442. Waiting wait_ms=73231,302, generation_ms=52026,844. Отмена не освободила слот раньше полного ответа. |
+| timeout | original 504 / 304,383427 s; waiting 503 / 299,373484 s; new/later 503 | send1 12:43:38.740 → task 4564 до 12:44:32.616. Transport timeout 12:48:38.741: 300,000625 s после withholding по monotonic; INFO llm_timeout, generation_ms=300001,375 и WARNING generation_uncertain/recovery=operator_required. Waiting wait_ms=299370,245. Один send и один task на весь case, включая probes и health=200; блокировка сохраняется до later в 12:51:13.916. |
+| cancel-timeout | cancelled.status пустой; waiting 503 / 297,352770 s; new/later 503 | send1 13:12:29.214, ASGI cancellation 13:12:29.844 и INFO client_cancelled; task 220 завершён 13:13:16.806. Transport timeout 13:17:29.214: 300,000601 s после withholding. Поздний INFO generation_ms=300001,657 и WARNING generation_uncertain; waiting wait_ms=297347,831. Один send/task, health=200 и later 13:19:22.983 слот не освобождают. |
+
+Trace считает полностью отправленные requests. Отдельные LLM launch/release
+подтверждают принятие и завершение реальных задач, а не просто счётчик harness.
+Нет следующего completion от 503 probes и нет retry в наблюдаемых интервалах.
+Сохранённый порядок соответствует test-only transport procedure; native timeout
+приложения отличается от client disconnect. Qwen фактически завершила оба
+timeout tasks раньше 300 s, но app response не прочёл: проверена именно
+неопределённость для app, непрерывная генерация все 300 s не заявляется.
+Cancellation вводилась SIGUSR1 через test-only ASGI task cancellation; само
+закрытие curl не считается доказательством CancelledError. Исходным отключённым
+клиентам не приписывается HTTP 504 либо иной незафиксированный статус.
+
+Все пять сохранённых HTTP 200 response JSON (два concurrent, cancel-full waiting,
+два recovered) соблюдают strict public contract и citation bounds; все имеют
+insufficient_context=true. Ответы/цитаты не копируются в Git. Семантическая
+корректность или безопасность всего corpus по этим пяти ответам не приняты.
+Семь сохранённых error JSON имеют только безопасный `detail`: один timeout 504
+и шесть generation_uncertain 503; технические failures не названы отсутствием
+документации. Другие категории, например broken-envelope 502, здесь не
+инъецировались и повторно live-пройденными не объявляются.
+
+**Ручной recovery — подтверждён для обоих timeout cases.** Первый старый PID
+3833263: `llm-stopped.json` Running=false/Pid=0/ExitCode=0, FinishedAt
+12:53:12.410; LLM log содержит cleanup, затем запуск 12:54:30.895 с новым
+PID 211242 (следующая memory telemetry/inspect), model loaded/listening
+12:54:33.702. Штатный app стартовал 12:59:04.797; `/health` 200; новый task 0
+13:05:51.337–13:06:43.866, app INFO и recovered 200 / 56,504470 s согласованы.
+
+Во втором recovery PID 211242 подтверждён остановленным (Running=false/Pid=0,
+ExitCode=0, FinishedAt 13:21:01.078); конечный preflight подтверждает новый PID
+228857/StartedAt 13:21:21.234. Штатный app стартовал 13:22:18.726 после LLM,
+health 200 13:22:40.437, recovered 200 / 62,671608 s в 13:24:08.530 с
+generation_ms=58754,798. Файл `cancel-timeout/app-recovered.log` содержит
+историю обоих app restart и обе безопасные outcome=ok записи. Отдельного
+LLM log после второго recovery в архиве нет; его успешный completion подтверждают
+recovered response, штатные app logs и новая process identity, но независимый
+глобальный completion count на этом последнем участке не заявляется.
+
+**INFO logging 7.7 — pass.** Все обычные и ошибочные app.chat outcome records
+содержат query/retrieval/wait/generation timings, включая нули у запросов,
+которым соответствующая фаза не выполнялась. У cancellation initial
+generation_ms=0 относится к моменту отмены; duration сохранена отдельной поздней
+record после полного ответа/timeout. Её нельзя считать потерянной или прибавлять
+как второй completion. Отдельная generation record и та же duration в итоговом
+outcome=ok — два вида log record одного вызова, не удвоенная генерация.
+
+Live evidence дополняет уже выполненные профильные 50 tests и штатный
+subprocess logging test из предыдущего раздела: code hashes совпали, INFO
+присутствует также у штатного `python -m app` после recovery и у app-only,
+не только у test-only entrypoint. Нет необходимости повторять эти тесты.
+Проверка всех app.chat строк на допустимую форму timings/category, поиск
+фактических question/session_id/returned source quotes и credential/DSN/Bearer
+patterns во всех сохранённых app/LLM/observer logs не обнаружили sensitive data.
+Ручной просмотр LLM records также не выявил prompt или документацию. Настоящие
+значения secrets в архиве не передавались: исчерпывающий поиск по неизвестным
+secret values не заявляется; sentinel checks подтверждены прежними local tests.
+
+В двух cancellation app.log **есть Uvicorn traceback `CancelledError`** со
+stack frames тестовой отмены. Поэтому утверждение «в Docker logs вообще нет
+exceptions/tracebacks» было бы неверным. Это не app.chat raw upstream error и
+не утечка request data: exception без содержимого, app.chat использует безопасный
+client_cancelled. Безопасность именно app.chat records по задаче 7.7 подтверждена;
+отсутствие любого traceback всех сторонних loggers не выдаётся за результат.
+
+**Memory / OOM — без нового resource failure в измеренных интервалах.**
+
+| Case | Samples; UTC начало–конец | min MemAvailable, KiB | sampled max app / LLM memory.current, MiB | LLM anon+swap, конец минус начало, MiB |
+| --- | --- | --- | --- | --- |
+| concurrent | 451; 08:31:59.269–08:39:29.417 | 6165600 | 1440,992 / 3738,586 | +0,070 |
+| cancel-full | 10586; 09:40:40.256–12:37:09.352 | 6349952 | 1186,488 / 3720,570 | +0,121 |
+| timeout | 647; 12:41:39.878–12:52:26.116 | 6379476 | 1183,207 / 3653,629 | +0,078 |
+| cancel-timeout | 609; 13:10:04.638–13:20:12.863 | 5925764 | 1150,527 / 3508,277 | +1,070 |
+
+Все 12 293 samples разобраны; largest start-to-start gap 1,001003 s,
+покрыты отправки и последние case responses. Host oom_kill=3 неизменно,
+cgroup oom/oom_kill=0, process identity/start/restarts стабильны внутри каждого
+case. Headroom выше консервативных 2097152 KiB. Host SwapFree меняется в диапазоне
+567096–1003544 KiB; это занятый swap, не измерение swap-in/out rate. App
+anon+swap от холодного baseline вырос на 820,578–822,410 MiB; это наблюдаемая
+инициализация lazy assets по времени первого chat, а не доказательство причины
+всех allocations или бесконечного plateau. Sampled maxima не абсолютные пики;
+сохранённые memory.peak/VmHWM имеют lifetime scope, включая прежнюю жизнь LLM.
+7.6 и её ограниченный допуск +4,684 MiB не переоцениваются и не распространяются
+на новые нагрузки. Planned timeout не является новым memory gate failure.
+Recovery/app-only промежутки не имеют такого же непрерывного memory monitoring.
+
+**Network isolation с двумя сетями app.** В Compose app подключён к
+`chago_default` и `wiki_default`; сам факт второй сети допускает Wiki/DB access,
+но не доказывает его. Все четыре capture summaries содержат `listening on any`
+(`LINUX_SLL2`), поэтому захватывают весь network namespace, включая eth0,
+eth1 и loopback, а не только default network. Нельзя закрепить одну сеть за
+именем eth0: в concurrent/cancel-full/cancel-timeout основной traffic идёт по
+eth1, в timeout — по eth0. Отсутствие eth0 packets в cancel-full не означает
+отключённую wiki_default. Archive не содержит NetworkSettings.Networks/IP mapping
+для привязки названий сетей к интерфейсам; точные mappings не выдумываются.
+
+Повторно разобраны все 761 packet headers: concurrent 216, cancel-full 209,
+timeout 174, cancel-timeout 162. Эти числа совпали с captured в summaries;
+везде 0 dropped by kernel. Received-by-filter=256/249/194/182 отличается от
+captured на 40/40/20/20 — ровно число сохранённых loopback packets; само это
+различие не является доказанными потерями, но и не подменяет dropped counter.
+Network-destinations.txt перепроверен по направленным flows: его список
+destinations включает обратный traffic и не годится для вывода об egress сам по себе.
+
+Наблюдаются только TCP app `172.25.0.2` ↔ `172.25.0.3:8080` (LLM по совпадению
+send/launch/completion intervals), входящие LAN HTTP requests от
+`192.168.12.100:<ephemeral>` к app:8000 и их ответы, loopback Docker DNS
+127.0.0.11 и IPv6 link-local router solicitations к ff02::2. Исходящих app
+connections к Wiki:8800, PostgreSQL:5432, HTTP(S) внешних API/download hosts или
+другим data endpoints нет. Обратные ответы app:8000 на LAN ephemeral ports
+не являются обращениями к Wiki по тому же IP. DNS names при `-q` не сохранены;
+содержимое DNS или upstream forwarding Docker resolver не установлено.
+
+**В пределах четырёх захваченных request/probe интервалов отсутствие
+обращений app к Wiki.js/DB и внешним API/downloads подтверждено packet evidence
+в обеих сетях.** Это также исключает Wiki writes через наблюдаемые connections.
+Это не firewall guarantee, не глобальный audit Wiki/LLM и не доказательство
+изоляции всех участков дня: захваты заканчиваются до recovery completions и
+не охватывают весь startup/shutdown. В archive нет отдельного network capture
+штатного indexed recovered chat. Доверие к роли `172.25.0.3:8080` опирается на
+согласованную LLM timeline, а не сохранённый сетевой inspect.
+
+**Offline app-only — подтверждён в доступном объёме.** `app-only-state.txt`:
+Network=none, Mounts=0, Running=true. Docker log показывает PID 1, startup
+без assets/index, index_missing, health 200 и chat 503 с безопасной
+retrieval_or_configuration_unavailable, все timings присутствуют. Отсутствие
+сетевого доступа при таком запуске следует из none; downloads невозможны.
+JSON stdout health/chat этой отдельной команды не сохранён, поэтому точные
+response bodies не приписываются архиву. Штатный health body подтверждён кодом
+и прежними tests, но не новым сохранённым JSON файлом этого case.
+
+**Пробелы 7.3 на момент review первого архива (закрыты addendum ниже).**
+
+| Критерий | Чего нет в текущем архиве | Минимальный следующий шаг |
+| --- | --- | --- |
+| `/health` во время генерации | В concurrent/cancel-full app.log health только до requests; сетевые headers не содержат дополнительного health connection во время генерации. В timeout cases health=200 уже после timeout/uncertain, что подтверждает другой критерий. | Сначала read-only поиск соответствующей записи в уже существующих timestamped app logs. Если записи нет, один health GET во время следующего отдельно согласованного необходимого indexed chat с сохранением его интервала; успешные concurrency/cancellation/timeout серии не повторять. |
+| LLM port не опубликован на host | В preflight selected inspect нет PortBindings/NetworkSettings.Ports. `compose.yaml` не публикует llm port, но это не live inspect actual container. | Read-only filtered inspect текущего LLM: Id/StartedAt/Image, HostConfig.PortBindings и NetworkSettings.Ports; без env/secrets. Сопоставить identity с конечным preflight, явно указать, если после испытаний состояние менялось. |
+| Полная область network verdict и привязка адресов | Нет actual app/LLM NetworkSettings.Networks, capture штатных recovered chat и непрерывного startup capture. Доказанный pass относится только к четырём fault windows. | Read-only получить только app/LLM network names, IPAddress/GlobalIPv6Address и IDs. Для недостающего штатного indexed chat совместить один capture `any` с предыдущим health check; не повторять уже проверенные fault cases. Нельзя ретроспективно объявить незахваченный recovery interval наблюдавшимся. |
+
+Один worker/PID согласуется с production entrypoint (`workers=1`), test-only
+entrypoint и startup logs PID 1, memory identities; один LLM slot дополнительно
+подтверждён реальными launch/release и сохранённым parallel=1/n_slots=1.
+Текущий archive не содержит отдельного `docker top` каждого временного app;
+это граница наблюдения, не основание повторять успешно проверенную очередь.
+
+Итак, **7.7 закрыта**, а **7.3 оставлена `[ ]`** без объявления полной stability
+приёмки. Ближайший шаг — read-only дополнение отсутствующих logs/filtered inspect;
+если health во время генерации никогда не вызывался, остаётся только этот
+непройденный live check с минимальным одним chat, одновременно закрывающим
+наблюдение обычного app traffic. В этом review он не запускается. До закрытия
+7.3 запуск итогового 7.2 не разрешается установленным порядком gates.
+После закрытия пробелов следующий минимальный шаг **для 7.2** — предусмотренный
+`docs/grounded-chat-api-evaluate.sh`: итоговые end-to-end и fixed-evidence
+generation-only cases с отдельными stability/safety/semantic-quality verdicts,
+всеми unanswerable и synthetic security/conflict cases, ручным safety review
+q13/q18, без tuning по раскрытому holdout или изменения frozen inputs. Старый
+failed 7.2 и quality/safety defects сохраняются.
+
+Локальная проверка evidence:
+`.venv/Scripts/python.exe -B data/grounded-chat-api-7.3-review/verify.py` — pass
+(archive bytes, JSON contracts/citation bounds, index/code identity,
+trace/task correlation, INFO/categories/privacy, memory и directed network flows).
+Verifier и numeric summary — локальные ignored artifacts. Unit/runtime/server
+tests не повторялись: изменения только в acceptance report и tasks.
+`openspec validate grounded-chat-api --strict` и `openspec validate --all --strict`
+— pass (11/11 items); CLI подтверждает 29/32. `git diff --check` — pass.
+
+### Review addendum 7.3, 2026-10-27
+
+**Verdict: 7.3 `[x]`, 7.7 `[x]`; прогресс 30/32.** Дополнение закрывает
+три пробела предыдущего review по действующим задаче 7.3, design §§7,9,
+delta requirements local runtime/app-only/read-only и SPEC §§5,24,27.
+Предыдущие результаты concurrency/cancellation/timeout/recovery, logging,
+offline app-only и SQLite identity сохраняются. Открыты **7.2 и 7.4**.
+Новых серверных испытаний в этой сессии не было, change не архивирован.
+
+Проверен `data/grounded-chat-api-7.3-addendum.tar.gz`, SHA256
+`0ca5a8f01eff42800710fc156637a10154e7e0821d54bee8194bcde2e905d268`:
+18 members, 20 973 file bytes. Members прочитаны непосредственно из архива
+без распаковки; проверены допустимые типы/пути и отсутствие повторных имён.
+Предыдущий архив повторно проверен существующим offline verifier, включая
+соответствие распакованных bytes и code/index identity. Архивы, ответы
+и оба verifier остаются в ignored `data/`, без добавления в Git.
+
+**Health во время фактического LLM inference — pass.** Все времена далее UTC
+2026-10-27, кроме явно указанных packet timestamps (МСК, UTC+3).
+`chat-start.txt` — 06:12:33Z; `chat-end.txt` — 06:13:54Z (точность до секунды).
+`chat.status`: HTTP **200 / 80,893726 s**. App outcome=ok в 06:13:54.099791,
+query_ms=80893,348, retrieval_ms=4140,332, wait_ms=0,063,
+generation_ms=76720,967; отдельная generation record согласована с итоговой.
+
+LLM log содержит ровно один launch/release: **slot 0, task 282,
+06:12:37.392267–06:13:54.098534**. Фактические prompt eval 33247,89 ms /
+2734 tokens и eval 43458,34 ms / 465 tokens, total 76706,23 ms / 3199 tokens
+согласуются с app duration. Это timing counts LLM, не новое доказательство
+полного `usage.prompt_tokens` и не повтор token gate 7.1.
+
+| Health UTC из app.log | HTTP / body | Client duration, s |
+| --- | --- | ---: |
+| 06:12:41.199820 | 200 / `{"status":"ok"}` | 0,001311 |
+| 06:12:49.206512 | 200 / `{"status":"ok"}` | 0,001069 |
+| 06:12:57.215650 | 200 / `{"status":"ok"}` | 0,001337 |
+| 06:13:05.224322 | 200 / `{"status":"ok"}` | 0,001104 |
+
+Четыре JSON body и `health-probes.log` с HTTP=200/CHAT_STILL_RUNNING
+сопоставлены с app.log и соответствующими TCP connections. Все GET выполнены
+**после launch и до release реальной LLM task**, а не только внутри долгого
+HTTP-запроса либо ожидания semaphore. По timings это prompt evaluation/prefill;
+проверку health именно в decode phase не заявляем. Требуемая отзывчивость
+во время LLM inference подтверждена; отдельного обязательного decode-phase
+gate нет. `health-errors.log` и `chat.stderr` пусты. Chat JSON соблюдает public
+contract и citation bounds, insufficient_context=true; corpus safety/quality
+по этому ответу не принимаются.
+
+**Host port / network mapping — pass.** В `ports-evidence.txt` (06:05:41 UTC)
+Compose ps показывает штатный `chago-app-1` (`python -m app`) и `chago-llm-1`
+с прежним pinned digest
+`f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283`.
+Опубликован app `192.168.12.100:8091->8000/tcp`; строка LLM без PORTS,
+port lookup: `no port 8080/tcp for container chago-llm-1`,
+`LLM_PORT_BINDINGS={}`. Совокупность filtered live outputs подтверждает
+отсутствие host-published LLM port, дополняя прежнюю проверку Compose config.
+
+`networks-evidence.txt`: app `chago_default=172.25.0.2`,
+`wiki_default=172.19.0.5`; LLM только `chago_default=172.25.0.3`.
+Роль адреса `172.25.0.3:8080` в capture подтверждена также network inspect.
+Это filtered output без raw NetworkSettings.Ports, container IDs/StartedAt
+и собственного timestamp mapping: новая побайтная identity-проверка всех
+settings/model и неизменность сетей вне наблюдений не заявляются. Роли
+согласуются с именами/digest в ps, прежними адресами и текущим capture.
+
+**Штатный indexed chat, capture `any` — pass в наблюдаемом интервале.**
+Summary: `listening on any`, LINUX_SLL2, **154 captured, 174 received by filter,
+0 dropped by kernel**. Разобраны все 154 непустых packet headers,
+09:12:33.203297–09:13:54.100414 МСК (06:12:33.203297–06:13:54.100414 UTC).
+Захват включает входящий chat, LLM request/response, все health requests
+и завершающий chat response; его 4512-byte body согласован с chat JSON.
+
+| Наблюдаемые направленные flows | Пакетов |
+| --- | ---: |
+| app `172.25.0.2` ↔ LLM `172.25.0.3:8080` | 72 |
+| Входящие LAN HTTP к app:8000 и ответы клиенту | 62 |
+| Loopback Docker DNS, 127.0.0.1 ↔ 127.0.0.11 | 20 |
+
+Пакеты идут по eth1 и lo; `any` охватывает также интерфейс второй сети,
+отсутствие её traffic не означает отключения wiki_default. Нет connections
+app к `172.19.*`, Wiki.js/DB, внешним API или download hosts. Ответы
+app:8000 на LAN ephemeral ports не являются обращениями к Wiki.
+Разница received/captured=20 совпадает с loopback count; dropped counter=0.
+DNS names/payload не сохранены, upstream forwarding resolver не установлен.
+
+Вместе с четырьмя прежними fault windows подтверждено отсутствие Wiki/API/
+download connections и сетевых Wiki writes в наблюдаемых запросах, теперь
+включая штатный indexed chat. Это не firewall guarantee, не ретроспективный
+capture прежних recovery completions/startup и не глобальный audit Wiki/LLM.
+Прежние четыре SQLite snapshots подтверждают hash/metadata до/после основной
+7.3; addendum не содержит нового index snapshot после health-live, такой замер
+ему не приписывается. Действующий gate не требует непрерывного capture всего
+дня или отдельной memory series для addendum.
+
+**Итог:** обязательные части 7.3 подтверждены совокупностью двух архивов;
+checkbox закрыт без изменения критериев, кода или LLM settings. Это pass Compose
+gate в описанных интервалах; итоговые stability/safety verdicts всего corpus
+и прежние semantic failures остаются предметом отдельного review.
+
+Следующий шаг **7.2** — `bash docs/grounded-chat-api-evaluate.sh` на закреплённой
+Qwen: итоговые end-to-end single-question и generation-only с fixed sufficient
+evidence, все answerable=false и synthetic security/conflict cases. Сохранить
+IDs/settings/fingerprints/counts/timings и раздельные stability, safety,
+semantic-quality verdicts; вручную проверить exact commands, refusals,
+ambiguity/conflicts/injection, особенно потенциальные safety blockers q13/q18.
+Frozen inputs и раскрытый holdout не использовать для tuning; старые failed
+7.2/quality verdicts сохраняются. После фактического review 7.2 остаётся 7.4.
+Серверные прогоны здесь не запускались.
+
+Локальные offline проверки:
+
+```powershell
+.venv/Scripts/python.exe -B data/grounded-chat-api-7.3-review/verify.py
+.venv/Scripts/python.exe -B data/grounded-chat-api-7.3-review/verify-addendum.py
+openspec.cmd validate grounded-chat-api --strict
+openspec.cmd validate --all --strict
+git diff --check
+```
+
+Оба evidence verifier — pass. Строгая валидация change — pass; всех items —
+11 passed / 0 failed. `git diff --check` — pass, CLI подтверждает **30/32**.
+Unit/runtime tests не запускались: изменены только этот отчёт и tasks.md;
+успешные серверные проверки, 7.1 и 7.6 не повторялись.
+
+## Локальная готовность к итоговой 7.2, 2026-10-27
+
+Проверен существующий harness; менять runtime, prompt, wrapper или frozen inputs
+для запуска не требуется. Точная последовательность операторских команд,
+preconditions, сбор identity/settings, проверка полноты JSONL и список evidence:
+[`grounded-chat-api-7.2-runbook.md`](grounded-chat-api-7.2-runbook.md).
+
+Профильные `app/tests/test_chat_evaluation.py`: **10 passed**. `bash -n` wrapper —
+pass. Frozen package v1 — valid; read-only StorageReader подтвердил source/document
+inventory live (24/910 documents/chunks) и synthetic (1/1), неизменность bytes обоих
+SQLite и прежние локальные SHA256 из раздела подготовки 7.2. Fixed manifests
+валидны для всех 18 single-question cases; unanswerable — q13–q17.
+Первый запуск pytest упёрся в права sandbox на временный каталог; повтор вне
+sandbox прошёл. Bash также проверен вне sandbox из-за CreateFileMapping error 5.
+Полный pytest/mypy не повторялись: изменения только в документации.
+
+Harness проверяет corpus через административный pipeline с общими validators,
+не через HTTP route/semaphore. API/concurrency/recovery/isolation evidence берётся
+из уже принятых проверок, отдельный corpus run не объявляется их повтором.
+Его summary сохраняет chat settings, но embedding/retrieval settings и LLM flags
+нужно сохранить внешней обвязкой по runbook. Текущее состояние сервера и наличие
+offline assets локально не подтверждены.
+
+**7.2 `[ ]`, 7.4 `[ ]`, прогресс 30/32.** Серверных запусков не было; нужны
+два полных JSONL (18 cases + summary каждый), stderr/identity/fingerprints/timings
+и ручные stability/safety/semantic-quality verdicts. q13/q18 остаются обязательными
+safety проверками; прежние failed reviews сохраняются, holdout не используется
+для tuning. Change не архивируется.
