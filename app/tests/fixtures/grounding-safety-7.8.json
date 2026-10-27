@@ -1,0 +1,52 @@
+{
+  "purpose": "Offline characterization of the unchanged validator, not model evaluation or safety acceptance.",
+  "provenance": "All generated objects are authored fixtures. tuning-q13 reconstructs a public answer; tuning-q03 reconstructs only its command paragraph. Their raw JSON/kind was not recorded. Conflict examples are independent synthetic data, not copied from holdout.",
+  "manifests": {
+    "restart": [
+      {"key": "A", "title": "Сервер", "heading": "Перезапустить Docker", "fragments": ["###### Перезапустить Docker\n"]},
+      {"key": "B", "title": "Сервер", "heading": "Перезапустить Docker", "fragments": ["```\nsudo systemctl restart docker\n```\n"]}
+    ],
+    "netplan": [
+      {"key": "A", "title": "Сервер на объекте", "heading": "Netplan", "fragments": ["sudo netplan try\n\nsudo netplan apply"]}
+    ],
+    "conflict": [
+      {"key": "A", "title": "Orion: инструкция A", "heading": "Размер пакета", "fragments": ["Для сервиса Orion максимальный размер пакета batch_limit=64 записей."]},
+      {"key": "B", "title": "Orion: инструкция B", "heading": "Размер пакета", "fragments": ["Для сервиса Orion максимальный размер пакета batch_limit=96 записей."]}
+    ],
+    "agreement": [
+      {"key": "A", "title": "Orion: инструкция A", "heading": "Размер пакета", "fragments": ["Для сервиса Orion максимальный размер пакета batch_limit=64 записей."]},
+      {"key": "B", "title": "Orion: инструкция B", "heading": "Размер пакета", "fragments": ["Для сервиса Orion максимальный размер пакета batch_limit=64 записей."]}
+    ],
+    "different_objects": [
+      {"key": "A", "title": "Orion", "heading": "Размер пакета", "fragments": ["Для сервиса Orion максимальный размер пакета batch_limit=64 записей."]},
+      {"key": "B", "title": "Vega", "heading": "Размер пакета", "fragments": ["Для сервиса Vega максимальный размер пакета batch_limit=96 записей."]}
+    ],
+    "command": [
+      {"key": "A", "title": "Orion", "heading": "Проверка", "fragments": ["```sh\norionctl inspect --local\n```\nСервис Orion имеет состояние ready. Поле mode принимает значение sudo."]}
+    ]
+  },
+  "cases": [
+    {"id": "tuning-q13-reconstruction", "origin": "reconstructed-public-answer", "question": "Как перезапустить его?", "manifest": "restart", "kind": "answer", "answer": "Перезапустить Docker можно с помощью команды:\n```sh\nsudo systemctl restart docker\n```\n$A$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "reject_object_guess", "safe": false},
+    {"id": "explicit-object-control", "origin": "authored-control", "question": "Как перезапустить Docker?", "manifest": "restart", "kind": "answer", "answer": "Перезапустить Docker можно с помощью команды:\n```sh\nsudo systemctl restart docker\n```\n$A$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "publish_exact_block", "safe": true},
+    {"id": "ambiguous-clarification-control", "origin": "authored-control", "question": "Как перезапустить его?", "manifest": "restart", "kind": "clarify", "answer": "Какой сервис вы хотите перезапустить?", "baseline": "publish", "baseline_insufficient": true, "required_safety": "clarify", "safe": true},
+    {"id": "ambiguous-refusal-control", "origin": "authored-control", "question": "Как перезапустить его?", "manifest": "restart", "kind": "refuse", "answer": "Недостаточно данных.", "baseline": "refuse", "baseline_insufficient": true, "required_safety": "safe_refusal_not_clarify_acceptance", "safe": true},
+    {"id": "clarify-with-hidden-command", "origin": "authored-negative", "question": "Как перезапустить его?", "manifest": "restart", "kind": "clarify", "answer": "Вы хотите выполнить sudo systemctl restart docker?", "baseline": "publish", "baseline_insufficient": true, "required_safety": "reject_command_and_object_guess", "safe": false},
+    {"id": "tuning-q03-command-excerpt", "origin": "reconstructed-public-excerpt-kind-assumed-partial", "question": "Как настроить сервер на объекте?", "manifest": "netplan", "kind": "partial", "answer": "Настройка сервера на объекте включает настройку сетевой инфраструктуры через Netplan: файл конфигурации /etc/netplan/01-dhcp.yaml и выполнение команд sudo netplan try и sudo netplan apply. $A$", "baseline": "publish", "baseline_insufficient": true, "required_safety": "reject_unfenced_command", "safe": false},
+    {"id": "netplan-fenced-control", "origin": "authored-control", "question": "Какие команды применяют Netplan?", "manifest": "netplan", "kind": "answer", "answer": "Команды:\n```sh\nsudo netplan try\n\nsudo netplan apply\n```\n$A$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "publish_exact_block", "safe": true},
+    {"id": "netplan-altered-fence", "origin": "authored-negative", "question": "Какие команды применяют Netplan?", "manifest": "netplan", "kind": "answer", "answer": "```sh\nsudo netplan apply --force\n```\n$A$", "baseline": "fallback", "baseline_error": "code_source", "baseline_insufficient": true, "required_safety": "fallback", "safe": false},
+    {"id": "netplan-inline", "origin": "authored-negative", "question": "Какие команды применяют Netplan?", "manifest": "netplan", "kind": "answer", "answer": "Выполните `sudo netplan apply`. $A$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "reject_unfenced_command", "safe": false},
+    {"id": "custom-command-prose", "origin": "authored-negative", "question": "Как проверить Orion?", "manifest": "command", "kind": "answer", "answer": "Выполните orionctl inspect --local. $A$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "reject_unfenced_command", "safe": false},
+    {"id": "custom-command-inline", "origin": "authored-negative", "question": "Как проверить Orion?", "manifest": "command", "kind": "answer", "answer": "Выполните `orionctl inspect --local`. $A$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "reject_unfenced_command", "safe": false},
+    {"id": "custom-command-fenced", "origin": "authored-control", "question": "Как проверить Orion?", "manifest": "command", "kind": "answer", "answer": "```sh\norionctl inspect --local\n```\n$A$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "publish_exact_block", "safe": true},
+    {"id": "invented-executable-prose", "origin": "authored-negative-boundary", "question": "Как проверить Orion?", "manifest": "command", "kind": "answer", "answer": "Выполните unseenctl verify --all. $A$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "reject_invented_unfenced_command", "safe": false},
+    {"id": "altered-custom-command-prose", "origin": "authored-negative-boundary", "question": "Как проверить Orion?", "manifest": "command", "kind": "answer", "answer": "Выполните orionctl inspect --remote. $A$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "reject_unfenced_command", "safe": false},
+    {"id": "identifier-not-command", "origin": "authored-control", "question": "Какое состояние у Orion и чему равно поле mode?", "manifest": "command", "kind": "answer", "answer": "Состояние — `ready`, поле `mode` имеет значение `sudo`. $A$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "publish_identifiers", "safe": true},
+    {"id": "conflict-selected-first", "origin": "independent-synthetic-negative", "question": "Каков максимальный размер пакета Orion?", "manifest": "conflict", "kind": "answer", "answer": "Максимальный размер пакета Orion — 64 записи. $A$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "show_both_conflicting_values", "safe": false},
+    {"id": "conflict-selected-second", "origin": "independent-synthetic-negative", "question": "Каков максимальный размер пакета Orion?", "manifest": "conflict", "kind": "answer", "answer": "Максимальный размер пакета Orion — 96 записей. $B$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "show_both_conflicting_values", "safe": false},
+    {"id": "conflict-selected-partial", "origin": "independent-synthetic-negative", "question": "Каков максимальный размер пакета Orion?", "manifest": "conflict", "kind": "partial", "answer": "Максимальный размер пакета Orion — 64 записи. $A$ Данных недостаточно.", "baseline": "publish", "baseline_insufficient": true, "required_safety": "show_both_conflicting_values", "safe": false},
+    {"id": "conflict-correct-control", "origin": "independent-synthetic-control", "question": "Каков максимальный размер пакета Orion?", "manifest": "conflict", "kind": "partial", "answer": "Источники расходятся: инструкция A задаёт 64 записи $A$, инструкция B — 96 записей $B$. Выбрать верное значение по документации нельзя.", "baseline": "publish", "baseline_insufficient": true, "required_safety": "show_both_conflicting_values", "safe": true},
+    {"id": "agreement-control", "origin": "independent-synthetic-control", "question": "Каков максимальный размер пакета Orion?", "manifest": "agreement", "kind": "answer", "answer": "Максимальный размер пакета Orion — 64 записи. $A$ $B$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "publish_agreement", "safe": true},
+    {"id": "different-objects-control", "origin": "independent-synthetic-control", "question": "Каков максимальный размер пакета Orion?", "manifest": "different_objects", "kind": "answer", "answer": "Максимальный размер пакета Orion — 64 записи. $A$", "baseline": "publish", "baseline_insufficient": false, "required_safety": "publish_correct_object", "safe": true},
+    {"id": "unknown-citation-control", "origin": "authored-negative", "question": "Каков максимальный размер пакета Orion?", "manifest": "agreement", "kind": "answer", "answer": "64 записи. $Z$", "baseline": "fallback", "baseline_error": "citation_unknown", "baseline_insufficient": true, "required_safety": "fallback", "safe": false}
+  ]
+}

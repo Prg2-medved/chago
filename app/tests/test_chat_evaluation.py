@@ -102,6 +102,7 @@ def test_case_selection_does_not_change_fingerprints_or_accept_followup(evaluati
     (json.dumps({"kind": "answer", "answer": "PRIVATE_INVALID_OUTPUT"}), "citation_missing"),
     (json.dumps({"kind": "answer", "answer": "PRIVATE_INVALID_OUTPUT [chunk:bad]"}), "citation_marker"),
     (json.dumps({"kind": "answer", "answer": "```sh\nPRIVATE_INVALID_OUTPUT\n```"}), "code_source"),
+    (json.dumps({"kind": "clarify", "answer": "PRIVATE_INVALID_OUTPUT sudo systemctl restart atlas?"}), "code_prose"),
 ])
 def test_validation_diagnostic_preserves_fallback_without_publishing_raw_output(evaluation_inputs, content, category):
     client = Client()

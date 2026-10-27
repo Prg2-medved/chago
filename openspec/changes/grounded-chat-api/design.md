@@ -4,6 +4,13 @@
 > согласования. Приоритеты и порядок gates ниже заменяют прежний общий semantic
 > acceptance gate; результаты прежних прогонов остаются историческими фактами.
 
+> План §10 / 7.8–7.11 согласован владельцем 2026-10-27. Выполнена локальная
+> диагностика 7.8 с test fixtures; кандидат 7.9 из §11 отдельно согласован
+> как минимальный вариант и реализован локально (§12). Новые серверные проверки
+> не выполнялись; локальные результаты не означают устранение safety blockers.
+> Критерии SPEC/proposal/delta specs сохраняются. Прежние разделы и результаты
+> описывают свои этапы; актуальный порядок продолжения после review — в §10.
+
 ## Context
 
 Мотивация и границы этапа — в `proposal.md`; contract — в `specs/grounded-chat-api/spec.md`. Использован весь brief §10 ROADMAP.md и SPEC.md §§5,10–16,18,20,24,26–27. §17 учитывается только для token budget и границы следующего этапа.
@@ -278,6 +285,199 @@ timeout gate остаётся открытым; это planning prerequisite, а
 SQLite. Health должен оставаться отзывчивым, но не считается доказательством
 прекращения генерации. При отсутствии live доступа эти gates остаются открытыми.
 
+### 10. Устранение safety blockers итоговой 7.2 (план согласован 2026-10-27)
+
+Основание — раздел «Review итоговой 7.2 по серверному архиву, 2026-10-27» в
+`docs/grounded-chat-api-server-acceptance.md`, архив
+`data/grounded-chat-api-7.2-evidence.tar.gz`, SHA256
+`c7e1a252875f4a670ed935ba4f6a7a1975bbeb474fa88727f49787e0169d939b`.
+Transport двух режимов завершён; safety и semantic quality — fail, ресурсы/
+identity нового интервала — evidence incomplete. Четыре safety failures:
+q13 end-to-end (выбор Docker вместо неизвестного объекта), q18 в обоих режимах
+(подмена очереди при retrieval miss / выбор одного варианта при полном конфликте),
+q03 generation-only (команды в прозе). Это наблюдения, а не установленная
+внутренняя причина выбора Qwen: raw generated JSON в evidence отсутствует.
+
+Работа остаётся в `grounded-chat-api`: исправляются обязательные требования
+SPEC §§13–16 и delta scenarios, а не вводится новая capability. Необходимые
+результаты исправления:
+
+| Ситуация | Требуемый результат и проверка |
+| --- | --- |
+| Неизвестный объект в независимом вопросе | Короткое уточнение; безопасный отказ без фактов допустим для safety, но не засчитывается как успешное уточнение. Нельзя брать объект из ближайшего retrieved heading или придумывать команду для него. insufficient_context=true; история из session_id не добавляется. |
+| Одному объекту/параметру соответствуют разные значения в переданном evidence | Явно назвать расхождение, показать оба значения с соответствующими citations, insufficient_context=true; не выбирать правильную версию. Общий refusal/fallback скрывает опасный ответ, но сам по себе не выполняет scenario показа конфликта. |
+| Конфликтующие evidence не собраны полностью | Сохранить retrieval/context miss отдельно от generation verdict; не дополнять отсутствующий вариант из знаний и не подменять предмет вопроса соседним identifier. Не добавлять поиски или ranking tuning ради раскрытого holdout. |
+| Команда публикуется в ответе | Только fenced block, дословный непрерывный исходный fragment по прежним правилам §6. Команда в prose/inline code не проходит safety acceptance. При отклонении скрывать generated answer существующим fallback без второго completion; не исправлять и не оборачивать команду автоматически ради pass. |
+
+**Порядок работ после согласования draft: 7.8 → 7.9 → 7.10 → 7.11 → 7.2 → 7.4.**
+Задачи 7.8–7.11 добавлены этим планом; результат выполненной 7.8 — в §11.
+7.9/7.10 выполнены локально по §12; подготовка 7.11 завершена по §13.
+Прежние 7.2/7.4 остаются открытыми.
+
+1. **7.8 — offline диагностика и fixtures.** По текущим prompt/manifest/validators
+   определить, где правила уже заданы и какие нарушения они пропускают. Для
+   ambiguity/commands использовать tuning q13/q03 и новые локальные fixtures;
+   для conflict — независимые synthetic examples с другими объектами/значениями,
+   без копирования q18 или его ожидаемых строк. Проверить также перестановку
+   источников, корректный однозначный вопрос, согласованные значения и правильный
+   fenced block: защита не должна превращать обычные ответы в общий отказ.
+   Canned model outputs проверяют границу backend, не доказывают поведение Qwen;
+   восстановленный из public answer output помечать как reconstruction.
+   Результат — выбор минимального механизма для каждого blocker, критерии тестов
+   и перечень затронутых файлов. При необходимости уточнить design перед 7.9;
+   расширение архитектуры требует отдельного согласования, не поглощается задачей.
+2. **7.9 — минимальное исправление выбранного механизма.** Сохранить один
+   completion, `{kind, answer}`, public API, исходные manifests и fail-closed.
+   Рассмотреть точечную правку prompt и/или ограниченные локальные проверки
+   только по обоснованной диагностикой границе. Уже имеющиеся правила prompt
+   не считать исправлением по факту их повторения; regex не считать общим
+   решением ambiguity/conflict или распознавания любых команд в произвольной
+   прозе. Проверки поддержанных форм и оставшиеся ограничения описать явно;
+   неподтверждённое покрытие оставляет safety gate открытым. Если в текущих
+   границах нет достаточного решения, представить blocker владельцу, а не
+   ослаблять acceptance или менять runtime. Новый semantic entailment checker,
+   verifier model, классификатор с дополнительным LLM call, tools, `parts`,
+   retries и tuning retrieval не входят в эту задачу. Backend не добавляет
+   citations и не исправляет kind/insufficient_context по их наличию.
+3. **7.10 — локальные проверки.** Запустить сначала профильные grounding/chat/
+   LLM tests с новыми негативными и позитивными fixtures, затем затронутые
+   API/config/health/index regressions, полный pytest и принятую mypy-проверку.
+   Проверить отсутствие дополнительного completion, сохранность exact-block/
+   citations/fallback и отсутствие sensitive output в логах. Сохранить команды,
+   результаты и объяснения skips. Локальный pass не закрывает live safety 7.2.
+4. **7.11 — evidence и готовность новой приёмки.** Read-only найти уже сохранённую
+   внешнюю обвязку исходного run: timestamps/exit/code hashes/public settings/
+   LLM flags/container-process-OOM/resources/inputs-check. Не найденные данные
+   оставить как limitation; не генерировать для старого интервала новые снимки.
+   Подготовить протокол приёмки окончательного исправленного варианта с полным
+   сбором этих данных, identity/messages fingerprints, обоими режимами corpus
+   и ручными stability/safety/quality verdicts. Этот шаг не отправляет model/HTTP
+   запросы и не запускает серверные проверки. Найденные metadata не исправляют
+   safety fail и не дают исходной 7.2 ретроспективный pass.
+
+**Условия последующей live 7.2.** Только после локальных проверок и отдельного
+разрешения на серверный этап проверяется окончательный вариант на закреплённой
+Qwen. Если изменились messages, прежняя 7.1 остаётся исторически принятой для
+старых messages, но не доказывает совместимость новых: до corpus run повторить
+exact token/template check по §4 на окончательных messages/границах контекста,
+сохранить calculated=actual и reserve. Без изменения messages/token path/runtime
+не повторять 7.1 без названной причины. Неизменные 7.5/7.6/7.3/7.7 не повторяются
+автоматически; при затрагивании их поведения сначала обосновать нужные проверки.
+
+В будущей 7.2 сохраняется полный single-question corpus в обоих режимах,
+все unanswerable/security/conflict cases и отдельный review q13/q18; никакого
+перезапуска отдельного holdout за удачным ответом. Вариант фиксируется до
+приёмки: раскрытый holdout q18 не используется для выбора реализации, prompt,
+регулярных выражений или ranking. Frozen inputs/splits/baselines, исторические
+reviews, image/model/flags/sampling/window/reserve/timeout не меняются.
+Семантические defects по полноте/kind/entailment остаются открытыми post-MVP;
+ни один из трёх классов safety blockers туда не переносится. Pass 7.2 требует
+фактических stability и safety verdicts, после него выполняется 7.4.
+
+### 11. Результат 7.8 и кандидат 7.9 на согласование, 2026-10-27
+
+Полный отчёт — `docs/grounded-chat-api-safety-diagnostic-7.8.md`; test assets —
+`app/tests/fixtures/grounding-safety-7.8.json` и
+`app/tests/test_grounding_safety_diagnostic.py`. Локально проверены 22 cases
+при двух порядках sources и две парные границы: 46 diagnostic checks;
+вместе с 50 существующими grounding checks — 96 passed. Unsafe outputs,
+которые нынешний validator публикует, зафиксированы как baseline gaps, не pass
+safety. q13/q03 fixtures — reconstruction public output/абзаца, не raw JSON.
+Conflict fixtures независимы от holdout; q18 не использован для выбора решения.
+
+Установлено: validator не получает question, не сравнивает смысл fragments и
+не проверяет команды в оставшейся после fences prose. Правила всех трёх safety
+случаев в SYSTEM_RULES уже есть. Внутренняя причина решений Qwen неизвестна;
+серверный inference в диагностике отсутствует. Изолированные quality defects
+и прежние отрицательные verdicts не пересмотрены.
+
+**Предлагаемый кандидат 7.9, не реализован:**
+
+- В SYSTEM_RULES поставить ранний выбор clarify по неопределимому объекту
+  текущего вопроса; дать контраст естественного местоименного и явного вопроса
+  при одном и том же соблазняющем CONTEXT, без подсказки в скобках.
+- После определения объекта явно сравнивать релевантные sources до answer;
+  показать независимые conflict/agreement/different-object examples. При
+  конфликте — partial, оба значения и citations; без backend исправления kind.
+- В общей `validate_answer` добавить fail-closed guard узнаваемого shell
+  invocation в оставшейся prose/inline code, в том числе внутри clarify:
+  sudo с executable/arguments и executable с arguments, извлечённый из простой
+  команды в исходном sh/bash/shell fence. Executables не привязываются к eval
+  literals. Canonical refusal, identifiers без invocation и проверенные fenced
+  blocks сохраняются. Отклонение — прежний полный fallback без повторного call;
+  exact code matching/нормализация не меняются. Кандидат не требует изменения
+  сигнатуры validator, ChatService, harness, public API или runtime.
+
+**Ограничение остаётся явным:** такой guard не распознаёт любые произвольные
+команды/языки и invented executable без исходного образца или узнаваемого prefix.
+Соответствующий negative fixture сохранён; его нельзя объявить закрытым scanner.
+Prompt остаётся модельным механизмом ambiguity/conflict и непокрытых command
+форм, его эффективность offline не измерена. Ни критерии safety, ни corpus
+не сужаются; нарушение при будущей приёмке оставит 7.2 открытой. Если этого
+кандидата недостаточно, дальнейшее расширение требует отдельного решения,
+не незаметного добавления blacklist/semantic checker/второй модели.
+
+Предполагаемые production changes 7.9 — только `app/app/grounding.py`; тесты —
+grounding и новые diagnostic assets с заменой затронутых baseline assertions
+на regression expectations. Команды/критерии проверки и альтернативы раскрыты
+в diagnostic report. Новые messages потребуют exact token/template gate перед
+будущей live 7.2; остальные неизменные принятые gates автоматически не повторяются.
+7.8 завершена, **7.9 не начинать до согласования кандидата владельцем**.
+
+### 12. Реализация согласованного кандидата 7.9, 2026-10-27
+
+Владелец согласовал механизм §11 как минимальный кандидат, без признания safety
+пройденной, и разрешил реализацию с локальными регрессиями. Из production
+изменён только `app/app/grounding.py`: ранний выбор clarify по объекту текущего
+вопроса, сравнение источников до answer, независимые примеры conflict/agreement/
+different objects; общий guard `_validate_prose_commands` после canonical refuse
+и до публикации answer/partial/clarify. Public API, validator signature, число
+completions, retrieval, модель и runtime flags сохраняются.
+
+Guard проверяет оставшуюся после exact fenced validation prose/inline code:
+`sudo` либо executable из простой команды в полном исходном sh/bash/shell fence,
+после которого идут whitespace и ASCII token argument. Используются только
+original fragments, а не generated blocks или title/heading. Shell keywords,
+assignments и строки с pipeline/redirect/variable/continuation не участвуют
+в извлечении. Ошибка — `code_prose`, прежний полный fallback без исправления
+команды/повторного вызова. Наличие generated fence не заменяет прежнюю точную
+проверку его body по одному переданному исходному fragment.
+
+Standalone identifiers, canonical refusal и корректные source-backed fences
+сохранены. Неизвестные executable, иные языки, сложные конструкции/обфускация
+и неполные исходные fences остаются вне гарантии; английская prose, похожая
+на invocation, может дать ложный fallback. Семантика ambiguity/conflict
+по-прежнему зависит от Qwen. Границы опубликованы в `docs/grounded-chat-api.md`,
+результаты/серверные prerequisites — в
+`docs/grounded-chat-api-safety-candidate-7.9.md`.
+
+Фиксированные 7.8 fixtures не переписаны: в tests затронутые шесть command
+outcomes заменены regression expectations, а непокрытые unsafe cases остаются
+явными. Приёмка реальной Qwen и новые counts не выводятся из canned outputs.
+7.9 закрывает реализацию кандидата; 7.2/7.4 остаются открытыми. Изменённый prompt
+требует нового exact token/template gate перед будущей 7.2, без автоматического
+повтора остальных неизменных gates. Серверный этап отдельно согласуется.
+
+### 13. Локальная готовность 7.11, 2026-10-27
+
+Read-only просмотр исходного архива и связанных локальных evidence не дал
+внешней обвязки прежней 7.2. .tmp wrapper artifacts являются mock-тестами,
+а не server observations. Отсутствие timestamps/exit/flags/process/OOM/resources/
+inputs-check остаётся явным ограничением старого verdict; другие интервалы
+и новые snapshots вместо них не используются.
+
+`docs/grounded-chat-api-7.11-runbook.md` фиксирует новый протокол: сверка
+checkout и кода в штатном app, SYSTEM_RULES/probe messages fingerprints,
+exact token/template gate изменённого prompt, затем полный corpus в обоих
+режимах с внешней обвязкой. App deployment, если требуется, отдельно согласуется:
+копирование checkout не обновляет COPY кода в уже запущенном image. Старый
+pass 7.1 остаётся для прежних messages; несовпадение counts/identity останавливает
+новую 7.2. Stop/no-retry/недопустимость tuning по holdout сохранены.
+
+7.11 завершает подготовку, не серверную приёмку. Bash/Python blocks проверены
+только синтаксически, Docker/model commands не выполнялись. 7.2/7.4 открыты;
+следующий серверный этап требует отдельного разрешения владельца.
+
 ## Risks / Trade-offs
 
 - [Валидная citation не доказывает entailment; команда может оказаться вне fences] → строгие правила, exact-block checks и ручной review corpus; не заявлять автоматическую гарантию всех фактов.
@@ -295,3 +495,4 @@ SQLite. Health должен оставаться отзывчивым, но не
 2. Исходный этап (выполнен): app settings и Compose environment для context/timeout, документация запросов/ошибок и `.env.example`. Эти настройки не изменяются в пересмотре; README/ROADMAP не менять.
 3. Продолжить с принятым gate 7.1 без смены messages/runtime: диагностика OOM → memory series → Compose concurrency/cancellation/timeout → ручной recovery → offline/app-only/isolation/SQLite → итоговый live MVP run. Semantic quality оформить отдельно как post-MVP, не переписывая прежние failures. `parts` не реализовывать. При необходимости менять runtime сначала получить отдельное решение владельца.
 4. При rollback вернуть предыдущий app image/code и environment; индекс не мигрировал и остаётся совместимым. Внешних записей, которые нужно откатывать, нет.
+5. Продолжение после отрицательного review 7.2 от 2026-10-27: согласовать draft §10 и задачи 7.8–7.11; затем offline диагностика → минимальное исправление → локальные регрессии → подготовка evidence/протокола → отдельно разрешённая live 7.2 и итоговая 7.4. Сейчас выполняется только planning; предыдущие принятые gates и отрицательные reviews сохраняются.

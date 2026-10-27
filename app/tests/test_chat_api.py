@@ -78,6 +78,24 @@ def test_contract_and_no_session_history_or_public_override(chat_api):
     assert len(queries) == 2
 
 
+def test_unfenced_command_uses_shared_fallback_without_retry_or_sensitive_logs(chat_api, caplog):
+    client, fake, queries, results = chat_api
+    original = "```sh\nnebula-tool --local\n```"
+    results[0] = replace(results[0], chunk=chunk(original))
+    fake.content = generated("PRIVATE_GENERATION nebula-tool --remote " + marker())
+    response = send(client, "PRIVATE_MESSAGE", "PRIVATE_SESSION")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == FALLBACK and body["insufficient_context"]
+    assert body["sources"][0]["quote"] == original
+    assert queries == ["PRIVATE_MESSAGE"] and len(fake.messages) == 1
+    assert "PRIVATE" not in caplog.text and "--remote" not in caplog.text
+    assert "query_ms=" in caplog.text and "generation_ms=" in caplog.text
+    fake.content = generated("Сервис готов. " + marker())
+    assert send(client, "Обычный вопрос").json()["insufficient_context"] is False
+    assert len(fake.messages) == 2
+
+
 @pytest.mark.parametrize("field,limit", [("session_id", 128), ("message", 4096)])
 @pytest.mark.parametrize("value", ["x", "🧪", "ё", " "])
 def test_original_unicode_length_boundaries(chat_api, field, limit, value):

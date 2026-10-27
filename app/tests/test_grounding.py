@@ -65,21 +65,30 @@ def test_untrusted_json_has_only_two_messages_and_no_source_urls():
 def test_prompt_examples_are_valid_json_citations_and_exact_source_code():
     # Exercise the examples through the actual parser/code/citation validators;
     # malformed JSON escapes or an unsourced example command would teach invalid output.
-    lines = SYSTEM_RULES.splitlines()
-    data = json.loads(next(line.removeprefix("Учебный CONTEXT: ") for line in lines
-                           if line.startswith("Учебный CONTEXT: ")))
-    manifest = build_manifest([chunk(data["fragments"][0], char="0")])
-    assert manifest[0].chunk_id == data["id"]
-    examples = [line for line in lines if line.startswith('{"kind":')]
-    assert len(examples) == 4
-    results = [validate_answer(raw, manifest) for raw in examples]
+    examples = []
+    for line in SYSTEM_RULES.splitlines():
+        if line.startswith("Учебный CONTEXT: "):
+            data = json.loads(line.removeprefix("Учебный CONTEXT: "))
+            items = data if isinstance(data, list) else [data]
+            manifest = build_manifest([chunk("\n".join(item["fragments"]), char=item["id"][0]) for item in items])
+            assert [item.chunk_id for item in manifest] == [item["id"] for item in items]
+        elif line.startswith('{"kind":'):
+            examples.append((line, manifest))
+    assert len(examples) == 7
+    results = [validate_answer(raw, context) for raw, context in examples]
     assert all(result.answer != FALLBACK for result in results)
-    assert [result.insufficient_context for result in results] == [False, True, False, True]
+    assert [result.insufficient_context for result in results] == [False, True, False, True, True, False, False]
     assert all(result.sources for result in results[:3]) and not results[3].sources
     assert "```sh\narchivectl verify\n```" in results[2].answer
+    assert [len(result.sources) for result in results[4:]] == [2, 2, 1]
+    for raw, context in examples:
+        reversed_result = validate_answer(raw, tuple(reversed(context)))
+        assert reversed_result.answer != FALLBACK
+        assert reversed_result.insufficient_context == (parse_generated(raw).kind != "answer")
     # Example IDs are never authority for a real request with different evidence.
-    actual_manifest = build_manifest([chunk(data["fragments"][0])])
-    assert all(validate_answer(raw, actual_manifest).answer == FALLBACK for raw in examples[:3])
+    actual_manifest = build_manifest([chunk("real source")])
+    assert all(validate_answer(raw, actual_manifest).answer == FALLBACK
+               for raw, _ in examples if parse_generated(raw).kind != "clarify")
 
 
 @pytest.mark.parametrize("kind", ["answer", "partial", "refuse", "clarify"])
@@ -224,3 +233,80 @@ def test_prompt_injection_fixture_has_no_authority_or_generated_link():
     assert attack not in messages[0]["content"]
     assert json.loads(messages[1]["content"])["CONTEXT"][0]["fragments"] == [attack]
     assert validate_answer(generated("ATTACK https://invented/"), manifest).answer == FALLBACK
+
+
+@pytest.mark.parametrize("language,executable", [("sh", "nebula-tool"), ("bash", "/opt/ops/inspect"), ("shell", "./verify.sh")])
+@pytest.mark.parametrize("kind", ["answer", "partial", "clarify"])
+def test_source_shell_invocation_in_prose_hidden_even_with_changed_arguments(language, executable, kind):
+    manifest = build_manifest([chunk(f"```{language}\n{executable} --local\n```\n")])
+    text = f"Выполнить `{executable} --remote`? " + marker()
+    errors = []
+    result = validate_answer(generated(text, kind), manifest, on_error=errors.append)
+    assert errors == ["code_prose"]
+    assert result.answer == FALLBACK and result.insufficient_context
+    assert "--remote" not in result.answer
+    assert result.sources[0].quote == manifest[0].fragments[0].text
+
+
+@pytest.mark.parametrize("text", [
+    "Состояние сервиса — ready.",
+    "Поле mode имеет значение `sudo`.",
+    "sudoers — группа пользователей.",
+    "Утилита nebula-tool предназначена для проверки.",
+    "Поле `tool` — `nebula-tool`.",
+    "`nebula-tool` используется для проверки.",
+    "Use `nebula-tool` for local checks.",
+    "Имя sudo означает запуск с повышенными правами.",
+    "batch_limit равен 64 записям.",
+])
+def test_command_guard_preserves_prose_and_standalone_technical_literals(text):
+    source = ("```sh\nnebula-tool --local\n```\nСостояние сервиса — ready. "
+              "Поле mode имеет значение sudo. Поле tool — nebula-tool. batch_limit=64.")
+    result = validate_answer(generated(text + " " + marker()), build_manifest([chunk(source)]))
+    assert result.answer != FALLBACK and not result.insufficient_context
+
+
+@pytest.mark.parametrize("source", [
+    "```sh\nnebula-tool --local\n```",
+    "~~~bash\nnebula-tool --local\n~~~",
+    "````shell\nnebula-tool --local\n`````",
+])
+def test_valid_source_blocks_allow_exact_generated_fence_but_not_extra_prose_command(source):
+    manifest = build_manifest([chunk(source)])
+    exact = "```sh\nnebula-tool --local\n```\n" + marker()
+    assert validate_answer(generated(exact), manifest).answer != FALLBACK
+    assert validate_answer(generated(exact + "\nТакже nebula-tool --remote."), manifest).answer == FALLBACK
+
+
+@pytest.mark.parametrize("source,text", [
+    ("```json\nnebula-tool --local\n```", "nebula-tool --remote"),
+    ("```sh\nnebula-tool --local", "nebula-tool --remote"),
+    ("nebula-tool --local", "nebula-tool --remote"),
+    ("```sh\nnebula-tool --local | other\n```", "nebula-tool --remote"),
+    ("```sh\nfor item in things\n```", "for local checks"),
+    ("```sh\nnebula-tool --local\n```", "unseen-tool --remote"),
+    ("```sh\nnebula-tool --local\n```", "nebula-tool"),
+])
+def test_command_guard_explicit_unsupported_boundaries(source, text):
+    # These authored outputs are NOT safety passes. The bounded guard cannot
+    # classify arbitrary commands or infer intent from a bare executable name.
+    result = validate_answer(generated(text + " " + marker()), build_manifest([chunk(source)]))
+    assert result.answer != FALLBACK
+
+
+@pytest.mark.parametrize("command", ["sudo systemctl restart atlas", "sudo -u operator ./verify --all"])
+def test_sudo_invocation_does_not_need_shell_fences_in_original(command):
+    manifest = build_manifest([chunk(command)])
+    errors = []
+    assert validate_answer(generated(command + " " + marker()), manifest, on_error=errors.append).answer == FALLBACK
+    assert errors == ["code_prose"]
+    result = validate_answer(generated("```sh\n" + command + "\n```\n" + marker()), manifest)
+    assert result.answer != FALLBACK and command in result.answer
+    # Refused raw content is discarded, not published as a generated command.
+    assert validate_answer(generated(command, "refuse"), manifest).answer == REFUSAL
+
+
+def test_shell_dot_builtin_does_not_turn_punctuation_into_a_command():
+    manifest = build_manifest([chunk("```sh\n. ./env\n```\nПоле mode имеет значение ready.")])
+    result = validate_answer(generated("Значение `ready`. Mode — имя поля. " + marker()), manifest)
+    assert result.answer != FALLBACK
