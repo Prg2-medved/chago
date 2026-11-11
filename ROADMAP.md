@@ -4,7 +4,7 @@
 
 Этот roadmap описывает целевую последовательность развития локальной RAG-системы Chago — от базового приложения и локальной LLM до полностью автономного read-only RAG.
 
-Roadmap намеренно не хранит статус выполнения и не требует регулярного обновления. Фактическое состояние реализации, активные задачи и завершённые изменения хранятся в OpenSpec.
+Завершённые этапы отмечаются пометкой `(выполнен)` в заголовке. Подробное фактическое состояние реализации, активные задачи и завершённые изменения хранятся в OpenSpec.
 
 Первые фундаментальные этапы также включены в roadmap, чтобы вся архитектурная последовательность проекта была видна в одном месте.
 
@@ -57,7 +57,7 @@ git diff
 
 ---
 
-## 1. `bootstrap-project`
+## 1. `bootstrap-project` (выполнен)
 
 ### Brief для OpenSpec
 
@@ -92,7 +92,7 @@ git diff
 
 ---
 
-## 2. `local-cpu-runtime`
+## 2. `local-cpu-runtime` (выполнен)
 
 ### Brief для OpenSpec
 
@@ -162,7 +162,7 @@ top_k: 20
 
 ---
 
-## 3. `wikijs-markdown-ingestion`
+## 3. `wikijs-markdown-ingestion` (выполнен)
 
 ### Brief для OpenSpec
 
@@ -188,7 +188,7 @@ top_k: 20
 
 ---
 
-## 4. `rag-evaluation-corpus`
+## 4. `rag-evaluation-corpus` (выполнен)
 
 ### Brief для OpenSpec
 
@@ -206,7 +206,7 @@ Corpus должен быть воспроизводимым и пригодны�
 
 ---
 
-## 5. `markdown-chunking`
+## 5. `markdown-chunking` (выполнен)
 
 ### Brief для OpenSpec
 
@@ -231,7 +231,7 @@ Chunking должен учитывать структуру Markdown и сохр
 
 ---
 
-## 6. `sqlite-index-storage`
+## 6. `sqlite-index-storage` (выполнен)
 
 ### Brief для OpenSpec
 
@@ -253,7 +253,7 @@ Chunking должен учитывать структуру Markdown и сохр
 
 ---
 
-## 7. `semantic-retrieval`
+## 7. `semantic-retrieval` (выполнен)
 
 ### Brief для OpenSpec
 
@@ -282,7 +282,7 @@ Embedding-модель должна:
 
 ---
 
-## 8. `lexical-and-hybrid-retrieval`
+## 8. `lexical-and-hybrid-retrieval` (выполнен)
 
 ### Brief для OpenSpec
 
@@ -305,7 +305,7 @@ Hybrid retrieval должен использовать как минимум:
 
 ---
 
-## 9. `atomic-full-reindex`
+## 9. `atomic-full-reindex` (выполнен)
 
 ### Brief для OpenSpec
 
@@ -323,7 +323,7 @@ Hybrid retrieval должен использовать как минимум:
 
 ---
 
-## 10. `grounded-chat-api`
+## 10. `grounded-chat-api` (выполнен)
 
 ### Brief для OpenSpec
 
@@ -359,7 +359,7 @@ Hybrid retrieval должен использовать как минимум:
 
 ---
 
-## 11. `minimal-web-ui-and-health`
+## 11. `minimal-web-ui-and-health` (выполнен)
 
 ### Brief для OpenSpec
 
