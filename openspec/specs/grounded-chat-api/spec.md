@@ -155,7 +155,7 @@ Wiki text SHALL передаваться как явно обозначенны�
 - **THEN** первый случай допускает обычный release без блокировки, второй восстанавливает chat; один restart app не выдаётся за подтверждённое завершение старой генерации
 
 ### Requirement: Technical errors and app-only compatibility
-Отсутствующий/невалидный индекс, несовместимые или недоступные embedding assets, ошибки retrieval и недоступная LLM SHALL давать безопасную HTTP 503; timeout LLM SHALL давать HTTP 504; некорректный transport response LLM SHALL давать HTTP 502. Некорректный формат содержимого генерации SHALL обрабатываться как неподтверждённый ответ HTTP 200 с исходными fragments. Технические ошибки SHALL NOT представляться отказом по отсутствию сведений в Wiki.js. App-only startup и `GET /health` SHALL сохранять HTTP 200 и `{"status":"ok"}` без LLM/model readiness checks. Система SHALL логировать query, retrieval, LLM wait и generation durations и безопасные категории ошибок, без credentials/DSN, raw exceptions, полного prompt/документов, session_id или message.
+Отсутствующий/невалидный индекс, несовместимые или недоступные embedding assets, ошибки retrieval и недоступная LLM SHALL давать безопасную HTTP 503; timeout LLM SHALL давать HTTP 504; некорректный transport response LLM SHALL давать HTTP 502. Некорректный формат содержимого генерации SHALL обрабатываться как неподтверждённый ответ HTTP 200 с исходными fragments. Технические ошибки SHALL NOT представляться отказом по отсутствию сведений в Wiki.js. App-only startup SHALL сохраняться без готовности индекса, embedding assets или LLM. `GET /health` SHALL сохранять HTTP 200 и верхнеуровневый status=ok, расширяя JSON диагностикой app/index/llm/chat по rag-operational-status, без генерации, загрузок и изменения generation slot. Система SHALL логировать query, retrieval, LLM wait и generation durations и безопасные категории ошибок, без credentials/DSN, raw exceptions, полного prompt/документов, session_id или message.
 
 Штатный запуск SHALL обеспечивать INFO query/retrieval/wait/generation records
 logger `app.chat`, без ручного включения его уровня тестом или оператором.
@@ -169,7 +169,7 @@ live logging evidence 7.3; 7.7 SHALL NOT закрываться до обоих 
 
 #### Scenario: Missing index or model
 - **WHEN** app запущен без готового индекса либо embedding assets
-- **THEN** health работает по прежнему контракту, chat возвращает техническую HTTP 503 без создания индекса или загрузок
+- **THEN** health возвращает HTTP 200 и status=ok с диагностикой недоступных компонентов, chat возвращает техническую HTTP 503 без создания индекса или загрузок
 
 #### Scenario: App timings in the normal startup configuration
 - **WHEN** приложение запускается штатно и выполняет предусмотренные проверки 7.3
