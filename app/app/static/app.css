@@ -1,0 +1,21 @@
+:root { font-family: system-ui, sans-serif; color: #202d3b; background: #f4f6f8; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 900px; margin: 2rem auto; padding: 0 1rem 3rem; }
+h1 { font-size: clamp(1.6rem, 5vw, 2.2rem); }
+p { line-height: 1.6; }
+label { display: block; font-weight: 600; margin-bottom: .6rem; }
+textarea { width: 100%; padding: .8rem; font: inherit; border: 1px solid #65778a; border-radius: .4rem; resize: vertical; }
+button { font: inherit; padding: .7rem 1.1rem; border: 0; border-radius: .4rem; background: #1c527e; color: white; cursor: pointer; }
+button:disabled { opacity: .65; cursor: wait; }
+:focus-visible { outline: 3px solid #a55500; outline-offset: 3px; }
+#question-help { font-size: .9rem; color: #45576b; }
+#chat-status { min-height: 1.6em; }
+.error, .warning { color: #8a2800; }
+.answer, .quote { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.source, details { background: white; border: 1px solid #c9d2dc; border-radius: .5rem; padding: 1rem; margin-top: 1rem; }
+.source h3 { margin-top: 0; }
+.source a, .source p { overflow-wrap: anywhere; }
+summary { cursor: pointer; font-weight: 600; }
+dt { font-weight: 600; margin-top: .7rem; }
+dd { margin: .2rem 0 0; overflow-wrap: anywhere; }

@@ -8,10 +8,6 @@ Roadmap намеренно не хранит статус выполнения �
 
 Первые фундаментальные этапы также включены в roadmap, чтобы вся архитектурная последовательность проекта была видна в одном месте.
 
-Обязательный путь к функциональному MVP после lexical/hybrid retrieval: `atomic-full-reindex` → `grounded-chat-api` → `minimal-web-ui-and-health` → `offline-mvp-acceptance`. По согласованному решению владельца от 2026-11-11 `session-follow-up` перенесён в отдельный post-MVP change (`SPEC.md` §17, §27, §30). Следующий этап MVP — `minimal-web-ui-and-health`, затем `offline-mvp-acceptance`. Достижение Hit@5 ≥90% также вынесено в post-MVP и не блокирует этот путь. Grounded answers, sources, refusal, read-only Wiki.js, local/offline runtime и остальные обязательные safety/stability требования остаются критериями выпуска.
-
-В MVP каждый вопрос обрабатывается независимо: новый retrieval → один LLM completion → ответ с источниками либо предусмотренный отказ/уточнение. История диалога не хранится и не передаётся в retrieval или LLM. Существующий контракт `/api/chat` и `session_id` сохраняется (`SPEC.md` §17.1, §20). Frozen evaluation corpus, исторические evidence и архивированные OpenSpec changes не изменяются; follow-up evaluation protocol не является runtime follow-up acceptance MVP.
-
 Роли документов:
 
 ```text
@@ -371,11 +367,8 @@ Hybrid retrieval должен использовать как минимум:
 
 Цель: добавить минимальный Web UI для работы с RAG и необходимые эксплуатационные health/status проверки.
 
-Это следующий этап MVP после `grounded-chat-api`; `session-follow-up` не является
-его зависимостью. Минимальный экран поддерживает один текущий вопрос и ответ с
-источниками, следующий вопрос заменяет предыдущий. История не хранится и не
-передаётся в retrieval или LLM; `/api/chat` и `session_id` сохраняются (`SPEC.md`
-§17.1, §19–20). После этого этапа следует `offline-mvp-acceptance`.
+Минимальный экран поддерживает один текущий вопрос и ответ с источниками;
+следующий вопрос заменяет предыдущий. История не хранится и не передаётся в retrieval или LLM.
 
 Web UI должен позволять:
 

@@ -30,6 +30,14 @@ def barrier_llm(monkeypatch):
         def log_message(self, *args):
             pass
 
+        def do_GET(self):
+            assert self.path == "/health"
+            raw = b'{"status":"ok"}'
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+
         def do_POST(self):
             payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             status = 200
@@ -62,6 +70,7 @@ def barrier_llm(monkeypatch):
     thread.start()
     state.settings = ChatSettings(base_url=f"http://127.0.0.1:{server.server_port}", model_name="alias", timeout_seconds=1)
     monkeypatch.setattr("app.chat.load_chat_settings", lambda: state.settings)
+    monkeypatch.setenv("LLM_BASE_URL", state.settings.base_url)
     try:
         yield state
     finally:
@@ -110,6 +119,10 @@ def test_timeout_keeps_server_active_blocks_waiters_and_new_http(barrier_llm, tm
                     return client.post("/api/chat", json={"session_id": "s", "message": question})
                 first = asyncio.create_task(post("first"))
                 await entered(state)
+                active_health = await asyncio.wait_for(client.get("/health"), .8)
+                assert active_health.json()["chat"]["status"] == "available"
+                assert active_health.json()["llm"]["status"] == "ok"
+                assert state.completions == 1 and state.active == 1
                 second = asyncio.create_task(post("second"))
                 if cancel_first:
                     first.cancel()
@@ -120,11 +133,12 @@ def test_timeout_keeps_server_active_blocks_waiters_and_new_http(barrier_llm, tm
                 assert (await asyncio.wait_for(second, 3)).status_code == 503
                 assert state.active == 1  # The fake server is still generating after HTTP timeout.
                 assert gate.generation_uncertain and gate._semaphore.locked()
-                assert (await client.get("/health")).json() == {"status": "ok"}
+                health = (await client.get("/health")).json()
+                assert health["llm"]["status"] == "ok" and health["chat"]["status"] == "generation_uncertain"
                 assert (await post("new")).status_code == 503
                 await asyncio.sleep(.03)
                 state.release.set()  # Even eventual server end does not authorize an automatic release.
-                assert (await client.get("/health")).json() == {"status": "ok"}
+                assert (await client.get("/health")).json()["chat"]["status"] == "generation_uncertain"
                 assert (await post("later")).status_code == 503
                 assert state.completions == 1
     asyncio.run(run())

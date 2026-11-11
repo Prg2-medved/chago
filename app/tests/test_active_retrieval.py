@@ -10,6 +10,7 @@ from app.config import RetrievalSettings
 from app.embeddings import EmbeddingError
 from app.hybrid_retrieval import HybridIndex, HybridRetrievalError
 from app.index_state import ActiveIndex, RetrievalService
+from app.health import index_snapshot
 from app.main import app
 from app.retrieval import RetrievalError
 from test_indexer import Encoder, pipeline
@@ -135,6 +136,7 @@ def test_snapshot_search_after_path_replacement(pipeline, monkeypatch, tmp_path)
         service = RetrievalService(path)
         await service.start()
         try:
+            metadata = index_snapshot(service.state)
             original = await service.search("Heading")
             rows[0].update(markdown="# New heading\nReplacement text", title="New title", path="new-path")
             monkeypatch.setenv("INDEX_PATH", str(replacement))
@@ -154,6 +156,7 @@ def test_snapshot_search_after_path_replacement(pipeline, monkeypatch, tmp_path)
                 pytest.fail("active pathname reopened during search")
             monkeypatch.setattr("app.hybrid_retrieval.LexicalReader", no_reopen)
             assert await service.search("Heading") == original
+            assert index_snapshot(service.state) == metadata
             for result in original:
                 chunk = result.chunk
                 assert chunk.document.title == "Title"
@@ -176,6 +179,7 @@ def test_snapshot_search_after_path_replacement(pipeline, monkeypatch, tmp_path)
 
 
 def test_app_only_missing_index_and_assets(tmp_path, monkeypatch):
+    monkeypatch.setenv("LLM_BASE_URL", "invalid")
     path = tmp_path / "missing.sqlite3"
     monkeypatch.setenv("INDEX_PATH", str(path))
     monkeypatch.setenv("EMBEDDING_MODEL_PATH", str(tmp_path / "missing-model"))
@@ -183,7 +187,7 @@ def test_app_only_missing_index_and_assets(tmp_path, monkeypatch):
         pytest.fail("encoder loaded at startup")
     monkeypatch.setattr("app.index_state.LocalEncoder", unexpected)
     with TestClient(app) as client:
-        assert client.get("/health").json() == {"status": "ok"}
+        assert client.get("/health").json()["index"]["status"] == "missing"
         assert not app.state.index.available
         with pytest.raises(HybridRetrievalError, match="index_unavailable"):
             client.portal.call(app.state.retrieval.search, "Heading")
@@ -191,6 +195,7 @@ def test_app_only_missing_index_and_assets(tmp_path, monkeypatch):
 
 
 def test_encoder_assets_failure_preserves_health_and_reader(pipeline, monkeypatch):
+    monkeypatch.setenv("LLM_BASE_URL", "invalid")
     path, _, _ = pipeline
     indexer.rebuild()
     def missing(settings):
@@ -200,6 +205,6 @@ def test_encoder_assets_failure_preserves_health_and_reader(pipeline, monkeypatc
         active = app.state.index.index
         with pytest.raises(EmbeddingError, match="embedding_assets"):
             client.portal.call(app.state.retrieval.search, "Heading")
-        assert client.get("/health").json() == {"status": "ok"}
+        assert client.get("/health").json()["index"]["status"] == "ok"
         assert active._reader._connection is not None
     assert active._reader._connection is None

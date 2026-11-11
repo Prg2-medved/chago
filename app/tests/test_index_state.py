@@ -13,7 +13,8 @@ from test_indexer import pipeline
 
 
 @pytest.mark.parametrize("kind", ["missing", "corrupt", "legacy", "version", "counts"])
-def test_unavailable(pipeline, kind):
+def test_unavailable(pipeline, kind, monkeypatch):
+    monkeypatch.setenv("LLM_BASE_URL", "invalid")
     active, _, _ = pipeline
     if kind == "corrupt":
         active.write_bytes(b"corrupt")
@@ -36,7 +37,10 @@ def test_unavailable(pipeline, kind):
     state.close()
     assert (active.read_bytes() if active.exists() else None) == before
     with TestClient(app) as client:
-        assert client.get("/health").json() == {"status": "ok"}
+        health = client.get("/health").json()
+        assert health["status"] == "ok"
+        assert health["index"] == {"status": "missing" if kind == "missing" else "invalid",
+                                   "available": False, "pages": None, "chunks": None, "indexed_at": None}
         assert not app.state.index.available
 
 

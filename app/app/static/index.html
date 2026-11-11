@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Вопрос к документации</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+<main>
+  <h1>Вопрос к документации</h1>
+  <p>Один вопрос — ответ с источниками Wiki.js. Каждый следующий вопрос обрабатывается независимо.</p>
+  <form id="question-form" autocomplete="off" novalidate>
+    <label for="question">Ваш вопрос</label>
+    <textarea id="question" name="question" rows="4" autocomplete="off" required aria-describedby="question-help"></textarea>
+    <p id="question-help">До 4096 символов. Отправить: Ctrl+Enter или кнопка «Спросить».</p>
+    <button id="submit" type="submit">Спросить</button>
+  </form>
+  <p id="chat-status" role="status" aria-live="polite"></p>
+  <section id="result" aria-label="Ответ и источники"></section>
+  <details open>
+    <summary>Состояние системы</summary>
+    <p>Это диагностика компонентов. Она не проверяет embedding-модель и качество ответа.</p>
+    <button id="refresh" type="button">Обновить состояние</button>
+    <div id="health" role="status" aria-live="polite"></div>
+  </details>
+</main>
+</body>
+</html>

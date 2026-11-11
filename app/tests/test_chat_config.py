@@ -70,7 +70,9 @@ def test_invalid_chat_settings_do_not_break_app_only(monkeypatch, tmp_path):
     monkeypatch.setenv("INDEX_PATH", str(path))
     monkeypatch.setenv("LLM_CONTEXT_SIZE", "invalid")
     monkeypatch.setenv("LLM_TIMEOUT_SECONDS", "invalid")
+    monkeypatch.setenv("LLM_BASE_URL", "invalid")
     assert load_settings().port == 8000
     with TestClient(app) as client:
-        assert client.get("/health").json() == {"status": "ok"}
+        health = client.get("/health").json()
+        assert health["status"] == "ok" and health["llm"]["status"] == "configuration_error"
     assert not path.exists()

@@ -102,9 +102,16 @@ def test_invalid_base_url(transport, monkeypatch, url):
     transport[0].open.assert_not_called()
 
 
-def test_bootstrap_health_does_not_call_llm(transport):
+def test_bootstrap_health_does_not_call_cli_transport(transport, monkeypatch):
     transport[0].open.side_effect = AssertionError("LLM must not be called")
+    calls = []
+    def probe(origin):
+        calls.append(origin)
+        return "unavailable"
+    monkeypatch.setattr("app.health.probe", probe)
     with TestClient(app) as client:
-        assert client.get("/health").json() == {"status": "ok"}
+        health = client.get("/health").json()
+        assert health["status"] == "ok" and health["llm"]["status"] == "unavailable"
         assert client.get("/docs").status_code == 404
+    assert calls == ["http://llm:8080"]
     transport[0].open.assert_not_called()

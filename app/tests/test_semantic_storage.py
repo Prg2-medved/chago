@@ -58,7 +58,9 @@ def test_reopen_base_provenance_immutable(semantic_file):
 
 def test_base_health_without_model_dependencies(semantic_file):
     code = """
+import os
 import sys
+os.environ['LLM_BASE_URL'] = 'invalid'
 for name in ('numpy', 'torch', 'sentence_transformers', 'transformers', 'tokenizers'):
     sys.modules[name] = None
 from pathlib import Path
@@ -70,7 +72,8 @@ assert load_settings().port == 8000
 with StorageReader(Path(sys.argv[1])) as reader:
     assert len(reader.chunks) == 1
 with TestClient(app) as client:
-    assert client.get('/health').json() == {'status': 'ok'}
+    health = client.get('/health').json()
+    assert health['status'] == 'ok' and health['llm']['status'] == 'configuration_error'
 """
     result = subprocess.run([sys.executable, "-c", code, str(semantic_file)],
                             capture_output=True, text=True, timeout=30)

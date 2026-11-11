@@ -171,12 +171,14 @@ def test_retrieval_failure_no_silent_fallback(chat_api, monkeypatch, error):
     assert "SECRET" not in response.text
 
 
-def test_missing_index_is_503_and_health_unchanged(tmp_path, monkeypatch):
+def test_missing_index_is_503_and_health_is_liveness(tmp_path, monkeypatch):
     path = tmp_path / "missing.db"
     monkeypatch.setenv("INDEX_PATH", str(path))
+    monkeypatch.setenv("LLM_BASE_URL", "invalid")
     with TestClient(app) as client:
         assert send(client).status_code == 503
-        assert client.get("/health").json() == {"status": "ok"}
+        health = client.get("/health").json()
+        assert health["status"] == "ok" and health["index"]["status"] == "missing"
     assert not path.exists()
 
 
@@ -192,12 +194,15 @@ def test_real_index_or_assets_failure_is_503(pipeline, kind, monkeypatch):
                 connection.execute("PRAGMA user_version=99")
     before = path.read_bytes()
     monkeypatch.setenv("EMBEDDING_MODEL_PATH", str(assets / "absent"))
+    monkeypatch.setenv("LLM_BASE_URL", "invalid")
     def unexpected(settings):
         pytest.fail("LLM must not be called on index/embedding failure")
     monkeypatch.setattr("app.chat.LLMClient", unexpected)
     with TestClient(app) as client:
         assert send(client).status_code == 503
-        assert client.get("/health").json() == {"status": "ok"}
+        health = client.get("/health").json()
+        assert health["status"] == "ok"
+        assert health["index"]["status"] == ("ok" if kind == "missing_assets" else "invalid")
     assert path.read_bytes() == before
 
 
