@@ -6,6 +6,12 @@
 
 ## Why
 
+Решение владельца от **2026-11-11** после offline review кандидата 7.9:
+ambiguity, семантическая обработка конфликтов и полное распознавание команд
+вне fences перенесены в post-MVP. Техническая 7.2 принимается по сохранённому
+evidence с этими исключениями; полный safety/quality fail не переименовывается
+в pass. Следующий шаг — итоговая сверка 7.4, без нового серверного run.
+
 Решение владельца, 2026-10-23: 7.6 принята по существующей полной серии
 `data/grounded-chat-api-memory.oytj57gl/` с утверждённым `--cache-ram 0` и
 остаточным ростом LLM anon+swap 4,684 MiB. Допуск относится только к этому
@@ -28,8 +34,8 @@ INFO-логирование `app.chat` по SPEC §24; фактическая п
 - Сохранить сериализацию генерации application semaphore при одном FastAPI worker, реализованные технические HTTP-ошибки и безопасные timings; завершить оставшиеся проверки на реальной модели.
 - Сохранить app-only startup и текущий `/health`; Web UI, расширенный health, session history, retrieval tuning и reindex API не входят в этап.
 - Приоритет оставшейся приёмки: диагностика global OOM и стабильность LLM, memory series последовательных запросов, Compose concurrency/cancellation/timeout/generation_uncertain, ручной recovery, offline/app-only/isolation/SQLite, затем итоговая live-приёмка MVP. Текущая архитектура и закреплённый runtime сохраняются.
-- Перенести полноту фактов, семантический выбор kind и entailment citations в явно открытые post-MVP цели SPEC §27. Правила prompt, validators, fail-closed, exact commands, unanswerable/conflict/injection safety и read-only остаются обязательными. Эксперимент `parts` не реализуется; внутренний формат остаётся `{kind, answer}`.
-- Разделять stability, safety и semantic quality verdicts. Известные q13 (неоднозначный объект) и q18 (противоречие) потенциально блокируют safety: их нельзя автоматически отнести к неблокирующему качеству. Раскрытый holdout не используется для настройки; прежние failures сохраняются.
+- Перенести полноту фактов, семантический выбор kind и entailment citations в открытые post-MVP цели SPEC §27; по решению 2026-11-11 туда же отнесены ambiguity, семантическая обработка конфликтов и полное распознавание команд вне fences. Правила prompt, validators/fail-closed, exact fenced blocks, существующий prose guard, ясные unanswerable cases, injection safety и read-only сохраняются. Эксперимент `parts` не реализуется; внутренний формат остаётся `{kind, answer}`.
+- Разделять stability, safety, semantic quality verdicts и решение о технической приёмке. Наблюдения q13/q18 и prose command prefix q02 остаются safety failures, но по явному решению владельца больше не блокируют MVP этого API. Это перенос исправлений, а не доказанное устранение дефектов. Раскрытый holdout не используется для настройки; прежние failures сохраняются.
 
 ## Capabilities
 
@@ -48,5 +54,8 @@ INFO-логирование `app.chat` по SPEC §24; фактическая п
 Пересмотр planning не меняет код, модель/image, runtime flags, sampling, timeout,
 retrieval ranking, prompt/messages и frozen evaluation inputs. Прежняя 7.2 не пройдена:
 старые fail verdicts сохраняются с исходными критериями. Stability, safety и semantic
-quality verdicts публикуются отдельно; MVP требует pass первых двух. Завершение технической приёмки не означает исправления
+quality verdicts публикуются отдельно; MVP требует pass stability и обязательных
+технических safety checks с явными исключениями решения 2026-11-11. Полный
+safety verdict нового corpus остаётся fail; 7.2 принята по пересмотренной области.
+Завершение технической приёмки не означает исправления
 семантических дефектов. Результаты уже выполненных проверок не переписываются.

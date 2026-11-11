@@ -9,7 +9,9 @@
 > как минимальный вариант и реализован локально (§12). Новые серверные проверки
 > не выполнялись; локальные результаты не означают устранение safety blockers.
 > Критерии SPEC/proposal/delta specs сохраняются. Прежние разделы и результаты
-> описывают свои этапы; актуальный порядок продолжения после review — в §10.
+> описывают свои этапы. Решение владельца 2026-11-11 (§14) заменяет прежние
+> условия блокировки приёмки: три класса дефектов отложены в post-MVP.
+> §§10–13 сохраняют историю диагностики/кандидата и действовавших тогда gates.
 
 ## Context
 
@@ -37,10 +39,12 @@
 Полнота required facts, семантическая обоснованность kind и entailment допустимых
 citations перенесены в post-MVP SPEC §27. Дополнительные механизмы смысловой проверки
 не входят в этап. `parts` не реализуется и не предписывается для post-MVP. Правила
-prompt и существующие validators/fail-closed не ослабляются; команды, отсутствие
-выдуманных фактов на unanswerable, conflict/injection safety и read-only остаются
-MVP gates. Смена приоритета не означает принятие этих проверок или исправление
-известных quality failures.
+prompt и существующие validators/fail-closed не ослабляются. Exact fenced
+validation, ограниченный prose guard, ясные unanswerable cases, injection
+safety и read-only остаются MVP gates. По решению 2026-11-11 надёжное уточнение
+неизвестного объекта, семантическая обработка конфликтов и полное покрытие
+команд вне fences перенесены в post-MVP. Известные failures не исправлены;
+техническая приёмка с исключениями не означает полный safety/quality pass.
 
 ## Decisions
 
@@ -128,18 +132,18 @@ commands, refusal/conflict и отсутствие успешной injection. �
 вердикта: stability (ресурсы, transport, concurrency/recovery/offline), safety
 (contract, validators/fallback, команды, unanswerable/ambiguity/conflict/injection,
 isolation/read-only) и semantic quality (полнота, семантический kind, entailment).
-MVP требует pass stability и safety. Только изолированный quality fail не блокирует
-MVP, но остаётся открытым post-MVP дефектом, не становится pass. Если один ответ
-нарушает safety и quality, неблокирующая метка quality не отменяет safety fail.
+MVP требует pass stability и обязательных технических safety checks с явно
+согласованными исключениями §14. Полный corpus safety verdict сохраняется
+отдельно: отложенные ambiguity/conflict/prose-command failures не становятся
+pass. Quality failures также остаются открытыми post-MVP дефектами.
 Технические ошибки не становятся refusal. Не приписывать sources
 или исправленный insufficient_context в backend для улучшения verdict.
 
-Известные q13 (неоднозначный объект) и q18 (противоречие) — потенциальные blockers
-safety acceptance. q13 нельзя автоматически считать лишь ошибкой kind: нужно
-отдельно оценить недопустимую подстановку объекта и выдуманный содержательный ответ.
-q18 нельзя свести к неполноте: самостоятельный выбор варианта при неразрешённом
-противоречии нарушает safety. До отдельного доказанного safety verdict эти cases
-не переводятся в неблокирующее качество. Раскрытый q18 holdout используется только
+По решению владельца 2026-11-11 классы defects, наблюдавшиеся в q13
+(неизвестный объект), q18 (конфликт/подмена предмета) и q02 (prose command prefix),
+не блокируют техническую приёмку. Их фактический safety fail сохраняется, а
+исправление относится к post-MVP, без автоматического переименования в quality.
+Раскрытый q18 holdout используется только
 как сохранённый результат/финальный safety review, не для настройки prompt, runtime,
 validators или retrieval. Новая реализация по этому review не начинается.
 
@@ -478,10 +482,40 @@ pass 7.1 остаётся для прежних messages; несовпадени
 только синтаксически, Docker/model commands не выполнялись. 7.2/7.4 открыты;
 следующий серверный этап требует отдельного разрешения владельца.
 
+### 14. Перенос оставшихся дефектов в post-MVP, 2026-11-11
+
+После объяснения отрицательного review архива `grounded-chat-api-7.2.ggGzk1BQ`
+владелец явно решил: «всё это оставим на post MVP». В этом решении «всё»
+относится к обсуждённым классам: угадывание объекта, семантическая обработка
+противоречий/подмена предмета и команды вне fences. Это не отмена технической
+безопасности, isolation, injection checks или отказов на ясных unanswerable cases.
+
+SPEC §§13/16/26/27 и delta specs согласованы с решением. Prompt, JSON contract,
+source provenance, exact fenced validation, существующий ограниченный prose
+guard/fallback, число completions, runtime и frozen inputs не меняются.
+Новые механизмы/модель/parts не выбираются. Поведение q13/q18/q02 не исправлено
+и не переоценивается как pass; прежние reviews/runbooks описывают свои критерии.
+Их требование «любой safety fail блокирует 7.2» заменено только для трёх
+перенесённых классов. Все остальные обязательные MVP gates сохраняются.
+
+7.2 принимается по пересмотренной области с явным deferred backlog:
+неизвестный объект → уточнение; конфликт → оба варианта с citations и
+insufficient_context=true; команды → полное покрытие prose/inline invocations.
+Основание — уже выполненный полный run и offline review 36 результатов,
+pass token/observed stability, существующие принятые API/Compose/local gates.
+Полный safety и semantic quality verdicts остаются fail. Новые серверные
+проверки, повтор holdout или исправления по его literals не нужны и не разрешены.
+
+Следующий шаг — отдельная итоговая сверка 7.4 по обязательным MVP scenarios
+с этими исключениями. Она не объявляется выполненной переносом дефектов;
+весь MVP продукта, follow-up и post-MVP качество не объявляются завершёнными.
+Будущая работа по отложенным классам требует отдельного planning/review;
+используются tuning cases и независимые synthetic conflicts, без tuning q18.
+
 ## Risks / Trade-offs
 
 - [Валидная citation не доказывает entailment; команда может оказаться вне fences] → строгие правила, exact-block checks и ручной review corpus; не заявлять автоматическую гарантию всех фактов.
-- [Малая Qwen нарушает JSON/prompt/injection rules] → консервативный fallback и реальные server checks; нарушения validators/безопасности блокируют MVP, semantic quality failures остаются открытыми post-MVP дефектами, без verifier model или незаметной смены модели.
+- [Малая Qwen нарушает JSON/prompt/injection rules] → консервативный fallback и реальные server checks; нарушения обязательных технических validators/injection/isolation gates блокируют MVP. Три класса §14 явно отложены владельцем, полный safety fail сохранён; semantic quality failures также остаются post-MVP, без verifier model или незаметной смены модели.
 - [Повторный global OOM или рост памяти] → ограниченная наблюдаемая серия и stop criteria §9; отсутствие измерений не заменять предположением о стабильности. Новый resource/runtime вариант требует отдельного решения владельца.
 - [Token endpoints/chat template отличаются между llama.cpp builds] → compatibility smoke с полным шаблоном на установленном image и явная техническая ошибка при несовместимости, без character heuristic.
 - [Очередь CPU повышает latency] → один worker, отдельные wait/generation timings, 300s transport timeout и документированный длительный client timeout; не увеличивать parallelism без нового решения.
@@ -496,3 +530,4 @@ pass 7.1 остаётся для прежних messages; несовпадени
 3. Продолжить с принятым gate 7.1 без смены messages/runtime: диагностика OOM → memory series → Compose concurrency/cancellation/timeout → ручной recovery → offline/app-only/isolation/SQLite → итоговый live MVP run. Semantic quality оформить отдельно как post-MVP, не переписывая прежние failures. `parts` не реализовывать. При необходимости менять runtime сначала получить отдельное решение владельца.
 4. При rollback вернуть предыдущий app image/code и environment; индекс не мигрировал и остаётся совместимым. Внешних записей, которые нужно откатывать, нет.
 5. Продолжение после отрицательного review 7.2 от 2026-10-27: согласовать draft §10 и задачи 7.8–7.11; затем offline диагностика → минимальное исправление → локальные регрессии → подготовка evidence/протокола → отдельно разрешённая live 7.2 и итоговая 7.4. Сейчас выполняется только planning; предыдущие принятые gates и отрицательные reviews сохраняются.
+6. Актуальное продолжение после решения 2026-11-11 (§14): принять выполненную 7.2 с отложенными ambiguity/conflict/prose-command defects, сохранить полный safety/quality fail; затем итоговая сверка 7.4. Повтор серверных runs не требуется; production code и исторические результаты не меняются.

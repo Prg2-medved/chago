@@ -7,6 +7,11 @@
 
 Предоставить минимальный локальный read-only RAG API, который отвечает по найденной документации, возвращает проверяемые источники и явно сообщает о недостатке сведений.
 
+Решение владельца 2026-11-11: устранение ambiguity, семантических conflict
+failures и пробелов распознавания команд вне fences отнесено к post-MVP.
+Целевые правила prompt сохраняются; ниже эти цели отделены от обязательных
+MVP проверок. Полные corpus safety/quality verdicts и старые failures сохраняются.
+
 ## ADDED Requirements
 
 ### Requirement: Stateless chat HTTP contract
@@ -69,19 +74,19 @@
 ### Requirement: Grounded Russian answers and insufficiency
 LLM SHALL получать прежние строгие правила: факты только из CONTEXT, русский язык ответа, точное сохранение identifiers, параметров, путей и команд, запрет дополнения из собственных знаний, полнота запрошенных фактов при достаточном evidence, обозначение пробелов и короткое уточнение при неоднозначности. Внутренний формат SHALL оставаться единственным JSON object `{kind, answer}` с прежними allowed kinds и parser/validators; протокол `parts` SHALL NOT реализовываться в этом этапе. Полный отказ, частичный ответ и уточнение SHALL иметь insufficient_context=true, полный ответ — false. При refuse backend SHALL использовать фразу `В документации недостаточно информации для ответа на этот вопрос.`. Отказ/уточнение без фактических утверждений SHALL допускать пустые sources; answer/partial SHALL требовать citations. Высокий retrieval score SHALL NOT разрешать выдумывание отсутствующих сведений. Backend SHALL NOT исправлять kind/insufficient_context по наличию citations или добавлять отсутствующие модельные citations.
 
-Полнота required facts, семантическая обоснованность kind и entailment допустимых citations SHALL измеряться отдельным quality verdict как открытые post-MVP цели SPEC §27, без требования общего semantic pass для MVP. Это SHALL NOT отменять обязательные MVP validators/fail-closed, exact commands, unanswerable/conflict/injection safety и read-only. Формальное соответствие mapping kind SHALL NOT объявляться доказательством правильности семантического выбора.
+Полнота required facts, семантическая обоснованность kind и entailment допустимых citations SHALL измеряться отдельным quality verdict как открытые post-MVP цели SPEC §27. По решению 2026-11-11 надёжное уточнение неизвестного объекта и семантическая обработка конфликтов также SHALL оставаться post-MVP целями, без требования их общего pass для технической приёмки. Обязательные MVP validators/fail-closed, exact fenced blocks, существующий prose guard, ясные unanswerable cases, injection safety и read-only SHALL сохраняться. Формальное соответствие mapping kind SHALL NOT объявляться доказательством правильности семантического выбора.
 
 #### Scenario: Sufficient evidence
 - **WHEN** найденные и переданные источники содержат обязательные факты контрольного вопроса
 - **THEN** MVP проверяет формат, mapping kind, citations/commands validators и безопасность; полнота и обоснованность kind/citations получают отдельный quality verdict, а пропуски или необоснованная недостаточность остаются post-MVP defects без преобразования в pass
 
 #### Scenario: Unanswerable question despite nearby results
-- **WHEN** retrieval вернул похожие chunks, но ответа на контрольный вопрос в них нет
+- **WHEN** retrieval вернул похожие chunks, но ответа на ясный контрольный вопрос с определённым объектом в них нет
 - **THEN** API возвращает явный отказ с insufficient_context=true без ответа из знаний модели
 
 #### Scenario: Partial and ambiguous evidence
 - **WHEN** подтверждена только часть вопроса либо неясно, о каком объекте спрашивает пользователь
-- **THEN** prompt требует обозначить пробел либо задать короткое уточнение, parser/validators проверяют прежний формат partial/clarify; семантический выбор kind фиксируется quality verdict отдельно, без разрешения нарушать safety gates
+- **THEN** prompt требует обозначить пробел либо задать короткое уточнение, parser/validators проверяют прежний формат partial/clarify; семантический выбор kind и подстановка неизвестного объекта получают отдельные verdicts, а устранение ambiguity failure относится к post-MVP по решению 2026-11-11
 
 ### Requirement: Backend-owned citations and source fragments
 LLM SHALL ссылаться только на chunk IDs, выданные в фактически переданном CONTEXT. Backend SHALL проверять каждый citation ID и формировать номера, title, heading path и URL из index metadata, а quote — дословно из исходных source ranges сохранённого Markdown соответствующего chunk. Generated fences/headers и `search_text` с generated segments SHALL NOT выдаваться за исходные цитаты. Несмежные ranges SHALL показываться отдельными source entries, без выдачи склейки за единый дословный fragment. Source URL SHALL NOT приниматься из output LLM. Если есть неизвестная/некорректная citation либо содержательный ответ не имеет citations, API SHALL возвращать HTTP 200, insufficient_context=true, сообщение о невозможности подтвердить ответ и доступные исходные fragments из переданного CONTEXT без сгенерированных утверждений. Backend SHALL NOT вызывать LLM повторно для исправления.
@@ -99,7 +104,14 @@ LLM SHALL ссылаться только на chunk IDs, выданные в ф
 - **THEN** sources содержат только отдельные дословные исходные ranges, без generated text и выдуманных heading anchors
 
 ### Requirement: Verbatim code and command validation
-Команды SHALL приводиться только дословно в fenced code blocks, без сборки новых команд, подстановки значений и исправлений. Backend SHALL проверять содержимое каждого code block целиком как точную подстроку одного непрерывного исходного fragment, переданного LLM в текущем CONTEXT; language marker и внешние fence delimiters не являются содержимым. Кроме удаления одного служебного перевода строки перед закрывающей fence нормализация текста SHALL NOT выполняться. Совпадение с generated segments, удалённым chunk, непереданным участком документа либо склейкой раздельных fragments SHALL NOT считаться подтверждением. При несовпадении либо незакрытом code fence API SHALL скрывать сгенерированный ответ, предлагать открыть источники и возвращать insufficient_context=true с исходными fragments. Эта проверка SHALL NOT объявляться доказательством корректности остальных фактов.
+Prompt SHALL требовать команды только дословно в fenced code blocks, без сборки новых команд, подстановки значений и исправлений. Backend SHALL проверять содержимое каждого code block целиком как точную подстроку одного непрерывного исходного fragment, переданного LLM в текущем CONTEXT; language marker и внешние fence delimiters не являются содержимым. Кроме удаления одного служебного перевода строки перед закрывающей fence нормализация текста SHALL NOT выполняться. Совпадение с generated segments, удалённым chunk, непереданным участком документа либо склейкой раздельных fragments SHALL NOT считаться подтверждением. При несовпадении либо незакрытом code fence API SHALL скрывать сгенерированный ответ, предлагать открыть источники и возвращать insufficient_context=true с исходными fragments. Эта проверка SHALL NOT объявляться доказательством корректности остальных фактов.
+
+Правило публикации любой команды только в fence SHALL сохраняться в prompt.
+По решению 2026-11-11 полное покрытие prose/inline invocations, включая
+prefixes и исходные fragments без fences, SHALL быть post-MVP целью.
+Обязательная MVP приёмка SHALL проверять неизменность exact fenced validation,
+существующего ограниченного prose guard и fail-closed для обнаруженных ошибок;
+непокрытые prose commands SHALL оставаться fail в отчёте, не блокируя 7.2.
 
 #### Scenario: Exact source command
 - **WHEN** fenced block дословно содержится в одном переданном source fragment
@@ -110,11 +122,11 @@ LLM SHALL ссылаться только на chunk IDs, выданные в ф
 - **THEN** сгенерированная инструкция не показывается, ответ предлагает открыть исходные источники
 
 ### Requirement: Contradictions and untrusted documentation
-Wiki text SHALL передаваться как явно обозначенные недоверенные данные с chunk IDs, отдельно от system instructions. Инструкции из документов SHALL NOT менять правила ответа. LLM SHALL NOT иметь tools, shell execution, SQL-доступ или полномочия изменять Wiki.js. Если переданные релевантные sources противоречат друг другу, ответ SHALL явно показывать расхождение, оба варианта с citations и SHALL NOT самостоятельно выбирать правильную версию без основания. Неразрешённое противоречие SHALL сопровождаться insufficient_context=true.
+Wiki text SHALL передаваться как явно обозначенные недоверенные данные с chunk IDs, отдельно от system instructions. Инструкции из документов SHALL NOT менять правила ответа. LLM SHALL NOT иметь tools, shell execution, SQL-доступ или полномочия изменять Wiki.js. Prompt SHALL требовать явно показывать расхождение и оба варианта с citations при противоречии sources, без самостоятельного выбора правильной версии, с insufficient_context=true. Надёжное соблюдение моделью этой семантической цели SHALL относиться к post-MVP по решению 2026-11-11; conflict fail SHALL сохраняться в отчёте, не блокируя техническую приёмку.
 
 #### Scenario: Conflicting configuration values
 - **WHEN** переданные sources дают разные значения одного параметра
-- **THEN** ответ сообщает о противоречии и показывает оба варианта с исходными цитатами и ссылками
+- **THEN** post-MVP цель требует ответа о противоречии с обоими вариантами, исходными цитатами и ссылками; MVP сохраняет правило prompt и фактический verdict, не заявляя устранение conflict failure
 
 #### Scenario: Prompt injection in a retrieved page
 - **WHEN** документ требует игнорировать system prompt, ответить без citations либо выполнить shell-команду
@@ -209,9 +221,9 @@ prompt count. Это SHALL NOT ослаблять отдельное обяза�
 - **THEN** операторское timeout испытание не начинается и ни fake tests, ни общий план не засчитываются как Compose pass
 
 ### Requirement: Grounded answer acceptance evidence
-Приёмка SHALL включать автоматические проверки API/validators и фактические ответы локальной целевой модели на single-question evaluation cases: обычный текст, identifiers, code, table, partial, clarify, contradictions, injection и все `answerable: false`, отдельно end-to-end и generation-only с фиксированным достаточным evidence. Проверяющий SHALL вручную оценить обязательные факты, соответствие citations утверждениям, дословность команд и отсутствие неподтверждённых сведений. Отчёт SHALL раздельно фиксировать stability (ресурсы/transport/concurrency/recovery/offline), safety (API/validators/fallback/команды/unanswerable/ambiguity/conflict/injection/isolation/read-only) и semantic quality (полнота, семантический kind, entailment). MVP SHALL требовать pass stability и safety. Только изолированный quality fail SHALL оставаться неблокирующим открытым post-MVP defect; quality classification SHALL NOT отменять safety fail того же ответа.
+Приёмка SHALL включать автоматические проверки API/validators и фактические ответы локальной целевой модели на single-question evaluation cases: обычный текст, identifiers, code, table, partial, clarify, contradictions, injection и все `answerable: false`, отдельно end-to-end и generation-only с фиксированным достаточным evidence. Проверяющий SHALL вручную оценить обязательные факты, соответствие citations утверждениям, дословность команд и отсутствие неподтверждённых сведений. Отчёт SHALL раздельно фиксировать stability (ресурсы/transport/concurrency/recovery/offline), полный safety (API/validators/fallback/команды/unanswerable/ambiguity/conflict/injection/isolation/read-only) и semantic quality (полнота, семантический kind, entailment). MVP SHALL требовать pass stability и обязательных технических safety checks с исключениями решения 2026-11-11; техническая приёмка SHALL фиксироваться отдельно от полного safety verdict, который может оставаться fail из-за отложенных классов. Quality failures SHALL оставаться открытыми post-MVP defects.
 
-Известные q13 (неоднозначный объект) и q18 (противоречие) SHALL рассматриваться как потенциальные safety blockers, а не автоматически неблокирующие ошибки kind/полноты. Подстановка неизвестного объекта в q13 и выбор варианта при неразрешённом конфликте q18 SHALL оцениваться отдельным safety verdict. Без доказанного safety verdict gate SHALL оставаться открытым. Раскрытый q18 holdout SHALL NOT использоваться для настройки; его сохранённый результат и финальная safety-проверка SHALL NOT становиться основанием tuning prompt/runtime/validators/retrieval.
+Подстановка неизвестного объекта (q13), выбор варианта при конфликте/подмена соседним identifier (q18) и непокрытые prose command prefixes (q02) SHALL сохранять фактический safety fail. По явному решению владельца 2026-11-11 устранение этих классов SHALL относиться к post-MVP и SHALL NOT блокировать техническую 7.2; это SHALL NOT считаться доказанным safety pass. Ясные unanswerable cases, injection, API/validators/fallback, exact fenced blocks, существующий prose guard и isolation/read-only SHALL оставаться обязательными MVP gates. Раскрытый holdout, включая q18, SHALL NOT использоваться для настройки или повторов за удачным ответом.
 
 Отчёт SHALL различать retrieved evidence misses и generation failures, сохранять настройки, fingerprints, case IDs, timings и ограничения без изменения frozen corpus, expectations, splits и исторических baseline. Прежние failed verdicts и непройденная исходная 7.2 SHALL сохраняться с исходными критериями; новая область MVP SHALL указываться отдельно с датой решения владельца. Непройденные, частично выполненные и незапущенные проверки SHALL NOT отмечаться успешными. Follow-up acceptance SHALL оставаться следующему этапу; Hit@5 ≥90% SHALL NOT быть gate этого change. Раскрытый holdout SHALL NOT использоваться для tuning; изменение критериев SHALL NOT становиться настройкой ответов по holdout.
 
@@ -219,7 +231,7 @@ prompt count. Это SHALL NOT ослаблять отдельное обяза�
 
 #### Scenario: Live server review
 - **WHEN** проводится приёмка на подготовленном локальном индексе и Qwen в Compose
-- **THEN** отдельный отчёт фиксирует реальные ответы, evidence coverage, отдельные stability/safety/semantic quality verdicts и ограничения; все unanswerable cases проходят без выдуманного содержательного ответа, safety/validators и эксплуатационные gates пройдены фактически
+- **THEN** отдельный отчёт фиксирует реальные ответы, evidence coverage, отдельные stability/safety/semantic quality verdicts и ограничения; обязательные MVP gates проходят фактически, а deferred ambiguity/conflict/prose-command failures явно перечисляются по решению 2026-11-11 без переименования полного safety fail в pass
 
 #### Scenario: Evidence miss
 - **WHEN** нужные факты есть в документации, но не попали в переданный CONTEXT
