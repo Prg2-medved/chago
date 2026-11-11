@@ -1,5 +1,11 @@
 # Grounded chat API: журнал проверки
 
+> Исторический материал: статусы и команды ниже относятся к датам записей.
+> Актуальный итог и расположение материалов — в [индексе](index.md) и
+> [основном документе API](../../grounded-chat-api.md).
+> Прежние пути внутри команд/цитат сохранены; скрипты остаются в `docs/`.
+
+
 Дата: 2026-10-21. Среда реализации: локальный Windows workspace.
 Linux-проверка 1.3 и live-gates 2.1, 7.1 подтверждены выводом оператора.
 `POST /api/chat` реализован локально; прогоны 7.2 выполнены оператором, но
@@ -170,7 +176,7 @@ shell code, Unicode и псевдо-delimiters. Request options — ровно �
 границах бюджета всё ещё обязательна.
 
 Подготовлен административный скрипт
-[`grounded-chat-api-token-smoke.sh`](grounded-chat-api-token-smoke.sh).
+[`grounded-chat-api-token-smoke.sh`](../../grounded-chat-api-token-smoke.sh).
 После переноса скрипта на сервер запустить из корня проекта:
 
 ```bash
@@ -330,7 +336,7 @@ Markdown reference link для соседних citations, mapping фактич�
 
 ## Завершённый серверный gate 7.1: окончательный prompt и context boundary
 
-Подготовлен [`grounded-chat-api-final-token-smoke.sh`](grounded-chat-api-final-token-smoke.sh).
+Подготовлен [`grounded-chat-api-final-token-smoke.sh`](../../grounded-chat-api-final-token-smoke.sh).
 После переноса актуальных `app/` и этого скрипта на сервер, из корня проекта:
 
 ```bash
@@ -446,7 +452,7 @@ Production-индекс из 7.1 не используется вместо от
 partial=q12, clarify=q13, conflict=q18, injection=q20, similar identifiers=q07,
 long code=q08. Follow-up q09/q10 исключены из обоих прогонов.
 
-Подготовлен [`grounded-chat-api-evaluate.sh`](grounded-chat-api-evaluate.sh).
+Подготовлен [`grounded-chat-api-evaluate.sh`](../../grounded-chat-api-evaluate.sh).
 Перенести актуальные `app/`, `eval/` и скрипт на сервер; из корня проекта:
 
 ```bash
@@ -462,7 +468,7 @@ bash docs/grounded-chat-api-evaluate.sh
 
 При запуске оператором получено `Missing frozen input: /data/hybrid-live.db`:
 проверка остановилась до генерации, задача 7.2 остаётся открытой.
-В [отчёте серверной hybrid-приёмки](lexical-and-hybrid-retrieval-server-acceptance.md#фактический-серверный-отчёт-2026-10-09)
+В [отчёте серверной hybrid-приёмки](../../lexical-and-hybrid-retrieval-server-acceptance.md#фактический-серверный-отчёт-2026-10-09)
 сохранён каталог `data/acceptance/lexical-and-hybrid-retrieval/run-20261009T185137Z-YCmy22/`.
 Если исходные evaluation-индексы в нём сохранены, из корня серверного проекта:
 
@@ -1424,7 +1430,7 @@ Ctrl+C только у клиента не гарантирует прекращ
 не требуется. Git status подтвердил ранее незакоммиченные журнал, tasks и q01 review;
 эти результаты сохранены. Новые ответы модели в этой сессии не получены.
 
-Подготовлен [проект составного ответа за один completion](grounded-chat-api-answer-parts-proposal.md).
+Подготовлен [проект составного ответа за один completion](../../experiments/grounded-chat-api/grounded-chat-api-answer-parts-proposal.md).
 Он предлагает явные части ответа со статусами supported/missing/conflict,
 локальными citations и проверкой согласованности выбранного моделью kind.
 Backend не добавляет markers, не исправляет insufficiency и не ослабляет прежние
@@ -1519,7 +1525,7 @@ LLM RepoDigest в `compose ps` совпадает с закреплённым
 близко к прежнему post-run snapshot 5.697 GiB; по двум снимкам нельзя установить
 тренд или отсутствие leak. Повторные прежние OOM/recovery проверки не запрошены.
 
-Подготовлен [операторский скрипт memory series](grounded-chat-api-memory-series.py).
+Подготовлен [операторский скрипт memory series](../../grounded-chat-api-memory-series.py).
 Запускать на Linux Docker host из корня актуального checkout, с Python 3.10+
 и Docker CLI, после переноса нового скрипта; build/recreate app не требуется.
 Нужны доступ на чтение host `/proc`, cgroup v2 `/sys/fs/cgroup`, bind-mounted
@@ -2136,7 +2142,7 @@ kernel/process/health/recovery проверки не повторяются. **2
 результаты, не новые проверки Codex.
 
 **Точная ревизия установлена локально.** Уже сохранённая таблица identity в
-[`local-cpu-runtime-benchmark.md`](local-cpu-runtime-benchmark.md) связывает
+[`local-cpu-runtime-benchmark.md`](../../local-cpu-runtime-benchmark.md) связывает
 закреплённый RepoDigest `sha256:f9115c95639e60abc09d4ea83b26fd4d56c66aa1174594393335a514da00c283`
 с llama.cpp `0.5.0-dev`, build `11243`, commit `fc07d781e`.
 `identity-before.json` серии подтверждает тот же RepoDigest и image ID
@@ -2290,7 +2296,7 @@ completions в текущей задаче. Сейчас сохраняются 
 
 Точные последовательные Linux-команды preconditions/backup/recreate только LLM/
 readiness/effective flags/baseline/четырёх запросов/review/rollback находятся в
-[операторском плане](grounded-chat-api-cache-ram-zero-experiment.md).
+[операторском плане](../../experiments/grounded-chat-api/grounded-chat-api-cache-ram-zero-experiment.md).
 Там же критерии поддержки/недостаточности гипотезы и ограничение сравнения с
 историей: restart baseline сам по себе не доказывает роль cache. Сравниваются
 все anon+swap steps, включая оба перехода q01 → q02, отдельно current/file,
@@ -2597,7 +2603,7 @@ lifespan/TestClient, success и ошибку с sentinel данными. Про�
 `client_cancelled` и позднюю generation record при полном ответе и при timeout.
 
 Подготовлены [серверные шаги](grounded-chat-api-compose-checks.md) и
-[test-only entrypoint](grounded-chat-api-fault.py). Он отправляет реальный HTTP
+[test-only entrypoint](../../grounded-chat-api-fault.py). Он отправляет реальный HTTP
 completion один раз и удерживает чтение response до разрешения либо штатного
 transport timeout; payload/model/production flags/settings не меняются. Записывает
 UTC/monotonic события и счётчик **полностью отправленных** upstream completion

@@ -1,13 +1,30 @@
-# Grounded chat API: lifecycle и retrieval
+# Grounded chat API: реализация, использование и ограничения
 
-На 2026-10-21 реализованы `POST /api/chat`, LLM client, active retrieval,
-prompt, budget packing и validators. Linux-проверка фактической замены
-открытого файла (задача 1.3) принята по выводу оператора: 30 passed,
-`PATHNAME_REPLACEMENT_OK`. Live-gate 2.1 также принят: calculated/actual
-65/65 и 202/202, cached_tokens=0 на закреплённом image/model. Compose config
-также подтверждён оператором: 8192/768/300. Финальная token compatibility 7.1
-принята по live-выводу 2026-10-22: 1850/1850, 7424/7424 и overflow без completion.
-Приёмка 7.2–7.3 остаётся открытой; автоматические fixtures не подтверждают качество Qwen.
+Актуально на **2026-11-11**. Change `grounded-chat-api` завершён: **36/36 задач**,
+техническая приёмка принята с явными исключениями владельца от 2026-11-11.
+Change архивирован, delta specs синхронизированы с основной
+[спецификацией API](../openspec/specs/grounded-chat-api/spec.md).
+Требования и критерии приёмки определяет [SPEC.md](../SPEC.md);
+план и фактическое выполнение сохранены в
+[архиве OpenSpec](../openspec/changes/archive/2026-11-11-grounded-chat-api/).
+
+Реализованы `POST /api/chat`, retrieval из удерживаемого SQLite snapshot,
+локальная генерация Qwen, точный token budget, backend citations и validators,
+сериализация генерации, безопасные технические ошибки и timings.
+
+| Результат | Итог |
+|---|---|
+| Техническая приёмка API | Завершена с исключениями решения 2026-11-11; 7.2 и итоговая сверка 7.4 закрыты |
+| Stability | Pass только в пределах принятых интервалов и проверенных runtime/configuration |
+| Полный corpus safety | **Fail**; дефекты ambiguity, conflict/подмены объекта и prose command prefixes отложены в post-MVP |
+| Semantic quality | **Fail**; полнота, выбор kind, обоснованность отказов и entailment citations остаются post-MVP |
+
+Перенос дефектов не исправляет их и не превращает прежние failures в pass.
+Завершение API change не означает завершения всего MVP продукта.
+Этот документ описывает текущее поведение; подробные результаты и прежние
+процедуры доступны через [индекс истории](history/grounded-chat-api/index.md),
+экспериментальные материалы — через
+[индекс экспериментов](experiments/grounded-chat-api/index.md).
 
 ## Настройки chat
 
@@ -74,7 +91,8 @@ Startup не требует embedding assets, LLM или Wiki.js. Отсутст
 ## Граница этапа и проверки
 
 Chat обрабатывает текущий вопрос независимо. История,
-follow-up и query rewriting относятся к следующему change `session-follow-up`.
+follow-up и использование предыдущих вопросов относятся к отдельному post-MVP
+change `session-follow-up`; LLM query rewriting в этот API не входит.
 
 Temporary SQLite tests сравнивают borrowed view со standalone hybrid,
 проверяют model identity mismatch, defaults, сериализацию concurrent searches,
@@ -92,8 +110,8 @@ python -m pytest -q -rs tests/test_active_retrieval.py tests/test_index_state.py
 
 В Linux тест не допускает `PermissionError` вместо подмены. После успешного
 `os.replace` он требует прежние результаты и provenance до close и новое
-поколение при следующем startup. Локальные результаты и оставшиеся gates:
-[журнал проверки](grounded-chat-api-server-acceptance.md).
+поколение при следующем startup. Сохранённые local/live результаты:
+[журнал проверки](history/grounded-chat-api/grounded-chat-api-server-acceptance.md).
 В журнале также приведена одна Docker-команда из корня проекта: отдельный
 контейнер с read-only исходниками, SQLite только в tmpfs и явным маркером
 `PATHNAME_REPLACEMENT_OK` в успешном Linux-выводе.
@@ -243,10 +261,15 @@ fallback. Отсутствие массовых ложных отказов пр
 Эти проверки не доказывают поддержку всех утверждений. Непокрытые команды,
 факты в уточняющем вопросе и смысл citations требуют ручного review.
 Строгий prompt и наличие citations не гарантируют отсутствие галлюцинаций/injection.
-Кандидат 7.9 реализован локально 2026-10-27; safety 7.2 остаётся открытой.
-Новые messages требуют повторного exact token/template gate перед будущим
-corpus run; старый pass 7.1 относится к прежним messages. Результаты и необходимые
-серверные проверки — [отчёт кандидата](grounded-chat-api-safety-candidate-7.9.md).
+Кандидат 7.9 реализован 2026-10-27 и установлен оператором; offline review
+нового серверного evidence завершён 2026-11-11. Exact token gate прошёл,
+но полный safety и semantic quality остались fail. Техническая 7.2 принята
+по пересмотренной области с исключениями; обязательные технические проверки
+сохраняются. Локальная реализация описана в историческом
+[отчёте кандидата](history/grounded-chat-api/grounded-chat-api-safety-candidate-7.9.md),
+итог — в [журнале проверки](history/grounded-chat-api/grounded-chat-api-server-acceptance.md#итоговая-сверка-74-2026-11-11).
+При будущих изменениях messages/runtime прежний token pass нельзя автоматически
+переносить на новую конфигурацию.
 
 ## Очередь, ошибки и recovery
 
@@ -290,6 +313,31 @@ Recovery выполняет оператор: **подтверждённая о�
 socket или задержка не доказывают, что старая генерация прекратилась. При изменении
 процессов следует исключить отправку запросов до завершения этого recovery.
 Автоматического release по таймеру, restart runtime, новых flags или polling slot API нет.
+
+## Ограничения и невыполненная работа
+
+- Неизвестный объект может быть угадан по retrieval (q13); при конфликте возможны
+  выбор одного варианта или подмена соседним identifier (q18).
+- Ограниченный prose guard не закрывает все команды вне fences, включая
+  наблюдавшийся command prefix q02. Exact fenced checks и существующий guard
+  остаются обязательными; полного распознавания shell-команд нет.
+- Полнота фактов, семантический kind и entailment citations не гарантируются.
+  q03/code_prose и q12/citation_missing дали защищённые fallback с quality fail.
+- Протокол `parts` отклонён и не реализован; внутренний формат — `{kind, answer}`.
+- Session history/follow-up, Web UI, расширенный health и целевой retrieval
+  Hit@5 ≥90% не завершены этим change и требуют отдельных этапов.
+
+Memory gate 7.6 принят по конкретной серии с утверждённым `--cache-ram 0`:
+20/20 HTTP 200, без новых OOM, residual LLM anon+swap +4,684 MiB.
+Допуск относится только к измеренному интервалу; он не задаёт будущий порог
+и не доказывает отсутствие leak или устойчивость при неограниченной нагрузке.
+Последующий corpus run имел только два memory snapshots, без continuous
+telemetry; допуск 7.6 на него не переносится. Прежние OOM и отрицательные
+серии сохраняют исходные verdicts.
+
+Новая работа по качеству требует отдельного planning/review. Frozen inputs,
+expectations и исторические результаты сохраняются; раскрытый holdout,
+включая q18, не используется для tuning или повторов за удачным ответом.
 
 ## Frozen evaluation и ручной checklist
 
@@ -358,8 +406,19 @@ code block; frozen eval inputs для них не редактировались
   проверена отдельно от end-to-end retrieval.
 
 Численный Hit@5 ≥90% относится к post-MVP и не блокирует этот change. Реальные
-case verdicts и ограничения обязательны. Qwen generation review 7.2 и Compose
-concurrency/offline/recovery 7.3 остаются серверными задачами; локальные unit/API
-tests их не заменяют. Token compatibility 7.1 принята по live-выводу оператора
-2026-10-22; готовый запуск обоих режимов
-7.2 описан в [журнале проверки](grounded-chat-api-server-acceptance.md).
+case verdicts и ограничения обязательны. Qwen review 7.2 и Compose
+concurrency/offline/recovery/logging 7.3/7.7 выполнены и учтены в технической
+приёмке; локальные unit/API tests не заменяют эти live evidence.
+В итоговом corpus run рассмотрены все 36 результатов двух режимов по 18 cases;
+retrieval misses отделены от generation failures, новых packing misses нет.
+
+Последняя сохранённая локальная регрессия 7.10: **1126 passed, 46 platform skips,
+35 subtests passed**, mypy — 31 source files без ошибок. Skips не считаются pass;
+Linux gates имеют отдельное evidence. Это исторические результаты, а не новый
+прогон при обновлении документации. Матрица 12 requirements / 38 scenarios и
+границы приёмки — в [итоговой сверке 7.4](history/grounded-chat-api/grounded-chat-api-server-acceptance.md#итоговая-сверка-74-2026-11-11).
+
+Скрипты evaluation, token smoke, memory series и fault injection остаются
+в `docs/grounded-chat-api-*` по прежним путям: на них ссылаются тесты и
+исторические процедуры. Старые runbooks описывают свои этапы и конфигурации;
+они не являются текущим планом работ или основанием автоматически повторять runs.
