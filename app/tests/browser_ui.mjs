@@ -72,8 +72,14 @@ try {
   const posts = [];
   const requests = [];
   const external = [];
+  const externalResponses = [];
+  const offlineCanary = "https://offline-probe.invalid/browser-matrix-canary";
+  let blockedCanaries = 0;
   const browserErrors = [];
   on("Runtime.exceptionThrown", event => browserErrors.push(event));
+  on("Network.responseReceived", event => {
+    if (!event.response.url.startsWith(base + "/")) externalResponses.push(new URL(event.response.url).origin);
+  });
   async function fulfill(requestId, code, body, raw = false) {
     return send("Fetch.fulfillRequest", {requestId, responseCode: code,
       responseHeaders: [{name: "Content-Type", value: "application/json"}],
@@ -83,7 +89,10 @@ try {
     try {
       const {requestId, request} = event;
       requests.push(request.url);
-      if (!request.url.startsWith(base + "/")) {
+      if (request.url === offlineCanary) {
+        blockedCanaries += 1;
+        await send("Fetch.failRequest", {requestId, errorReason: "InternetDisconnected"});
+      } else if (!request.url.startsWith(base + "/")) {
         external.push(request.url);
         await send("Fetch.failRequest", {requestId, errorReason: "InternetDisconnected"});
       } else if (request.url.endsWith("/api/chat")) {
@@ -95,6 +104,12 @@ try {
       else await send("Fetch.continueRequest", {requestId});
     } catch (error) { browserErrors.push(String(error)); }
   });
+  // Probe the deny rule before navigating to the app's CSP-protected document.
+  // Fetch interception rejects this test-only request before network transport;
+  // the same rule stays active for the entire matrix while LAN remains allowed.
+  const canaryRejected = await evaluate(`fetch(${JSON.stringify(offlineCanary)}, {mode:'no-cors'}).then(() => false, () => true)`);
+  assert.ok(canaryRejected);
+  assert.equal(blockedCanaries, 1);
   await send("Page.navigate", {url: base + "/"});
   await until('document.querySelector("#health dl") && !document.querySelector("#refresh").disabled');
   const verdicts = [];
@@ -226,12 +241,19 @@ try {
   // even with CSP. Keep the attempts visible in evidence and block them; all
   // other external page requests are a failure.
   const environmentRequests = external.filter(url => new URL(url).hostname === "gc.kis.v2.scr.kaspersky-labs.com");
-  assert.deepEqual(external.filter(url => !environmentRequests.includes(url)), []);
+  const applicationExternalRequests = external.filter(url => !environmentRequests.includes(url));
+  assert.deepEqual(applicationExternalRequests, []);
+  assert.deepEqual(externalResponses, []);
   assert.deepEqual(browserErrors, []);
   pass("application resources same-origin; external requests blocked (environment injection reported separately)");
+  pass("offline internet-denial canary rejected before transport; full matrix works with LAN allowed");
   console.log(JSON.stringify({browser: version.Browser, base, secureContext: await evaluate("isSecureContext"),
     randomUUID: await evaluate("typeof crypto.randomUUID"), verdicts, posts: posts.length,
-    environmentRequests: environmentRequests.map(url => new URL(url).origin), browserErrors}, null, 2));
+    environmentRequests: environmentRequests.map(url => ({origin: new URL(url).origin, action: "blocked-before-transport"})),
+    applicationExternalRequests, externalResponses,
+    applicationResourcePaths: [...new Set(requests.filter(url => url.startsWith(base + "/")).map(url => new URL(url).pathname))],
+    offline: {mode: "browser-target external requests denied; LAN allowed", blockedCanaries, canaryRejected},
+    browserErrors}, null, 2));
 } finally {
   if (socket) socket.close();
   browser.kill();
